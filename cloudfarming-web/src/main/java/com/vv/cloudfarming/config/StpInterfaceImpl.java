@@ -33,7 +33,7 @@ public class StpInterfaceImpl implements StpInterface {
      */
     @Override
     public List<String> getRoleList(Object loginId, String loginType) {
-        UserRespDTO user = userService.getUserById((Long) loginId);
+        UserRespDTO user = userService.getUserById(Long.valueOf(loginId.toString()));
         return List.of(UserRoleEnum.fromCode(user.getUserType()).getDescription());
     }
 }
