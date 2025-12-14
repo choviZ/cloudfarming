@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-@MapperScan("com.vv.cloudfarming.user.dao.mapper")
+@MapperScan({"com.vv.cloudfarming.user.dao.mapper", "com.vv.cloudfarming.shop.dao.mapper"})
 public class CloudFarmingApplication {
     public static void main(String[] args) {
         SpringApplication.run(CloudFarmingApplication.class, args);
