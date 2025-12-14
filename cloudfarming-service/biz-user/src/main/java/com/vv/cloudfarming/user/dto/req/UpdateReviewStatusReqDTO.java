@@ -8,9 +8,18 @@ import lombok.Data;
 @Data
 public class UpdateReviewStatusReqDTO {
 
+    /**
+     * 主键
+     */
     private Long id;
 
+    /**
+     * 要修改为的状态
+     */
     private String status;
 
+    /**
+     * 备注
+     */
     private String remark;
 }
