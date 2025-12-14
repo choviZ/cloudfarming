@@ -1,5 +1,7 @@
 package com.vv.cloudfarming.user.service.impl;
 
+import cn.dev33.satoken.stp.StpInterface;
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -30,14 +32,15 @@ import org.springframework.stereotype.Service;
 public class FarmerServiceImpl extends ServiceImpl<FarmerMapper, FarmerDO> implements FarmerService {
 
     private final UserService userService;
+    private final StpInterface stpInterface;
 
     @Override
-    public void submitApply(FarmerApplyReqDO requestParam, HttpServletRequest request) {
+    public void submitApply(FarmerApplyReqDO requestParam) {
         // TODO 参数校验
-        UserRespDTO loginUser = userService.getLoginUser(request);
+        long loginId = StpUtil.getLoginIdAsLong();
         // 保存审核记录
         FarmerDO farmerDO = BeanUtil.toBean(requestParam, FarmerDO.class);
-        farmerDO.setUserId(loginUser.getId());
+        farmerDO.setUserId(loginId);
         farmerDO.setReviewStatus(ReviewStatusEnum.PENDING.getStatus());
         int inserted = baseMapper.insert(farmerDO);
         if (inserted < 1){
@@ -46,14 +49,11 @@ public class FarmerServiceImpl extends ServiceImpl<FarmerMapper, FarmerDO> imple
     }
 
     @Override
-    public FarmerReviewRespDTO getReviewStatus(HttpServletRequest request) {
-        // 检查登录态
-        UserRespDTO loginUser = userService.getLoginUser(request);
-        if (loginUser == null || loginUser.getId() == null) {
-            throw new ClientException("请先登录");
-        }
+    public FarmerReviewRespDTO getReviewStatus() {
+        // 是否申请过成为农户
+        long loginId = StpUtil.getLoginIdAsLong();
         LambdaQueryWrapper<FarmerDO> wrapper = Wrappers.lambdaQuery(FarmerDO.class)
-                .eq(FarmerDO::getUserId, loginUser.getId());
+                .eq(FarmerDO::getUserId, loginId);
         FarmerDO farmerDO = baseMapper.selectOne(wrapper);
         if (farmerDO == null) {
             throw new ClientException("您未申请过成为入住农户");
@@ -66,19 +66,11 @@ public class FarmerServiceImpl extends ServiceImpl<FarmerMapper, FarmerDO> imple
     }
 
     @Override
-    public void updateReviewState(UpdateReviewStatusReqDTO requestParam, HttpServletRequest request) {
+    public void updateReviewState(UpdateReviewStatusReqDTO requestParam) {
         String remark = requestParam.getRemark();
         ReviewStatusEnum statusEnum = ReviewStatusEnum.getByDesc(requestParam.getStatus());
         if (statusEnum == null){
             throw new ClientException("不存在的状态");
-        }
-        UserRespDTO loginUser = userService.getLoginUser(request);
-        if (loginUser == null){
-            throw new ClientException("请先登录");
-        }
-        boolean admin = userService.isAdmin(loginUser.getId());
-        if (!admin){
-            throw new ClientException("无权修改状态");
         }
         // 检查是否申请成为农户
         FarmerDO farmerDO = baseMapper.selectById(requestParam.getId());
@@ -86,10 +78,11 @@ public class FarmerServiceImpl extends ServiceImpl<FarmerMapper, FarmerDO> imple
             throw new ClientException("请先申请成为农户");
         }
         // 更新审核记录
+        long loginId = StpUtil.getLoginIdAsLong();
         LambdaUpdateWrapper<FarmerDO> wrapper = Wrappers.lambdaUpdate(FarmerDO.class)
                 .eq(FarmerDO::getId, requestParam.getId())
                 .set(FarmerDO::getReviewStatus, statusEnum.getStatus())
-                .set(FarmerDO::getReviewUserId, loginUser.getId())
+                .set(FarmerDO::getReviewUserId, loginId)
                 .set(StrUtil.isNotBlank(remark), FarmerDO::getReviewRemark, remark);
         int updated = baseMapper.update(wrapper);
         // 更新用户角色
@@ -100,5 +93,7 @@ public class FarmerServiceImpl extends ServiceImpl<FarmerMapper, FarmerDO> imple
         if (updated < 1 || updatedUserType){
             throw new ServiceException("更新状态失败，请稍后重试");
         }
+        // 重新获取sa-token中的角色
+        stpInterface.getRoleList(loginId,null);
     }
 }

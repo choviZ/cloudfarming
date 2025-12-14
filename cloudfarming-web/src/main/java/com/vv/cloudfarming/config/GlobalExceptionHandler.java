@@ -1,5 +1,8 @@
 package com.vv.cloudfarming.config;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotRoleException;
+import cn.dev33.satoken.util.SaResult;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import com.vv.cloudfarming.common.errorcode.BaseErrorCode;
@@ -24,6 +27,26 @@ import java.util.Optional;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * 未登录异常
+     */
+    @ExceptionHandler(NotLoginException.class)
+    public SaResult handlerException(NotLoginException e) {
+        // 打印堆栈，以供调试
+        e.printStackTrace();
+        // 返回给前端
+        return SaResult.error(e.getMessage());
+    }
+
+    /**
+     * 角色不符
+     */
+    @ExceptionHandler(NotRoleException.class)
+    public SaResult handlerException(NotRoleException e) {
+        e.printStackTrace();
+        return SaResult.error("缺少角色：" + e.getRole());
+    }
 
     /**
      * 拦截参数验证异常

@@ -5,15 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.vv.cloudfarming</groupId>
-        <artifactId>cloudfarming</artifactId>
+        <artifactId>cloudfarming-service</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-    <packaging>pom</packaging>
-    <modules>
-        <module>biz-user</module>
-        <module>biz-shop</module>
-    </modules>
-    <artifactId>cloudfarming-service</artifactId>
+
+    <artifactId>biz-shop</artifactId>
+    <description>商品模块</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -22,16 +19,18 @@
     </properties>
 
     <dependencies>
+        <!-- 公共模块 -->
         <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>${mybatis-plus.version}</version>
+            <groupId>com.vv.cloudfarming</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
-
+        <!-- 用户模块 -->
         <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-            <version>${hutool-all.version}</version>
+            <groupId>com.vv.cloudfarming</groupId>
+            <artifactId>biz-user</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

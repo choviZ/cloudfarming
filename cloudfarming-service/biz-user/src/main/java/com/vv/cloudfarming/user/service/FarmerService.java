@@ -14,23 +14,19 @@ public interface FarmerService extends IService<FarmerDO> {
 
     /**
      * 提交农户入住申请
-     *
      * @param requestParam 请求参数
      */
-    void submitApply(FarmerApplyReqDO requestParam, HttpServletRequest request);
+    void submitApply(FarmerApplyReqDO requestParam);
 
     /**
      * 获取审核状态
-     *
-     * @param request http请求
      * @return 审核状态
      */
-    FarmerReviewRespDTO getReviewStatus(HttpServletRequest request);
+    FarmerReviewRespDTO getReviewStatus();
 
     /**
      * 修改审核状态
      * @param requestParam 请求参数
-     * @param request http请求
      */
-    void updateReviewState(UpdateReviewStatusReqDTO requestParam, HttpServletRequest request);
+    void updateReviewState(UpdateReviewStatusReqDTO requestParam);
 }

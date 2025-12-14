@@ -16,7 +16,7 @@ public interface UserService extends IService<UserDO> {
      * 用户登录
      * @return 用户信息
      */
-    UserRespDTO userLogin(UserLoginReqDTO requestParam, HttpServletRequest request);
+    UserRespDTO userLogin(UserLoginReqDTO requestParam);
 
     /**
      * 用户注册

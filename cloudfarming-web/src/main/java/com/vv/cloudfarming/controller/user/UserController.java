@@ -6,7 +6,6 @@ import com.vv.cloudfarming.user.dto.req.UserLoginReqDTO;
 import com.vv.cloudfarming.user.dto.req.UserRegisterReqDTO;
 import com.vv.cloudfarming.user.dto.resp.UserRespDTO;
 import com.vv.cloudfarming.user.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,8 +24,8 @@ public class UserController {
      * 登录
      */
     @PostMapping("/v1/user/login")
-    public Result<UserRespDTO> userLogin(@RequestBody UserLoginReqDTO requestParam, HttpServletRequest request) {
-        return Results.success(userService.userLogin(requestParam, request));
+    public Result<UserRespDTO> userLogin(@RequestBody UserLoginReqDTO requestParam) {
+        return Results.success(userService.userLogin(requestParam));
     }
 
     /**

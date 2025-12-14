@@ -1,10 +1,11 @@
 package com.vv.cloudfarming.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
+import com.vv.cloudfarming.constant.UserRoleConstant;
 import com.vv.cloudfarming.user.dto.req.UpdateReviewStatusReqDTO;
 import com.vv.cloudfarming.user.service.FarmerService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,9 +23,10 @@ public class FarmerAdminController {
     /**
      * 修改审核状态
      */
+    @SaCheckRole(UserRoleConstant.ADMIN_DESC)
     @PostMapping("admin/v1/review-status")
-    public Result<Void> updateReviewState(@RequestBody UpdateReviewStatusReqDTO requestParam, HttpServletRequest request){
-        farmerService.updateReviewState(requestParam,request);
+    public Result<Void> updateReviewState(@RequestBody UpdateReviewStatusReqDTO requestParam){
+        farmerService.updateReviewState(requestParam);
         return Results.success();
     }
 }

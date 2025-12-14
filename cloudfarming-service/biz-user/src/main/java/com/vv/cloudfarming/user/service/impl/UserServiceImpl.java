@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.user.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -25,21 +26,21 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements UserService {
 
     @Override
-    public UserRespDTO userLogin(UserLoginReqDTO requestParam, HttpServletRequest request) {
+    public UserRespDTO userLogin(UserLoginReqDTO requestParam) {
         String username = requestParam.getUsername();
         String password = requestParam.getPassword();
         LambdaQueryWrapper<UserDO> wrapper = Wrappers.lambdaQuery(UserDO.class)
                 .eq(UserDO::getUsername, username)
                 .eq(UserDO::getPassword, password);
-        UserDO selected = baseMapper.selectOne(wrapper);
-        if (selected == null) {
+        UserDO user = baseMapper.selectOne(wrapper);
+        if (user == null) {
             throw new ClientException(BaseErrorCode.USERNAME_PASSWORD_ERROR);
         }
-        if (selected.getStatus() == 1) {
+        if (user.getStatus() == 1) {
             throw new ClientException(BaseErrorCode.ACCOUNT_STATUS_ERROR);
         }
-        request.getSession().setAttribute("USER_STATE", selected);
-        return BeanUtil.toBean(selected, UserRespDTO.class);
+        StpUtil.login(user.getId());
+        return BeanUtil.toBean(user, UserRespDTO.class);
     }
 
     @Override
