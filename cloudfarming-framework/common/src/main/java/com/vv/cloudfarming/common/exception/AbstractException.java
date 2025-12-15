@@ -8,6 +8,7 @@ import java.util.Optional;
 
 /**
  * 抽象项目中三类异常体系，客户端异常、服务端异常以及远程服务调用异常
+ *
  * @see ClientException
  * @see ServiceException
  * @see RemoteException
@@ -22,6 +23,8 @@ public abstract class AbstractException extends RuntimeException {
     public AbstractException(String message, Throwable throwable, IErrorCode errorCode) {
         super(message, throwable);
         this.errorCode = errorCode.code();
-        this.errorMessage = Optional.ofNullable(!message.isEmpty() ? message : null).orElse(errorCode.message());
+        this.errorMessage = Optional.ofNullable(message)
+                .filter(s -> !s.isEmpty())
+                .orElse(errorCode.message());
     }
 }
