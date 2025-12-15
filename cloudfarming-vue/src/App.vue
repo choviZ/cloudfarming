@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import GlobalHeader from '@/components/GlobalHeader.vue'
+import BasicLayout from '@/layout/BasicLayout.vue'
 </script>
 
 <template>
-  <GlobalHeader/>
-  <h1>You did it!</h1>
+  <BasicLayout />
 </template>
 
 <style scoped></style>
