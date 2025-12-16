@@ -8,7 +8,7 @@
       <!-- 用户功能区域 -->
       <div class="header-user">
         <a-space>
-          <a-button type="text">
+          <a-button type="text" @click="handleLoginClick">
             <template #icon>
               <UserOutlined />
             </template>
@@ -35,12 +35,18 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import {
   UserOutlined,
   MessageOutlined,
   ShoppingCartOutlined
 } from '@ant-design/icons-vue'
 
+const router = useRouter()
+
+const handleLoginClick = () => {
+  router.push('/user/login')
+}
 </script>
 
 <style scoped>
