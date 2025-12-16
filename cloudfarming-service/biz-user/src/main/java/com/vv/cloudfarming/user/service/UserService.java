@@ -28,7 +28,10 @@ public interface UserService extends IService<UserDO> {
      * @param request http请求
      * @return 当前登录用户的信息
      */
+    @Deprecated
     UserRespDTO getLoginUser(HttpServletRequest request);
+
+    UserRespDTO getLoginUser();
 
     /**
      * 根据用户 ID 查询用户信息

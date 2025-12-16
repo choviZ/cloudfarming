@@ -65,6 +65,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     }
 
     @Override
+    @Deprecated
     public UserRespDTO getLoginUser(HttpServletRequest request) {
         Object userObj = request.getSession().getAttribute("USER_STATE");
         UserRespDTO userRespDTO = BeanUtil.toBean(((UserDO) userObj), UserRespDTO.class);
@@ -72,6 +73,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
             throw new ClientException("未获取到登录信息");
         }
         return userRespDTO;
+    }
+
+    @Override
+    public UserRespDTO getLoginUser() {
+        long loginId = StpUtil.getLoginIdAsLong();
+        UserDO userDO = baseMapper.selectById(loginId);
+        if (userDO == null) {
+            throw new ClientException("请先登录");
+        }
+        return BeanUtil.toBean(userDO, UserRespDTO.class);
     }
 
     @Override
