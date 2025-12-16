@@ -26,5 +26,5 @@ export const useUserStore = defineStore('useUserStore', () => {
     }
   }
 
-  return { loginUser,setUser,fetchUser }
+  return { loginUser,setUser,fetchUser,clearUser }
 })

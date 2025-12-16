@@ -78,5 +78,11 @@ public interface UserService extends IService<UserDO> {
      * @param userId 用户ID
      * @return 是否是管理员
      */
+    @Deprecated
     boolean isAdmin(Long userId);
+
+    /**
+     * 退出登录
+     */
+    void userLogout();
 }

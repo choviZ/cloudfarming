@@ -15,3 +15,8 @@ export const userLogin = (data: { username: string; password: string }): Promise
 export const getUser = (): Promise<Result<UserRespDTO>> => {
   return request.get('/v1/user')
 }
+
+// 退出登录
+export const userLogout = (): Promise<Result<boolean>> => {
+  return request.get('/v1/user/logout')
+}

@@ -65,7 +65,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     }
 
     @Override
-    @Deprecated
     public UserRespDTO getLoginUser(HttpServletRequest request) {
         Object userObj = request.getSession().getAttribute("USER_STATE");
         UserRespDTO userRespDTO = BeanUtil.toBean(((UserDO) userObj), UserRespDTO.class);
@@ -150,8 +149,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
     @Override
     public boolean isAdmin(Long userId) {
-        // TODO 修改成从登录态判断
         UserDO userDO = baseMapper.selectById(userId);
         return userDO.getUserType() == 2;
+    }
+
+    @Override
+    public void userLogout() {
+        StpUtil.logout();
     }
 }
