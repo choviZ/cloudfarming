@@ -8,6 +8,8 @@ import com.vv.cloudfarming.operation.dto.req.AdvertUpdateReqDTO;
 import com.vv.cloudfarming.operation.dao.entity.Advert;
 import com.vv.cloudfarming.operation.dto.resp.AdvertRespDTO;
 
+import java.util.List;
+
 /**
  * 广告服务接口层
  */
@@ -51,4 +53,10 @@ public interface AdvertService extends IService<Advert> {
      * @return 广告列表
      */
     IPage<AdvertRespDTO> pageAdvert(AdvertPageQueryReqDTO requestParam);
+
+    /**
+     * 获取展示的广告
+     * @return 广告列表
+     */
+    List<AdvertRespDTO> getShowAdverts();
 }

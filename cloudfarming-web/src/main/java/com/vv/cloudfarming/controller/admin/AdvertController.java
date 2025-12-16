@@ -16,6 +16,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 广告控制层
  */
@@ -25,6 +27,15 @@ import org.springframework.web.bind.annotation.*;
 public class AdvertController {
 
     private final AdvertService advertService;
+
+    /**
+     * 查询展示的广告
+     */
+    @Operation(summary = "查询展示的广告")
+    @GetMapping("/v1/show/adverts")
+    public Result<List<AdvertRespDTO>> getShowAdverts(){
+        return Results.success(advertService.getShowAdverts());
+    }
 
     /**
      * 创建广告

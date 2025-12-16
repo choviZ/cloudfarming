@@ -11,7 +11,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import java.time.LocalDateTime;
-
+import java.util.List;
+import java.util.stream.Collectors;
 import com.vv.cloudfarming.operation.dto.req.AdvertCreateReqDTO;
 import com.vv.cloudfarming.operation.dto.req.AdvertPageQueryReqDTO;
 import com.vv.cloudfarming.operation.dto.req.AdvertUpdateReqDTO;
@@ -116,5 +117,20 @@ public class AdvertServiceImpl extends ServiceImpl<AdvertMapper, Advert> impleme
 
         IPage<Advert> page = baseMapper.selectPage(requestParam, wrapper);
         return page.convert(each -> BeanUtil.toBean(each, AdvertRespDTO.class));
+    }
+
+    @Override
+    public List<AdvertRespDTO> getShowAdverts() {
+        LambdaQueryWrapper<Advert> wrapper = Wrappers.lambdaQuery(Advert.class)
+                .eq(Advert::getIsActive, true)
+                .lt(Advert::getStartDate, LocalDateTime.now())
+                .gt(Advert::getEndDate, LocalDateTime.now())
+                .orderByAsc(Advert::getDisplayOrder);
+
+        List<Advert> adverts = baseMapper.selectList(wrapper);
+
+        return adverts.stream()
+                .map(advert -> BeanUtil.toBean(advert, AdvertRespDTO.class))
+                .collect(Collectors.toList());
     }
 }
