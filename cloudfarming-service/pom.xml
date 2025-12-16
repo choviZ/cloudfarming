@@ -12,6 +12,7 @@
     <modules>
         <module>biz-user</module>
         <module>biz-shop</module>
+        <module>biz-operation</module>
     </modules>
     <artifactId>cloudfarming-service</artifactId>
 
