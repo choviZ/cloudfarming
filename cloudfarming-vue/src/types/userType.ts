@@ -62,24 +62,3 @@ export interface UserLoginReqDTO {
    */
   password: string
 }
-
-/**
- * 通用响应结果
- */
-export interface Result<T> {
-
-  /**
-   * 响应状态码
-   */
-  code: string
-
-  /**
-   * 响应消息
-   */
-  message: string
-
-  /**
-   * 响应数据
-   */
-  data: T
-}

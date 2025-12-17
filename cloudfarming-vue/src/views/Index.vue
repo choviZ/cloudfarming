@@ -12,52 +12,179 @@
       </a-carousel>
     </div>
 
-    <!-- 下部商品展示区域（占位） -->
+    <!-- 下部商品展示区域 -->
     <div class="product-section">
+      <!-- 商品类型标签查询 -->
       <div class="product-types">
-        <!-- 商品类型tag占位 -->
+        <a-tag
+          v-for="tag in productTags"
+          :key="tag.key"
+          :color="activeTag === tag.key ? 'green' : 'default'"
+          @click="handleTagClick(tag.key)"
+          class="tag-item"
+        >
+          {{ tag.name }}
+        </a-tag>
       </div>
-      <div class="product-list">
-        <!-- 商品展示占位 -->
-        <a-card v-for="i in 8" :key="i" hoverable class="product-card">
-          <template #cover>
-            <img alt="商品图片" src="https://via.placeholder.com/200x200?text=Product" />
-          </template>
-          <a-card-meta title="商品名称" description="商品描述" />
-        </a-card>
+
+      <!-- 商品列表 -->
+      <a-skeleton :loading="productLoading" :rows="8" animated>
+        <div class="product-list waterfall">
+          <div
+            v-for="product in productList"
+            :key="product.id"
+            class="product-item"
+          >
+            <a-card hoverable class="product-card">
+              <template #cover>
+                <img
+                  :alt="product.productName"
+                  :src="getFirstImage(product.productImg)"
+                  class="product-image"
+                />
+              </template>
+              <div class="product-info">
+                <div class="product-title">{{ product.productName }}</div>
+                <div class="product-price">¥{{ product.price }}</div>
+                <a-flex align="center" justify="space-between">
+                  <a-space>
+                    <a-avatar :src="product.createUser.avatar" v-if="product.createUser.avatar"/>
+                    <a-avatar size="small" v-else>
+                      <template #icon><UserOutlined /></template>
+                    </a-avatar>
+                    <div class="product-origin">{{ product.createUser.username }}</div>
+                  </a-space>
+                  <div class="product-origin">{{ product.originPlace }}</div>
+                </a-flex>
+                
+              </div>
+            </a-card>
+          </div>
+        </div>
+      </a-skeleton>
+
+      <!-- 分页组件 -->
+      <div class="pagination-container">
+        <a-pagination
+          v-model:current="pagination.current"
+          v-model:page-size="pagination.size"
+          :total="pagination.total"
+          :show-size-changer="true"
+          :page-size-options="['16', '24', '32']"
+          :show-total="(total: number) => `共 ${total} 件商品`"
+          @change="handlePageChange"
+          @show-size-change="handleSizeChange"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { getShowAdverts } from '@/api/advert';
 import type { AdvertRespDTO } from '@/types/advert';
+import { getProductList } from '@/api/product';
+import type { ProductPageQueryReqDTO, ProductRespDTO } from '@/types/product';
+import type { IPage } from '@/types/common';
 import { message } from 'ant-design-vue';
 
+// 广告相关
 const adverts = ref<AdvertRespDTO[]>([]);
-const loading = ref(false);
+const advertLoading = ref(false);
+
+// 商品相关
+const productList = ref<ProductRespDTO[]>([]);
+const productLoading = ref(false);
+const activeTag = ref('all');
+
+// 分页相关
+const pagination = ref({
+  current: 1,
+  size: 16,
+  total: 0,
+});
+
+// 商品类型标签
+const productTags = ref([
+  { key: 'all', name: '全部' },
+  // 可以根据需要添加更多标签
+]);
+
+// 处理商品图片，只返回第一张
+const getFirstImage = (imageStr: string): string => {
+  if (!imageStr) {
+    return 'https://via.placeholder.com/200x200?text=No+Image';
+  }
+  return imageStr.split(',')[0] || imageStr;
+};
 
 // 获取广告数据
 const fetchAdverts = async () => {
-  loading.value = true;
+  advertLoading.value = true;
   try {
     const response = await getShowAdverts();
     if (response.code === '0' && response.data) {
       // 按照displayOrder排序广告
-      adverts.value = response.data.sort((a, b) => a.displayOrder - b.displayOrder);
+      adverts.value = response.data.sort((a: { displayOrder: number; }, b: { displayOrder: number; }) => a.displayOrder - b.displayOrder);
     } else {
       message.error('获取广告数据失败：' + (response.message || '未知错误'));
     }
   }finally {
-    loading.value = false;
+    advertLoading.value = false;
   }
 };
 
-// 组件挂载时获取广告数据
+// 获取商品数据
+const fetchProducts = async () => {
+  productLoading.value = true;
+  try {
+    // 构建查询参数
+    const queryParam: ProductPageQueryReqDTO = {
+      current: pagination.value.current,
+      size: pagination.value.size,
+      stock: 0,
+    };
+
+    const response = await getProductList(queryParam);
+    if (response.code === '0' && response.data) {
+      const pageData: IPage<ProductRespDTO> = response.data;
+      productList.value = pageData.records;
+      pagination.value.total = pageData.total;
+    } else {
+      message.error('获取商品数据失败：' + (response.message || '未知错误'));
+    }
+  }finally {
+    productLoading.value = false;
+  }
+};
+
+// 标签点击事件
+const handleTagClick = (tagKey: string) => {
+  activeTag.value = tagKey;
+  // 重置分页
+  pagination.value.current = 1;
+  // 重新获取商品数据
+  fetchProducts();
+};
+
+// 分页变化事件
+const handlePageChange = (page: number) => {
+  pagination.value.current = page;
+  fetchProducts();
+};
+
+// 每页条数变化事件
+const handleSizeChange = (current: number, size: number) => {
+  pagination.value.current = current;
+  pagination.value.size = size;
+  fetchProducts();
+};
+
+// 组件挂载时获取数据
 onMounted(() => {
   fetchAdverts();
+  fetchProducts();
 });
 </script>
 
@@ -116,17 +243,130 @@ onMounted(() => {
 
 .product-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, 240px);
   gap: 20px;
+  justify-content: center;
+}
+
+/* 瀑布流布局 */
+.product-list.waterfall {
+  display: block;
+  column-width: 240px;
+  column-gap: 20px;
+  column-fill: balance;
+}
+
+.product-item {
+  break-inside: avoid;
+  margin-bottom: 20px;
+  width: 240px;
 }
 
 .product-card {
-  height: 100%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  height: 100%;
 }
 
 .product-card:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* 商品图片样式 */
+.product-card .ant-card-cover {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 240px;
+  height: 240px;
+  overflow: hidden;
+  background-color: #f8f8f8;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
+.product-image {
+  width: 240px;
+  height: 240px;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image {
+  transform: scale(1.05);
+}
+
+/* 使用Vue深度选择器覆盖Ant Design卡片默认样式 */
+.product-card :deep(.ant-card-body) {
+  padding: 2px !important;
+  border-radius: 0 0 8px 8px !important;
+}
+
+/* 商品信息样式 */
+.product-info {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-title {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-price {
+  font-size: 17px;
+  font-weight: 600;
+  color: #ff4d4f;
+  margin-bottom: 2px;
+}
+
+.product-origin {
+  font-size: 14px;
+  color: #999;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .product-list.waterfall {
+    column-count: 3;
+  }
+  .product-list {
+    grid-template-columns: repeat(auto-fill, 240px);
+  }
+}
+
+@media (max-width: 900px) {
+  .product-list.waterfall {
+    column-count: 2;
+  }
+  .product-list {
+    grid-template-columns: repeat(auto-fill, 240px);
+  }
+}
+
+@media (max-width: 600px) {
+  .product-list.waterfall {
+    column-count: 1;
+  }
+  .product-list {
+    grid-template-columns: 240px;
+  }
 }
 </style>

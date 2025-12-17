@@ -1,5 +1,6 @@
 import request from './request'
-import type { UserRegisterReqDTO, Result, UserRespDTO } from '../types/userType.ts'
+import type { Result } from '../types/common.ts'
+import type { UserRegisterReqDTO, UserRespDTO } from '@/types/userType.ts'
 
 // 用户注册
 export const userRegister = (data: UserRegisterReqDTO): Promise<Result<boolean>> => {
