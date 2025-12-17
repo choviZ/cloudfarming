@@ -1,6 +1,7 @@
 package com.vv.cloudfarming.shop.dto.resp;
 
 import com.vv.cloudfarming.common.database.BaseDO;
+import com.vv.cloudfarming.user.dto.resp.UserRespDTO;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -26,7 +27,7 @@ public class ProductRespDTO extends BaseDO implements Serializable {
     /**
      * 创建人id
      */
-    private Long creatorId;
+    private UserRespDTO createUser;
 
     /**
      * 商品名称

@@ -21,6 +21,8 @@ import com.vv.cloudfarming.shop.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.shop.dto.resp.ShopInfoRespDTO;
 import com.vv.cloudfarming.shop.service.ProductService;
 import com.vv.cloudfarming.shop.service.ShopService;
+import com.vv.cloudfarming.user.dto.resp.UserRespDTO;
+import com.vv.cloudfarming.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +37,7 @@ import java.math.BigDecimal;
 public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> implements ProductService {
 
     private final ShopService shopService;
+    private final UserService userService;
 
     @Override
     public void createProduct(ProductCreateReqDTO requestParam) {
@@ -124,10 +127,15 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
                 .eq(StrUtil.isNotBlank(originPlace), ProductDO::getOriginPlace, originPlace)
                 .eq(StrUtil.isNotBlank(specification), ProductDO::getSpecification, specification)
                 .eq(ObjectUtil.isNotNull(price), ProductDO::getPrice, price)
-                .eq(ObjectUtil.isNotNull(stock), ProductDO::getStock, stock)
+                .gt(ObjectUtil.isNotNull(stock), ProductDO::getStock, stock)
                 .like(StrUtil.isNotBlank(description), ProductDO::getDescription, description);
         IPage<ProductDO> page = baseMapper.selectPage(requestParam, wrapper);
-        return page.convert(each -> BeanUtil.toBean(each, ProductRespDTO.class));
+        return page.convert(each -> {
+            ProductRespDTO productRespDTO = BeanUtil.toBean(each, ProductRespDTO.class);
+            UserRespDTO user = userService.getUserById(each.getCreatorId());
+            productRespDTO.setCreateUser(user);
+            return productRespDTO;
+        });
     }
 
     @Override
