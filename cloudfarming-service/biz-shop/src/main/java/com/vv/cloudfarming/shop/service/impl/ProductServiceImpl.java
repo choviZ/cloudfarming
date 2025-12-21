@@ -61,6 +61,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
         }
         ProductDO productDO = baseMapper.selectById(id);
         ProductRespDTO productRespDTO = BeanUtil.toBean(productDO, ProductRespDTO.class);
+        productRespDTO.setCreateUser(userService.getUserById(productDO.getCreatorId()));
         return productRespDTO;
     }
 

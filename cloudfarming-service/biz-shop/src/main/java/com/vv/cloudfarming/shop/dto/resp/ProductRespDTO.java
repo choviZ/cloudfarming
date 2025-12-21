@@ -25,7 +25,7 @@ public class ProductRespDTO extends BaseDO implements Serializable {
     private Long shopId;
 
     /**
-     * 创建人id
+     * 创建人
      */
     private UserRespDTO createUser;
 
