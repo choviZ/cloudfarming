@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -24,9 +25,11 @@ import com.vv.cloudfarming.shop.service.ShopService;
 import com.vv.cloudfarming.user.dto.resp.UserRespDTO;
 import com.vv.cloudfarming.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -38,6 +41,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
 
     private final ShopService shopService;
     private final UserService userService;
+    private final StringRedisTemplate stringRedisTemplate;
+    private static final String PRODUCT_CACHE_KEY_PREFIX = "cloudfarming:product:";
 
     @Override
     public void createProduct(ProductCreateReqDTO requestParam) {
@@ -59,9 +64,20 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
         if (id == null || id <= 0) {
             throw new ClientException("id不合法");
         }
+        String cacheKey = PRODUCT_CACHE_KEY_PREFIX + id;
+        String productJsonStr = stringRedisTemplate.opsForValue().get(cacheKey);
+        // 缓存命中
+        if (StrUtil.isNotBlank(productJsonStr)) {
+            return JSONUtil.toBean(productJsonStr, ProductRespDTO.class);
+        }
         ProductDO productDO = baseMapper.selectById(id);
+        if (productDO == null){
+            return null;
+        }
         ProductRespDTO productRespDTO = BeanUtil.toBean(productDO, ProductRespDTO.class);
         productRespDTO.setCreateUser(userService.getUserById(productDO.getCreatorId()));
+        // 未命中-构建缓存
+        stringRedisTemplate.opsForValue().set(cacheKey, JSONUtil.toJsonStr(productRespDTO), 30, TimeUnit.MINUTES);
         return productRespDTO;
     }
 
@@ -91,6 +107,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
         if (updated < 0) {
             throw new ServiceException("更新商品信息失败");
         }
+        // 删除缓存
+        stringRedisTemplate.delete(PRODUCT_CACHE_KEY_PREFIX + id);
         return true;
     }
 
@@ -105,6 +123,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
         if (deleted < 0){
             throw new ServiceException("删除商品失败");
         }
+        // 删除缓存
+        stringRedisTemplate.delete(PRODUCT_CACHE_KEY_PREFIX + id);
         return true;
     }
 
