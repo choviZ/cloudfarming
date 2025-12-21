@@ -5,18 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.vv.cloudfarming</groupId>
-        <artifactId>cloudfarming</artifactId>
+        <artifactId>cloudfarming-service</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-    <packaging>pom</packaging>
-    <modules>
-        <module>biz-user</module>
-        <module>biz-shop</module>
-        <module>biz-operation</module>
-        <module>biz-order</module>
-    </modules>
-    <artifactId>cloudfarming-service</artifactId>
 
+    <artifactId>biz-order</artifactId>
+    <description>订单模块</description>
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -25,21 +19,24 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>${mybatis-plus.version}</version>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
         </dependency>
-
         <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-            <version>${hutool-all.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-
-        <!-- Sa-Token 权限认证，在线文档：https://sa-token.cc -->
+        <!-- 公共模块 -->
         <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-spring-boot3-starter</artifactId>
+            <groupId>com.vv.cloudfarming</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- 商品店铺模块 -->
+        <dependency>
+            <groupId>com.vv.cloudfarming</groupId>
+            <artifactId>biz-shop</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

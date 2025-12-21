@@ -8,7 +8,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @MapperScan({
         "com.vv.cloudfarming.user.dao.mapper",
         "com.vv.cloudfarming.shop.dao.mapper",
-        "com.vv.cloudfarming.operation.dao.mapper"
+        "com.vv.cloudfarming.operation.dao.mapper",
+        "com.vv.cloudfarming.order.dao.mapper"
 })
 public class CloudFarmingApplication {
     public static void main(String[] args) {

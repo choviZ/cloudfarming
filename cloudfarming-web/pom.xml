@@ -56,5 +56,11 @@
             <artifactId>biz-operation</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <!-- 订单模块 -->
+        <dependency>
+            <groupId>com.vv.cloudfarming</groupId>
+            <artifactId>biz-order</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>
