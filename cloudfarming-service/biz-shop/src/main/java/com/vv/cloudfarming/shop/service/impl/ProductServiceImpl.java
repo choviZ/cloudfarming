@@ -43,6 +43,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
     private final UserService userService;
     private final StringRedisTemplate stringRedisTemplate;
     private static final String PRODUCT_CACHE_KEY_PREFIX = "cloudfarming:product:";
+    private static final String STOCK_CACHE_KEY_PREFIX = "cloudfarming:stock:";
 
     @Override
     public void createProduct(ProductCreateReqDTO requestParam) {
@@ -71,7 +72,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
             return JSONUtil.toBean(productJsonStr, ProductRespDTO.class);
         }
         ProductDO productDO = baseMapper.selectById(id);
-        if (productDO == null){
+        if (productDO == null) {
             return null;
         }
         ProductRespDTO productRespDTO = BeanUtil.toBean(productDO, ProductRespDTO.class);
@@ -109,6 +110,10 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
         }
         // 删除缓存
         stringRedisTemplate.delete(PRODUCT_CACHE_KEY_PREFIX + id);
+        // 更新库存
+        if (ObjectUtil.isNotNull(stock)) {
+            stringRedisTemplate.opsForValue().set(STOCK_CACHE_KEY_PREFIX + id, stock.toString());
+        }
         return true;
     }
 
@@ -120,7 +125,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
             throw new ClientException("无权删除该商品！");
         }
         int deleted = baseMapper.deleteById(id);
-        if (deleted < 0){
+        if (deleted < 0) {
             throw new ServiceException("删除商品失败");
         }
         // 删除缓存
@@ -181,7 +186,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
         // 如果已经是目标状态，无需更新
         if (product.getStatus() != null && product.getStatus() == targetStatus) {
             return;
-        } else if (2 == product.getStatus()){
+        } else if (2 == product.getStatus()) {
             throw new ClientException("请等待管理员审核");
         }
         // 更新状态
@@ -191,6 +196,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
         boolean updated = this.updateById(update);
         if (!updated) {
             throw new RuntimeException("商品上下架失败");
+        }
+        // 上架-设置库存缓存
+        String stockCacheKey = STOCK_CACHE_KEY_PREFIX + productId;
+        if (onShelf) {
+            stringRedisTemplate.opsForValue().set(stockCacheKey, product.getStock().toString());
+        } else {
+            // 下架-删除缓存
+            stringRedisTemplate.delete(stockCacheKey);
         }
     }
 }

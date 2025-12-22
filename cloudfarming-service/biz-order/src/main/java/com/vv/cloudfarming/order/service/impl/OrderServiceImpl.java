@@ -17,6 +17,7 @@ import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.shop.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.shop.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
 
     private final ProductService productService;
     private final OrderItemMapper orderItemMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+    private static final String STOCK_CACHE_KEY_PREFIX = "cloudfarming:stock:";
 
     @Transactional
     @Override
@@ -45,52 +48,68 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         if (product == null) {
             throw new ClientException("商品不存在");
         }
-        if (product.getStock() < quantity) {
+        // 锁定库存 - 使用Redis原子操作确保库存一致性
+        String stockCacheKey = STOCK_CACHE_KEY_PREFIX + productId;
+        String stock = stringRedisTemplate.opsForValue().get(stockCacheKey);
+        if (stock == null){
+            // 缓存不存在，构建缓存
+            stringRedisTemplate.opsForValue().set(stockCacheKey,product.getStock().toString());
+        }
+        Long newStock = stringRedisTemplate.opsForValue().decrement(stockCacheKey, quantity);
+        if (newStock < 0) {
+            // 库存不足，回滚操作
+            stringRedisTemplate.opsForValue().increment(stockCacheKey, quantity);
             throw new ClientException("商品库存不足");
         }
-        long userId = StpUtil.getLoginIdAsLong();
-        // 创建主订单
-        OrderDO orderDO = new OrderDO();
-        orderDO.setOrderNo(generateOrderNo(userId));
-        orderDO.setUserId(userId);
-        BigDecimal amount = product.getPrice().multiply(new BigDecimal(quantity));
-        orderDO.setTotalAmount(amount);
-        orderDO.setPayType(0); // TODO 支付相关先模拟
-        orderDO.setPayStatus(PayStatusEnum.UNPAID.getCode());
+        try {
+            long userId = StpUtil.getLoginIdAsLong();
+            // 创建主订单
+            OrderDO orderDO = new OrderDO();
+            orderDO.setOrderNo(generateOrderNo(userId));
+            orderDO.setUserId(userId);
+            BigDecimal amount = product.getPrice().multiply(new BigDecimal(quantity));
+            orderDO.setTotalAmount(amount);
+            orderDO.setPayType(0); // TODO 支付相关先模拟
+            orderDO.setPayStatus(PayStatusEnum.UNPAID.getCode());
 
-        orderDO.setReceiveName(receiveInfo.getReceiveName());
-        orderDO.setReceivePhone(receiveInfo.getReceivePhone());
-        orderDO.setReceiveProvince(receiveInfo.getReceiveProvince());
-        orderDO.setReceiveCity(receiveInfo.getReceiveCity());
-        orderDO.setReceiveDistrict(receiveInfo.getReceiveDistrict());
-        orderDO.setReceiveDetail(receiveInfo.getReceiveDetail());
+            orderDO.setReceiveName(receiveInfo.getReceiveName());
+            orderDO.setReceivePhone(receiveInfo.getReceivePhone());
+            orderDO.setReceiveProvince(receiveInfo.getReceiveProvince());
+            orderDO.setReceiveCity(receiveInfo.getReceiveCity());
+            orderDO.setReceiveDistrict(receiveInfo.getReceiveDistrict());
+            orderDO.setReceiveDetail(receiveInfo.getReceiveDetail());
 
-        orderDO.setOrderStatus(OrderStatusEnum.UNPAID.getCode());
-        orderDO.setRemark(remark);
+            orderDO.setOrderStatus(OrderStatusEnum.UNPAID.getCode());
+            orderDO.setRemark(remark);
 
-        int inserted = baseMapper.insert(orderDO);
-        if (inserted != 1) {
-            throw new ServiceException("订单创建失败");
+            int inserted = baseMapper.insert(orderDO);
+            if (inserted != 1) {
+                throw new ServiceException("订单创建失败");
+            }
+            // 创建子订单
+            Long farmerId = product.getCreateUser().getId();
+            OrderItemDO orderItemDO = new OrderItemDO();
+            orderItemDO.setItemOrderNo(generateOrderNo(farmerId));
+            orderItemDO.setMainOrderId(orderDO.getId());
+            orderItemDO.setMainOrderNo(orderDO.getOrderNo());
+            orderItemDO.setUserId(userId);
+            orderItemDO.setFarmerId(farmerId);
+            orderItemDO.setProductJson(JSONUtil.toJsonStr(product));
+            orderItemDO.setProductTotalQuantity(quantity);
+            orderItemDO.setProductTotalAmount(amount);
+            orderItemDO.setActualPayAmount(amount);
+            orderItemDO.setOrderStatus(OrderStatusEnum.UNPAID.getCode());
+            int insertedOrderItem = orderItemMapper.insert(orderItemDO);
+            if (insertedOrderItem != 1) {
+                throw new ServiceException("订单创建失败");
+            }
+            // TODO 延迟队列处理订单超时
+        } catch (ServiceException e) {
+            // 订单创建失败，释放库存锁
+            stringRedisTemplate.opsForValue().increment(stockCacheKey, quantity);
+            // 重新抛出异常
+            throw e;
         }
-        // TODO 锁定库存
-        // 创建子订单
-        Long farmerId = product.getCreateUser().getId();
-        OrderItemDO orderItemDO = new OrderItemDO();
-        orderItemDO.setItemOrderNo(generateOrderNo(farmerId));
-        orderItemDO.setMainOrderId(orderDO.getId());
-        orderItemDO.setMainOrderNo(orderDO.getOrderNo());
-        orderItemDO.setUserId(userId);
-        orderItemDO.setFarmerId(farmerId);
-        orderItemDO.setProductJson(JSONUtil.toJsonStr(product));
-        orderItemDO.setProductTotalQuantity(quantity);
-        orderItemDO.setProductTotalAmount(amount);
-        orderItemDO.setActualPayAmount(amount);
-        orderItemDO.setOrderStatus(OrderStatusEnum.UNPAID.getCode());
-        int insertedOrderItem = orderItemMapper.insert(orderItemDO);
-        if (insertedOrderItem != 1) {
-            throw new ServiceException("订单创建失败");
-        }
-        // TODO 延迟队列处理订单超时
     }
 
     /**
