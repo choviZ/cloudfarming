@@ -16,7 +16,13 @@ const router = createRouter({
           name: 'index',
           component: () => import('../views/Index.vue')
         }
+
       ]
+    },
+    {
+      path: '/product/:id',
+      name: 'productDetail',
+      component: () => import('../views/ProductDetailView.vue')
     },
     // 用户相关路由组
     {
@@ -35,7 +41,7 @@ const router = createRouter({
         }
       ]
     }
-  ],
+  ]
 })
 
 export default router

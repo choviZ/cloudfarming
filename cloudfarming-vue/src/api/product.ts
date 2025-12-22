@@ -11,3 +11,15 @@ import request from "./request";
 export const getProductList = (queryParam: ProductPageQueryReqDTO): Promise<Result<IPage<ProductRespDTO>>> => {
     return request.post('/v1/product/page', queryParam)
 }
+
+/**
+ * 获取农产品详情
+ * @param id
+ */
+export const getProductDetail = (id: string): Promise<Result<ProductRespDTO>> => {
+    return request.get(`/v1/product`,{
+        params: {
+            id:id
+        }
+    })
+}

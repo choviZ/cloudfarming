@@ -43,7 +43,7 @@
               class="product-item-wrapper"
             >
               <div class="product-item">
-                <a-card hoverable class="product-card">
+                <a-card hoverable class="product-card" @click="goToProductDetail(product.id)">
                   <template #cover>
                     <img
                       :alt="product.productName"
@@ -92,12 +92,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { getShowAdverts } from '@/api/advert';
 import type { AdvertRespDTO } from '@/types/advert';
 import { getProductList } from '@/api/product';
 import type { ProductPageQueryReqDTO, ProductRespDTO } from '@/types/product';
 import type { IPage } from '@/types/common';
 import { message } from 'ant-design-vue';
+
+// 路由实例
+const router = useRouter();
 
 // 广告相关
 const adverts = ref<AdvertRespDTO[]>([]);
@@ -124,6 +128,7 @@ const productTags = ref([
 // 处理商品图片，只返回第一张
 const getFirstImage = (imageStr: string): string => {
   if (!imageStr) {
+    // TODO 随机图片临时占位
     return 'https://via.placeholder.com/200x200?text=No+Image';
   }
   return imageStr.split(',')[0] || imageStr;
@@ -189,6 +194,14 @@ const handleSizeChange = (current: number, size: number) => {
   pagination.value.current = current;
   pagination.value.size = size;
   fetchProducts();
+};
+
+// 跳转到商品详情页
+const goToProductDetail = (productId: number) => {
+  router.push({
+    name: 'productDetail',
+    params: { id: productId.toString() }
+  });
 };
 
 // 组件挂载时获取数据
