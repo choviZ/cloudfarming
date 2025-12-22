@@ -15,14 +15,13 @@ const router = createRouter({
           path: 'index',
           name: 'index',
           component: () => import('../views/Index.vue')
-        }
-
+        },
+        {
+          path: '/product/:id',
+          name: 'productDetail',
+          component: () => import('../views/ProductDetailView.vue')
+        },
       ]
-    },
-    {
-      path: '/product/:id',
-      name: 'productDetail',
-      component: () => import('../views/ProductDetailView.vue')
     },
     // 用户相关路由组
     {
