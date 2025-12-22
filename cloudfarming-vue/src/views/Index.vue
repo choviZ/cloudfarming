@@ -29,37 +29,47 @@
 
       <!-- 商品列表 -->
       <a-skeleton :loading="productLoading" :rows="8" animated>
-        <div class="product-list waterfall">
-          <div
-            v-for="product in productList"
-            :key="product.id"
-            class="product-item"
-          >
-            <a-card hoverable class="product-card">
-              <template #cover>
-                <img
-                  :alt="product.productName"
-                  :src="getFirstImage(product.productImg)"
-                  class="product-image"
-                />
-              </template>
-              <div class="product-info">
-                <div class="product-title">{{ product.productName }}</div>
-                <div class="product-price">¥{{ product.price }}</div>
-                <a-flex align="center" justify="space-between">
-                  <a-space>
-                    <a-avatar :src="product.createUser.avatar" v-if="product.createUser.avatar"/>
-                    <a-avatar size="small" v-else>
-                      <template #icon><UserOutlined /></template>
-                    </a-avatar>
-                    <div class="product-origin">{{ product.createUser.username }}</div>
-                  </a-space>
-                  <div class="product-origin">{{ product.originPlace }}</div>
-                </a-flex>
-                
+        <div class="product-list">
+          <a-row :gutter="[20, 20]">
+            <a-col
+              v-for="product in productList"
+              :key="product.id"
+              :xs="24"
+              :sm="12"
+              :md="8"
+              :lg="8"
+              :xl="6"
+              :xxl="4"
+              class="product-item-wrapper"
+            >
+              <div class="product-item">
+                <a-card hoverable class="product-card">
+                  <template #cover>
+                    <img
+                      :alt="product.productName"
+                      :src="getFirstImage(product.productImg)"
+                      class="product-image"
+                    />
+                  </template>
+                  <div class="product-info">
+                    <div class="product-title">{{ product.productName }}</div>
+                    <div class="product-price">¥{{ product.price }}</div>
+                    <a-flex align="center" justify="space-between">
+                      <a-space>
+                        <a-avatar :src="product.createUser.avatar" v-if="product.createUser.avatar"/>
+                        <a-avatar size="small" v-else>
+                          <template #icon><UserOutlined /></template>
+                        </a-avatar>
+                        <div class="product-origin">{{ product.createUser.username }}</div>
+                      </a-space>
+                      <div class="product-origin">{{ product.originPlace }}</div>
+                    </a-flex>
+
+                  </div>
+                </a-card>
               </div>
-            </a-card>
-          </div>
+            </a-col>
+          </a-row>
         </div>
       </a-skeleton>
 
@@ -70,7 +80,7 @@
           v-model:page-size="pagination.size"
           :total="pagination.total"
           :show-size-changer="true"
-          :page-size-options="['16', '24', '32']"
+          :page-size-options="['24', '32']"
           :show-total="(total: number) => `共 ${total} 件商品`"
           @change="handlePageChange"
           @show-size-change="handleSizeChange"
@@ -101,7 +111,7 @@ const activeTag = ref('all');
 // 分页相关
 const pagination = ref({
   current: 1,
-  size: 16,
+  size: 24,
   total: 0,
 });
 
@@ -197,7 +207,7 @@ onMounted(() => {
 /* 广告区域样式 */
 .advert-section {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1550px;
   margin: 0 auto;
   padding: 20px 0;
 }
@@ -225,7 +235,7 @@ onMounted(() => {
 /* 商品区域样式 */
 .product-section {
   width: 100%;
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 20px 0 40px;
 }
@@ -242,24 +252,19 @@ onMounted(() => {
 }
 
 .product-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 240px);
-  gap: 20px;
+  width: 100%;
+  padding: 0 20px;
+}
+
+.product-item-wrapper {
+  display: flex;
   justify-content: center;
 }
 
-/* 瀑布流布局 */
-.product-list.waterfall {
-  display: block;
-  column-width: 240px;
-  column-gap: 20px;
-  column-fill: balance;
-}
-
 .product-item {
-  break-inside: avoid;
-  margin-bottom: 20px;
-  width: 240px;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto;
 }
 
 .product-card {
@@ -267,7 +272,7 @@ onMounted(() => {
   transition: box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
-  width: 240px;
+  width: 100%;
   height: 100%;
 }
 
@@ -280,7 +285,7 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 240px;
+  width: 100%;
   height: 240px;
   overflow: hidden;
   background-color: #f8f8f8;
@@ -290,7 +295,7 @@ onMounted(() => {
 }
 
 .product-image {
-  width: 240px;
+  width: 100%;
   height: 240px;
   object-fit: cover;
   object-position: center;
@@ -340,33 +345,5 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   margin-top: 40px;
-}
-
-/* 响应式设计 */
-@media (max-width: 1200px) {
-  .product-list.waterfall {
-    column-count: 3;
-  }
-  .product-list {
-    grid-template-columns: repeat(auto-fill, 240px);
-  }
-}
-
-@media (max-width: 900px) {
-  .product-list.waterfall {
-    column-count: 2;
-  }
-  .product-list {
-    grid-template-columns: repeat(auto-fill, 240px);
-  }
-}
-
-@media (max-width: 600px) {
-  .product-list.waterfall {
-    column-count: 1;
-  }
-  .product-list {
-    grid-template-columns: 240px;
-  }
 }
 </style>

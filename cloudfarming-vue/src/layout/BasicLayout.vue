@@ -47,7 +47,7 @@ import GlobalHeader from '../components/GlobalHeader.vue'
 
 .content-wrapper {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1550px;
   padding: 0 20px;
   box-sizing: border-box;
 }
