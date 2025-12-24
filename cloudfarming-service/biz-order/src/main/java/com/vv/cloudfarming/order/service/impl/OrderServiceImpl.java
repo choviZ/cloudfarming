@@ -17,6 +17,8 @@ import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.shop.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.shop.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +37,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private final OrderItemMapper orderItemMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private static final String STOCK_CACHE_KEY_PREFIX = "cloudfarming:stock:";
+    private final int MAX_PURCHASE_LIMIT = 1000;
+    private final RedissonClient redissonClient;
 
     @Transactional
     @Override
@@ -44,6 +48,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         Integer quantity = requestParam.getQuantity();
         ReceiveInfoDTO receiveInfo = requestParam.getReceiveInfo();
         String remark = requestParam.getRemark();
+        if (quantity == null || quantity <= 0) {
+            throw new ClientException("购买数量必须大于0");
+        }
+        if (quantity > MAX_PURCHASE_LIMIT) {
+            throw new ClientException("单次购买数量超过限制");
+        }
         ProductRespDTO product = productService.getProductById(productId);
         if (product == null) {
             throw new ClientException("商品不存在");
@@ -51,9 +61,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         // 锁定库存 - 使用Redis原子操作确保库存一致性
         String stockCacheKey = STOCK_CACHE_KEY_PREFIX + productId;
         String stock = stringRedisTemplate.opsForValue().get(stockCacheKey);
-        if (stock == null){
-            // 缓存不存在，构建缓存
-            stringRedisTemplate.opsForValue().set(stockCacheKey,product.getStock().toString());
+        if (stock == null) {
+            RLock lock = redissonClient.getLock("cloudfarming:" + productId);
+            try {
+                lock.lock();
+                // 缓存不存在，构建缓存,双重检查
+                stock = stringRedisTemplate.opsForValue().get(stockCacheKey);
+                if (stock == null) {
+                    stringRedisTemplate.opsForValue().set(stockCacheKey, product.getStock().toString());
+                }
+            } finally {
+                lock.unlock();
+            }
         }
         Long newStock = stringRedisTemplate.opsForValue().decrement(stockCacheKey, quantity);
         if (newStock < 0) {
@@ -104,7 +123,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 throw new ServiceException("订单创建失败");
             }
             // TODO 延迟队列处理订单超时
-        } catch (ServiceException e) {
+        } catch (Exception e) {
             // 订单创建失败，释放库存锁
             stringRedisTemplate.opsForValue().increment(stockCacheKey, quantity);
             // 重新抛出异常
