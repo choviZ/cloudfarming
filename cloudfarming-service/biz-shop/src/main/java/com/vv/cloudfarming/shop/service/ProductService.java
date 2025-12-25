@@ -9,6 +9,8 @@ import com.vv.cloudfarming.shop.dto.req.ProductUpdateReqDTO;
 import com.vv.cloudfarming.shop.dto.req.ProductUpdateShelfStatusRequestDTO;
 import com.vv.cloudfarming.shop.dto.resp.ProductRespDTO;
 
+import java.util.List;
+
 /**
  * 商品服务接口层
  */
@@ -28,6 +30,13 @@ public interface ProductService extends IService<ProductDO> {
      * @return 商品详情
      */
     ProductRespDTO getProductById(Long id);
+
+    /**
+     * 根据id批量获取商品信息
+     * @param ids id集合
+     * @return 商品集合
+     */
+    List<ProductRespDTO> batchProductsByIds(List<Long> ids);
 
     /**
      * 修改商品信息

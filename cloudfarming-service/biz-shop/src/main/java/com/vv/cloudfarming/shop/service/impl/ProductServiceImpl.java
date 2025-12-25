@@ -29,7 +29,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 
 /**
@@ -80,6 +83,18 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, ProductDO> im
         // 未命中-构建缓存
         stringRedisTemplate.opsForValue().set(cacheKey, JSONUtil.toJsonStr(productRespDTO), 30, TimeUnit.MINUTES);
         return productRespDTO;
+    }
+
+    @Override
+    public List<ProductRespDTO> batchProductsByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return this.listByIds(ids).stream()
+                .map(productDO -> {
+                    ProductRespDTO productRespDTO = BeanUtil.toBean(productDO, ProductRespDTO.class);
+                    return productRespDTO;
+                }).collect(Collectors.toList());
     }
 
     @Override
