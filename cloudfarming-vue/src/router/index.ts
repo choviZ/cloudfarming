@@ -21,6 +21,11 @@ const router = createRouter({
           name: 'productDetail',
           component: () => import('../views/ProductDetailView.vue')
         },
+        {
+          path: 'cart',
+          name: 'cart',
+          component: () => import('../views/Cart.vue')
+        },
       ]
     },
     // 用户相关路由组

@@ -11,7 +11,7 @@
       </div>
     </a-layout-content>
     <!-- 底部区域 -->
-    <a-layout-footer class="layout-footer">
+    <a-layout-footer class="layout-footer" :class="{'has-cart': isCartPage}">
       <div class="footer-content">
         <p>网站信息和备案信息占位</p>
       </div>
@@ -21,6 +21,11 @@
 
 <script setup lang="ts">
 import GlobalHeader from '../components/GlobalHeader.vue'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const isCartPage = computed(() => route.path.startsWith('/cart'))
 </script>
 
 <style scoped>
@@ -53,9 +58,15 @@ import GlobalHeader from '../components/GlobalHeader.vue'
 }
 
 .layout-footer {
+  position: relative;
   background-color: #ffffff;
   padding: 24px 0;
   border-top: 1px solid #e8e8e8;
+}
+
+/* 有购物车时的footer样式 */
+.layout-footer.has-cart {
+  margin-bottom: 80px;
 }
 
 .footer-content {

@@ -116,6 +116,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { addToCart as addToCartApi } from '@/api/cart'
 import { getProductDetail } from '@/api/product'
 import {
   ShopOutlined,
@@ -163,14 +164,14 @@ const fetchProductDetail = async (id: string) => {
     if (response.code === '0' && response.data) {
       const productData = response.data
       // 更新商品信息
-      productInfo.name = productData.productName || '';
-      productInfo.description = productData.description || '';
-      productInfo.price = productData.price || '0';
-      productInfo.stock = productData.stock || 0;
-      productInfo.productCategory = productData.productCategory || '';
-      productInfo.originPlace = productData.originPlace || '';
-      productInfo.specification = productData.specification || '';
-      
+      productInfo.name = productData.productName || ''
+      productInfo.description = productData.description || ''
+      productInfo.price = productData.price || '0'
+      productInfo.stock = productData.stock || 0
+      productInfo.productCategory = productData.productCategory || ''
+      productInfo.originPlace = productData.originPlace || ''
+      productInfo.specification = productData.specification || ''
+
       // 更新商品图片，如果有多个图片则分割，否则使用单张图片
       if (productData.productImg) {
         const images = productData.productImg.split(',').filter(img => img.trim())
@@ -215,8 +216,18 @@ const handleQuantityChange = (value: number | null) => {
 }
 
 // 加入购物车
-const addToCart = () => {
-  message.success('已成功加入购物车')
+const addToCart = async () => {
+  const res = await addToCartApi({
+      skuId: productId,
+      quantity: quantity.value,
+      selected: false
+    }
+  )
+  if (res.code === '0') {
+    message.success('已成功加入购物车')
+  } else {
+    message.error('加入购物车失败，' + res.message)
+  }
 }
 
 // 立即购买
@@ -491,24 +502,24 @@ const toggleFavorite = () => {
   .main-content {
     flex-direction: column;
   }
-  
+
   .left-section,
   .right-section {
     flex: 1;
     width: 100%;
   }
-  
+
   .fixed-action-buttons {
     position: static;
     margin-top: 20px;
     justify-content: center;
   }
-  
+
   .product-basic-info {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .info-item {
     min-width: auto;
   }

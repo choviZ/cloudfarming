@@ -41,7 +41,7 @@
               </template>
             </a-button>
           </a-badge>
-          <a-button type="text">
+          <a-button type="text" @click="goToCart">
             <template #icon>
               <ShoppingCartOutlined />
             </template>
@@ -69,6 +69,10 @@ const userStore = useUserStore()
 
 const handleLoginClick = () => {
   router.push('/user/login')
+}
+
+const goToCart = () => {
+  router.push('/cart')
 }
 
 // 退出登录处理函数
