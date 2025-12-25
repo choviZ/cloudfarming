@@ -1,0 +1,27 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vv.cloudfarming.order.dao.mapper.OrderItemMapper">
+
+    <select id="selectByMainOrderId" resultType="com.vv.cloudfarming.order.dao.entity.OrderItemDO">
+        SELECT
+            item.id,
+            item.item_order_no,
+            item.farmer_id,
+            item.product_json,
+            item.product_total_quantity,
+            item.product_total_amount,
+            item.actual_pay_amount,
+            item.order_status,
+            item.logistics_company,
+            item.logistics_no
+        FROM
+            t_order_item item
+                INNER JOIN
+            t_order_main main ON item.main_order_id = main.id
+        WHERE
+            main.id = #{id}
+          AND main.del_flag = 0
+          AND item.del_flag = 0;
+    </select>
+</mapper>

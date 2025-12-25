@@ -1,14 +1,18 @@
 package com.vv.cloudfarming.order.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.vv.cloudfarming.common.utils.FormatConvertUtil;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.OrderItemDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderItemMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
+import com.vv.cloudfarming.order.dto.ProductInfoDTO;
 import com.vv.cloudfarming.order.dto.ReceiveInfoDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderInfoRespDTO;
 import com.vv.cloudfarming.order.enums.OrderStatusEnum;
 import com.vv.cloudfarming.order.enums.PayStatusEnum;
 import com.vv.cloudfarming.order.service.OrderService;
@@ -24,6 +28,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -98,7 +104,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             orderDO.setReceiveDistrict(receiveInfo.getReceiveDistrict());
             orderDO.setReceiveDetail(receiveInfo.getReceiveDetail());
 
-            orderDO.setOrderStatus(OrderStatusEnum.UNPAID.getCode());
+            orderDO.setOrderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode());
             orderDO.setRemark(remark);
 
             int inserted = baseMapper.insert(orderDO);
@@ -117,7 +123,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             orderItemDO.setProductTotalQuantity(quantity);
             orderItemDO.setProductTotalAmount(amount);
             orderItemDO.setActualPayAmount(amount);
-            orderItemDO.setOrderStatus(OrderStatusEnum.UNPAID.getCode());
+            orderItemDO.setOrderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode());
             int insertedOrderItem = orderItemMapper.insert(orderItemDO);
             if (insertedOrderItem != 1) {
                 throw new ServiceException("订单创建失败");
@@ -129,6 +135,58 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             // 重新抛出异常
             throw e;
         }
+    }
+
+    @Override
+    public OrderInfoRespDTO queryOrderById(Long id) {
+        if (id == null || id <= 0) {
+            throw new ClientException("id不合法");
+        }
+        // 主订单
+        OrderDO orderDO = baseMapper.selectById(id);
+        if (orderDO == null){
+            throw new ClientException("订单不存在");
+        }
+        // 子订单
+        List<OrderItemDO> items = orderItemMapper.selectByMainOrderId(id);
+        if (items == null || items.size() == 0) {
+            return null;
+        }
+        // 构建响应
+        List<ProductInfoDTO> productList = new ArrayList<>();
+        items.forEach(item -> {
+            JSONObject jsonObject = new JSONObject(item.getProductJson());
+            ProductInfoDTO productInfoDTO = ProductInfoDTO.builder()
+                    .productId(item.getId())
+                    .productName(jsonObject.getStr("productName"))
+                    .productImg(jsonObject.getStr("productImg").split(",")[0])
+                    .description(jsonObject.getStr("description"))
+                    .price(jsonObject.getBigDecimal("price"))
+                    // TODO 缺失数量字段
+                    .quantity(1)
+                    .build();
+            productList.add(productInfoDTO);
+        });
+        OrderInfoRespDTO respDTO = OrderInfoRespDTO.builder()
+                .id(orderDO.getId())
+                .orderNo(orderDO.getOrderNo())
+                .productList(productList)
+                .totalAmount(orderDO.getTotalAmount())
+                .discountAmount(orderDO.getDiscountAmount())
+                .freightAmount(orderDO.getFreightAmount())
+                .actualPayAmount(orderDO.getActualPayAmount())
+                .payType(orderDO.getPayType())
+                .payStatus(orderDO.getPayStatus())
+                .orderStatus(orderDO.getOrderStatus())
+                .createTime(FormatConvertUtil.convertToLocalDateTime(orderDO.getCreateTime()))
+                .payTime(orderDO.getPayTime())
+                .build();
+        // 订单状态为 已完成（确认收货） 、 已取消 时设置订单结束时间
+        if (orderDO.getOrderStatus().equals(OrderStatusEnum.COMPLETED.getCode())
+                || orderDO.getOrderStatus().equals(OrderStatusEnum.CANCEL.getCode())) {
+            respDTO.setCloseTime(FormatConvertUtil.convertToLocalDateTime(orderDO.getUpdateTime()));
+        }
+        return respDTO;
     }
 
     /**
