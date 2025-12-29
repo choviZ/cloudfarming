@@ -2,7 +2,10 @@ package com.vv.cloudfarming.cart.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.vv.cloudfarming.cart.dao.entity.CartArchiveDO;
 import com.vv.cloudfarming.cart.dao.entity.CartItemDO;
+import com.vv.cloudfarming.cart.dao.mapper.CartArchiveMapper;
 import com.vv.cloudfarming.cart.dto.req.CartItemAddReqDTO;
 import com.vv.cloudfarming.cart.dto.req.CartItemUpdateReqDTO;
 import com.vv.cloudfarming.cart.dto.resp.CartItemRespDTO;
@@ -35,8 +38,9 @@ public class CartServiceImpl implements CartService {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final ProductService productService;
+    private final CartArchiveMapper cartArchiveMapper;
     // 购物车Redis Key前缀
-    private static final String CART_KEY_PREFIX = "cart:user:";
+    private static final String CART_KEY_PREFIX = "cloudfarming:cart:user:";
     // 购物车TTL时间 14天 1209600秒
     private static final long CART_TTL_SECONDS = 14 * 24 * 60 * 60L;
 
@@ -54,6 +58,25 @@ public class CartServiceImpl implements CartService {
         try {
             // 获取当前购物车项
             String cartItemJson = (String) stringRedisTemplate.opsForHash().get(cartKey, skuId.toString());
+            if (cartItemJson == null) {
+                // 尝试加载归档数据
+                CartArchiveDO cartArchive = cartArchiveMapper.getCartArchive(StpUtil.getLoginIdAsLong());
+                if (cartArchive != null) {
+                    log.info("addToCart加载归档购物车数据, userId: {}, cartItems: {}", StpUtil.getLoginIdAsLong(), cartArchive.getCartItems());
+                    List<String> cartItemStrings = JSONArray.parseArray(cartArchive.getCartItems(), String.class);
+                    for (String cartItemStr : cartItemStrings) {
+                        CartItemDO item = JSON.parseObject(cartItemStr, CartItemDO.class);
+                        stringRedisTemplate.opsForHash().put(cartKey, item.getSkuId().toString(), JSON.toJSONString(item));
+                        if (item.getSkuId().equals(skuId)) {
+                            cartItemJson = JSON.toJSONString(item);
+                        }
+                    }
+                    // 刷新TTL
+                    refreshCartTTL();
+                    Long ttl = stringRedisTemplate.getExpire(cartKey, TimeUnit.SECONDS);
+                    log.info("addToCart归档购物车数据已恢复到Redis, userId: {}, cartKey: {}, ttl: {}秒", StpUtil.getLoginIdAsLong(), cartKey, ttl);
+                }
+            }
             CartItemDO cartItem;
             if (cartItemJson != null) {
                 // 商品已在购物车中，更新数量
@@ -76,8 +99,8 @@ public class CartServiceImpl implements CartService {
             refreshCartTTL();
             return true;
         } catch (Exception e) {
-            log.error("添加购物车失败", e.getMessage());
-            throw new ServiceException("添加购物车失败");
+            log.error("添加购物车失败, userId: {}, skuId: {}, error: {}", StpUtil.getLoginIdAsLong(), skuId, e.getMessage(), e);
+            throw new ServiceException("添加购物车失败: " + e.getMessage());
         }
     }
 
@@ -103,8 +126,8 @@ public class CartServiceImpl implements CartService {
             refreshCartTTL();
             return true;
         } catch (Exception e) {
-            log.error("更新购物车项失败", e.getMessage());
-            throw new ServiceException("更新购物车项失败");
+            log.error("更新购物车项失败, userId: {}, error: {}", StpUtil.getLoginIdAsLong(), e.getMessage(), e);
+            throw new ServiceException("更新购物车项失败: " + e.getMessage());
         }
     }
 
@@ -120,8 +143,8 @@ public class CartServiceImpl implements CartService {
             }
             return result > 0;
         } catch (Exception e) {
-            log.error("删除购物车项失败", e.getMessage());
-            throw new ServiceException("删除购物车项失败");
+            log.error("删除购物车项失败, userId: {}, skuId: {}, error: {}", StpUtil.getLoginIdAsLong(), skuId, e.getMessage(), e);
+            throw new ServiceException("删除购物车项失败: " + e.getMessage());
         }
     }
 
@@ -137,8 +160,8 @@ public class CartServiceImpl implements CartService {
             }
             return true;
         } catch (Exception e) {
-            log.error("批量删除购物车项失败", e.getMessage());
-            throw new ServiceException("批量删除购物车项失败");
+            log.error("批量删除购物车项失败, userId: {}, skuIds: {}, error: {}", StpUtil.getLoginIdAsLong(), skuIds, e.getMessage(), e);
+            throw new ServiceException("批量删除购物车项失败: " + e.getMessage());
         }
     }
 
@@ -149,8 +172,8 @@ public class CartServiceImpl implements CartService {
             // 删除整个购物车
             return stringRedisTemplate.delete(cartKey);
         } catch (Exception e) {
-            log.error("清空购物车失败", e.getMessage());
-            throw new ServiceException("清空购物车失败");
+            log.error("清空购物车失败, userId: {}, error: {}", StpUtil.getLoginIdAsLong(), e.getMessage(), e);
+            throw new ServiceException("清空购物车失败: " + e.getMessage());
         }
     }
 
@@ -160,6 +183,24 @@ public class CartServiceImpl implements CartService {
             String cartKey = getCartKey();
             // 获取购物车所有项
             Map<Object, Object> cartItemsMap = stringRedisTemplate.opsForHash().entries(cartKey);
+            if (cartItemsMap.isEmpty()) {
+                // 尝试加载归档数据
+                CartArchiveDO cartArchive = cartArchiveMapper.getCartArchive(StpUtil.getLoginIdAsLong());
+                if (cartArchive != null) {
+                    log.info("加载归档购物车数据, userId: {}, cartItems: {}", StpUtil.getLoginIdAsLong(), cartArchive.getCartItems());
+                    List<String> cartItemStrings = JSONArray.parseArray(cartArchive.getCartItems(), String.class);
+                    for (String cartItemStr : cartItemStrings) {
+                        CartItemDO item = JSON.parseObject(cartItemStr, CartItemDO.class);
+                        stringRedisTemplate.opsForHash().put(cartKey, item.getSkuId().toString(), JSON.toJSONString(item));
+                    }
+                    // 刷新TTL
+                    refreshCartTTL();
+                    Long ttl = stringRedisTemplate.getExpire(cartKey, TimeUnit.SECONDS);
+                    log.info("归档购物车数据已恢复到Redis, userId: {}, cartKey: {}, ttl: {}秒", StpUtil.getLoginIdAsLong(), cartKey, ttl);
+                    // 重新获取购物车数据
+                    cartItemsMap = stringRedisTemplate.opsForHash().entries(cartKey);
+                }
+            }
             if (cartItemsMap.isEmpty()) {
                 return new CartRespDTO();
             }
@@ -228,8 +269,8 @@ public class CartServiceImpl implements CartService {
 
             return cartResp;
         } catch (Exception e) {
-            log.error("获取购物车失败", e.getMessage());
-            throw new ServiceException("获取购物车失败");
+            log.error("获取购物车失败, userId: {}, error: {}", StpUtil.getLoginIdAsLong(), e.getMessage(), e);
+            throw new ServiceException("获取购物车失败: " + e.getMessage());
         }
     }
 
@@ -252,8 +293,8 @@ public class CartServiceImpl implements CartService {
             refreshCartTTL();
             return true;
         } catch (Exception e) {
-            log.error("更新购物车项选中状态失败", e.getMessage());
-            throw new ServiceException("更新购物车项选中状态失败");
+            log.error("更新购物车项选中状态失败, userId: {}, skuId: {}, error: {}", StpUtil.getLoginIdAsLong(), skuId, e.getMessage(), e);
+            throw new ServiceException("更新购物车项选中状态失败: " + e.getMessage());
         }
     }
 
@@ -286,8 +327,8 @@ public class CartServiceImpl implements CartService {
 
             return true;
         } catch (Exception e) {
-            log.error("全选/取消全选购物车项失败", e.getMessage());
-            throw new ServiceException("全选/取消全选购物车项失败");
+            log.error("全选/取消全选购物车项失败, userId: {}, error: {}", StpUtil.getLoginIdAsLong(), e.getMessage(), e);
+            throw new ServiceException("全选/取消全选购物车项失败: " + e.getMessage());
         }
     }
 
@@ -304,6 +345,11 @@ public class CartServiceImpl implements CartService {
      */
     private void refreshCartTTL() {
         String cartKey = getCartKey();
-        stringRedisTemplate.expire(cartKey, CART_TTL_SECONDS, TimeUnit.SECONDS);
+        Boolean result = stringRedisTemplate.expire(cartKey, CART_TTL_SECONDS, TimeUnit.SECONDS);
+        if (result) {
+            log.debug("刷新购物车TTL成功, cartKey: {}, ttl: {}秒", cartKey, CART_TTL_SECONDS);
+        } else {
+            log.warn("刷新购物车TTL失败, cartKey可能不存在, cartKey: {}", cartKey);
+        }
     }
 }
