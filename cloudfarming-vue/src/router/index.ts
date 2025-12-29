@@ -26,6 +26,11 @@ const router = createRouter({
           name: 'cart',
           component: () => import('../views/Cart.vue')
         },
+        {
+          path: 'farmer/join',
+          name: 'joinFarmer',
+          component: () => import('../views/farmer/JoinFarmer.vue')
+        },
       ]
     },
     // 用户相关路由组

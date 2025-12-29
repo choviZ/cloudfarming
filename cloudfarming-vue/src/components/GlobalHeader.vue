@@ -47,6 +47,9 @@
             </template>
             购物车
           </a-button>
+          <a-button type="text" @click="router.push('/farmer/join')">
+            成为入住农户
+          </a-button>
         </a-space>
       </div>
     </div>
