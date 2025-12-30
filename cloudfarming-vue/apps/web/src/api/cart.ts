@@ -1,6 +1,6 @@
-import request from '@/api/request';
-import type { Result } from '@/types/common.ts'
-import type { CartRespDTO, CartItemAddReqDTO, CartItemUpdateReqDTO } from '@/types/cart';
+import request from './request';
+import type { Result } from '../types/common.ts'
+import type { CartRespDTO, CartItemAddReqDTO, CartItemUpdateReqDTO } from '../types/cart';
 
 /**
  * 添加商品到购物车
