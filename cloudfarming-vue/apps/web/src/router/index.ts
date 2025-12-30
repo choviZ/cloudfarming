@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../views/LoginView.vue'
 import BasicLayout from '../layout/BasicLayout.vue'
+import MerchantLayout from '@/layout/MerchantLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -47,6 +48,20 @@ const router = createRouter({
           path: 'register',
           name: 'register',
           component: Login
+        }
+      ]
+    },
+    // 农户后台路由
+    {
+      path: '/farmer',
+      name: 'farmer',
+      component: MerchantLayout,
+      redirect: '/farmer/index',
+      children: [
+        {
+          path: 'index',
+          name: 'farmerWorkbench',
+          component: () => import('../views/farmer/Workbench.vue')
         }
       ]
     }

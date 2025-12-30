@@ -47,8 +47,11 @@
             </template>
             购物车
           </a-button>
-          <a-button type="text" @click="router.push('/farmer/join')">
+          <a-button type="text" @click="router.push('/farmer/join')" v-if="userStore.loginUser?.userType != 1">
             成为入住农户
+          </a-button>
+          <a-button v-else type="text" @click="router.push('/farmer/index')">
+            商家后台
           </a-button>
         </a-space>
       </div>
