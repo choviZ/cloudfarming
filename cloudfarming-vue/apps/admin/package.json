@@ -16,6 +16,7 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "@cloudfarming/core": "workspace:*",
     "@vueuse/core": "^14.1.0",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.13.2",

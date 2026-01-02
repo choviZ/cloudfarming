@@ -48,7 +48,8 @@
           </a-checkbox>
           <a href="javascript:;">忘记密码?</a>
         </div>
-        <a-button type="primary" html-type="submit" long :loading="loading" size="large" style="width: 100%">
+        <a-button type="primary" html-type="submit" long :loading="loading" size="large"
+                  style="width: 100%">
           登录
         </a-button>
         <a-button type="link" long class="login-form-register-btn" style="width: 100%">
@@ -60,58 +61,69 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
-import { message } from 'ant-design-vue';
-import { UserOutlined, LockOutlined } from '@ant-design/icons-vue';
-import { useStorage } from '@vueuse/core';
-import { useUserStore } from '@/store';
-import useLoading from '@/hooks/loading';
-import type { LoginData } from '@/api/user';
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
+import { UserOutlined, LockOutlined } from '@ant-design/icons-vue'
+import { useStorage } from '@vueuse/core'
+import { useUserStore } from '@/store'
+import useLoading from '@/hooks/loading'
+import { userLogin, type UserLoginReqDTO } from '@cloudfarming/core'
 
-const router = useRouter();
-const errorMessage = ref('');
-const { loading, setLoading } = useLoading();
-const userStore = useUserStore();
+const router = useRouter()
+const errorMessage = ref('')
+const { loading, setLoading } = useLoading()
+const userStore = useUserStore()
 
+// localStorage配置
 const loginConfig = useStorage('login-config', {
   rememberPassword: true,
-  username: 'admin', // 演示默认值
-  password: 'admin', // 演示默认值
-});
+  username: '',
+  password: ''
+})
 
-const userInfo = reactive({
-  username: loginConfig.value.username,
-  password: loginConfig.value.password,
-});
+// 用户信息
+const userInfo = reactive<UserLoginReqDTO>({
+  username: '',
+  password: ''
+})
 
-// Ant Design Vue 表单验证通过后会触发 @finish 事件
+// 提交登录请求
 const handleSubmit = async (values: Record<string, any>) => {
-  if (loading.value) return;
-
-  setLoading(true);
+  // 设置加载
+  if (loading.value) return
+  setLoading(true)
+  // 发送请求
   try {
-    await userStore.login(values as LoginData);
-    const { redirect, ...othersQuery } = router.currentRoute.value.query;
-    router.push({
-      name: (redirect as string) || 'Workplace',
+    const res = await userLogin(userInfo)
+    if (res.code != '0') {
+      message.error('登录失败' + res.message)
+      return;
+    }else if(res.data.userType != 2){
+      message.error('当前账号不是管理员账号！')
+      return;
+    }
+    userStore.setUser(res.data)
+    // query 是一个对象，对应 URL 中 ? 后面的键值对
+    const { redirect, ...othersQuery } = router.currentRoute.value.query
+    // 跳转至redirect指定的路由，若没有指定则跳转至首页
+    await router.push({
+      path: (redirect as string) || '/',
       query: {
-        ...othersQuery,
-      },
-    });
-    message.success('登录成功');
-
-    const { rememberPassword } = loginConfig.value;
-    const { username, password } = values;
+        ...othersQuery
+      }
+    })
+    message.success('登录成功')
+    // 持久化
+    const { rememberPassword } = loginConfig.value
+    const { username, password } = values
     // 实际生产环境需要进行加密存储。
-    loginConfig.value.username = rememberPassword ? username : '';
-    loginConfig.value.password = rememberPassword ? password : '';
-  } catch (err) {
-    errorMessage.value = (err as Error).message;
+    loginConfig.value.username = rememberPassword ? username : ''
+    loginConfig.value.password = rememberPassword ? password : ''
   } finally {
-    setLoading(false);
+    setLoading(false)
   }
-};
+}
 </script>
 
 <style lang="less" scoped>
@@ -121,14 +133,14 @@ const handleSubmit = async (values: Record<string, any>) => {
   }
 
   &-title {
-    color: var(--color-text-1);
+    color: #1F2329;
     font-weight: 500;
     font-size: 24px;
     line-height: 32px;
   }
 
   &-sub-title {
-    color: var(--color-text-3);
+    color: #7A869A;
     font-size: 16px;
     line-height: 24px;
   }

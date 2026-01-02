@@ -1,76 +1,32 @@
-import { defineStore } from 'pinia';
-import type{
-  login as userLogin,
-  logout as userLogout,
-  getUserInfo,
-  LoginData,
-} from '@/api/user';
-import type{ UserState } from './types';
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { getUser } from '@cloudfarming/core'
+import type { UserRespDTO } from '@cloudfarming/core'
 
-const useUserStore = defineStore('user', {
-  state: (): UserState => ({
-    name: undefined,
-    avatar: undefined,
-    job: undefined,
-    organization: undefined,
-    location: undefined,
-    email: undefined,
-    introduction: undefined,
-    personalWebsite: undefined,
-    jobName: undefined,
-    organizationName: undefined,
-    locationName: undefined,
-    phone: undefined,
-    registrationDate: undefined,
-    accountId: undefined,
-    certification: undefined,
-    role: '',
-  }),
+const useUserStore = defineStore('useUserStore', () => {
 
-  getters: {
-    userInfo(state: UserState): UserState {
-      return { ...state };
-    },
-  },
+  // 用户信息
+  const loginUser = ref<UserRespDTO>()
 
-  actions: {
-    switchRoles() {
-      return new Promise((resolve) => {
-        this.role = this.role === 'user' ? 'admin' : 'user';
-        resolve(this.role);
-      });
-    },
-    // Set user's information
-    setInfo(partial: Partial<UserState>) {
-      this.$patch(partial);
-    },
+  function setUser(user: UserRespDTO) {
+    loginUser.value = user
+  }
 
-    // Reset user's information
-    resetInfo() {
-      this.$reset();
-    },
+  function clearUser() {
+    loginUser.value = undefined
+  }
 
-    // Get user's information
-    async info() {
-    },
+  // 获取用户信息
+  async function fetchUser() {
+    const res = await getUser()
+    if (res.code === '0' && res.data) {
+      setUser(res.data)
+    } else {
+      clearUser()
+    }
+  }
 
-    // Login
-    async login(loginForm: LoginData) {
-      try {
-      } catch (err) {
-        throw err;
-      }
-    },
-    logoutCallBack() {
-    },
-    // Logout
-    async logout() {
-      try {
-      } finally {
-        this.logoutCallBack();
-      }
-    },
-  },
-});
+  return { loginUser, setUser, fetchUser, clearUser }
+})
 
-export default useUserStore;
+export default useUserStore
