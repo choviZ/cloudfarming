@@ -137,10 +137,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     @Override
     public IPage<UserRespDTO> pageUser(UserPageQueryReqDTO requestParam) {
         String username = requestParam.getUsername();
+        String phoneNumber = requestParam.getPhone();
         Integer userType = requestParam.getUserType();
         Integer status = requestParam.getStatus();
         LambdaQueryWrapper<UserDO> wrapper = Wrappers.lambdaQuery(UserDO.class)
-                .eq(StrUtil.isNotBlank(username), UserDO::getUsername, username)
+                .like(StrUtil.isNotBlank(username), UserDO::getUsername, username)
+                .like(StrUtil.isNotBlank(phoneNumber),UserDO::getPhone,phoneNumber)
                 .eq(ObjectUtil.isNotNull(userType), UserDO::getUserType, userType)
                 .eq(ObjectUtil.isNotNull(status), UserDO::getStatus, status);
         IPage<UserDO> page = baseMapper.selectPage(requestParam, wrapper);

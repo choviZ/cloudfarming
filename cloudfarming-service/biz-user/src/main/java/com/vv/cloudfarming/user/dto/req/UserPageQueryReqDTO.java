@@ -17,6 +17,11 @@ public class UserPageQueryReqDTO extends Page {
     private String username;
 
     /**
+     * 手机号
+     */
+    private String phone;
+
+    /**
      * 用户类型： 0-普通用户 1-农户 2-系统管理员
      */
     @Min(value = 0, message = "用户类型错误")
