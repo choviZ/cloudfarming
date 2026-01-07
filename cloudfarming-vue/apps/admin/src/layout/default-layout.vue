@@ -55,7 +55,7 @@ const items = ref<MenuProps['items']>([
 ])
 
 const handleClick = ({key} : {key: string}) => {
-  router.push(key);
+  router.push(`/${key}`);
 }
 </script>
 

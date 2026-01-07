@@ -199,6 +199,7 @@
 
 <script lang="ts" setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import dayjs from 'dayjs'
 import { message } from 'ant-design-vue'
 import {
   SearchOutlined,
@@ -314,7 +315,19 @@ const columns = [
     title: '创建时间',
     dataIndex: 'createTime',
     key: 'createTime',
-    width: 180
+    width: 180,
+    customRender: ({ text }: { text: string }) => {
+      return dayjs(text).format('YYYY-MM-DD HH:mm:ss')
+    }
+  },
+  {
+    title: '更新时间',
+    dataIndex: 'updateTime',
+    key: 'updateTime',
+    width: 180,
+    customRender: ({ text }: { text: string }) => {
+      return dayjs(text).format('YYYY-MM-DD HH:mm:ss')
+    }
   },
   {
     title: '操作',
