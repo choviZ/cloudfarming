@@ -2,6 +2,8 @@ package com.vv.cloudfarming.shop.dto.resp;
 
 import lombok.Data;
 
+import java.util.Map;
+
 @Data
 public class SpuRespDTO {
 
@@ -24,4 +26,9 @@ public class SpuRespDTO {
      * 商品状态：0-下架，1-上架，2-待审核
      */
     private Integer status;
+
+    /**
+     * 基本属性
+     */
+    private Map<String,String> attributes;
 }
