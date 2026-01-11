@@ -11,7 +11,12 @@ public class SpuCreateOrUpdateReqDTO {
     /**
      * 标准商品名称
      */
-    private String spuName;
+    private String title;
+
+    /**
+     * 店铺id
+     */
+    private Long shopId;
 
     /**
      * 商品分类id
@@ -21,7 +26,7 @@ public class SpuCreateOrUpdateReqDTO {
     /**
      * 商品图片URL，多个图片用逗号分隔
      */
-    private String image;
+    private String images;
 
     /**
      * 商品状态：0-下架，1-上架，2-待审核

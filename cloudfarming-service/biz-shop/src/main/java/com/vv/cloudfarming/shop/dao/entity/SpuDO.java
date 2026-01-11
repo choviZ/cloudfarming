@@ -20,9 +20,14 @@ public class SpuDO extends BaseDO implements Serializable {
     private Long id;
 
     /**
-     * 标准商品名称
+     * 所属店铺id
      */
-    private String spuName;
+    private Long shopId;
+
+    /**
+     * 标准商品标题
+     */
+    private String title;
 
     /**
      * 商品分类id

@@ -98,7 +98,7 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         Integer status = queryParam.getStatus();
         // 构建查询条件
         LambdaQueryWrapper<SpuDO> queryWrapper = Wrappers.lambdaQuery(SpuDO.class)
-                .like(!StrUtil.isBlank(spuName), SpuDO::getSpuName, spuName)
+                .like(!StrUtil.isBlank(spuName), SpuDO::getTitle, spuName)
                 .eq(categoryId != null, SpuDO::getCategoryId, categoryId)
                 .eq(status != null, SpuDO::getStatus, status);
         // 查询
