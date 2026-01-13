@@ -10,10 +10,16 @@
           <dashboard-outlined />
           <span>工作台</span>
         </a-menu-item>
-        <a-menu-item key="1">
-          <appstore-outlined />
-          <span>管理商品</span>
-        </a-menu-item>
+        <a-sub-menu key="1">
+          <template #title>
+            <appstore-outlined />
+            <span>管理商品</span>
+          </template>
+          <a-menu-item key="1-1" @click="router.push('/farmer/spu/create')">
+            <plus-outlined />
+            <span>创建商品</span>
+          </a-menu-item>
+        </a-sub-menu>
         <a-menu-item key="2">
           <shop-outlined />
           <span>管理店铺</span>
@@ -68,7 +74,8 @@ import {
   TransactionOutlined,
   ProjectOutlined,
   BarChartOutlined,
-  RollbackOutlined
+  RollbackOutlined,
+  PlusOutlined
 } from '@ant-design/icons-vue'
 import { h } from 'vue'
 import { useRouter } from 'vue-router'

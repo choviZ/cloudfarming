@@ -89,7 +89,7 @@ import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 import type { FarmerApplyReqDO, FarmerReviewRespDTO } from '@/types/farmer.ts'
 import { getFarmerReviewStatus, submitFarmerApply } from '@/api/farmer.ts'
 import { handleResp } from '@/utils/respUtil.ts'
-import ReviewState from '@/views/farmer/component/ReviewState.vue'
+import ReviewState from '@/views/farmer/components/ReviewState.vue'
 
 const rules = {
   realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],

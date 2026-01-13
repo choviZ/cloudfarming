@@ -53,3 +53,7 @@ vite.config.ts.*
 
 # Documentation (kept for reference but not committed)
 docs
+
+# custom
+.claude
+.trae

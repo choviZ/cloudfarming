@@ -62,6 +62,11 @@ const router = createRouter({
           path: 'index',
           name: 'farmerWorkbench',
           component: () => import('../views/farmer/Workbench.vue')
+        },
+        {
+          path: 'spu/create',
+          name: 'createSpu',
+          component: () => import('../views/farmer/admin/Index.vue')
         }
       ]
     }

@@ -35,7 +35,7 @@ public class SpuController {
     @SaCheckRole(UserRoleConstant.FARMER_DESC)
     @PostMapping("/v1/spu/save-or-update")
     public Result<Void> saveOrUpdateSpu(@Validated @RequestBody SpuCreateOrUpdateReqDTO requestParam) {
-        spuService.saveOrUpdateSpu(requestParam);
+        spuService.saveSpu(requestParam);
         return Results.success();
     }
 

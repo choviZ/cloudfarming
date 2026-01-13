@@ -45,21 +45,22 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
     private final AttributeService attributeService;
 
     @Override
-    public void saveOrUpdateSpu(SpuCreateOrUpdateReqDTO requestParam) {
+    public Long saveSpu(SpuCreateOrUpdateReqDTO requestParam) {
         if (requestParam == null) {
             throw new ClientException("参数不能为空");
         }
         Long categoryId = requestParam.getCategoryId();
-
         CategoryRespDTO category = categoryService.getCategoryById(categoryId);
         if (category == null) {
             throw new ClientException("分类不存在");
         }
+        // 保存
         SpuDO spu = BeanUtil.toBean(requestParam, SpuDO.class);
-        boolean result = this.saveOrUpdate(spu);
+        boolean result = this.save(spu);
         if (!result) {
             throw new ServiceException("SPU创建或修改失败");
         }
+        return spu.getId();
     }
 
     @Override
@@ -253,11 +254,9 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         if (spuId == null || spuId <= 0) {
             throw new ClientException("SPU ID不合法");
         }
-
         if (this.getById(spuId) == null) {
             throw new ClientException("SPU不存在");
         }
-
         LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
                 .eq(SpuAttrValueDO::getSpuId, spuId);
         List<SpuAttrValueDO> spuAttrValues = spuAttrValueMapper.selectList(wrapper);

@@ -12,7 +12,8 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@cloudfarming/core': fileURLToPath(new URL('../../packages/core/src', import.meta.url))
     },
   },
   server: {

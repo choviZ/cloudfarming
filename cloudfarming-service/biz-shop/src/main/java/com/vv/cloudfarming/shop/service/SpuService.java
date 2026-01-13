@@ -21,7 +21,7 @@ public interface SpuService extends IService<SpuDO> {
      * 创建或修改SPU
      * @param requestParam 请求参数
      */
-    void saveOrUpdateSpu(SpuCreateOrUpdateReqDTO requestParam);
+    Long saveSpu(SpuCreateOrUpdateReqDTO requestParam);
 
     /**
      * 根据id删除SPU
