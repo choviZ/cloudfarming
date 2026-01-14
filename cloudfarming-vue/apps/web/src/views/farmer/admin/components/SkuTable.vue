@@ -9,27 +9,23 @@
       size="small"
     >
       <template #bodyCell="{ column, record }">
-        <!-- 库存列 -->
         <template v-if="column.key === 'stock'">
           <a-input-number
             :min="0"
-            :value="getStockForRow(record.__skuKey__)"
-            @change="val => updateStock(record.__skuKey__, val)"
+            :value="getStock(record.__skuKey__ as string)"
+            @change="(val: number | null) => updateStock(record.__skuKey__ as string, val)"
             style="width: 120px"
           />
         </template>
-
-        <!-- 价格列（如果需要价格列） -->
         <template v-else-if="column.key === 'price'">
           <a-input-number
             :min="0"
-            :value="getPriceForRow(record.__skuKey__)"
-            @change="val => updatePrice(record.__skuKey__, val)"
+            :value="getPrice(record.__skuKey__ as string)"
+            @change="(val: number | null) => updatePrice(record.__skuKey__ as string, val)"
             style="width: 120px"
             :precision="2"
           />
         </template>
-        <!-- 其余列使用默认渲染 -->
       </template>
     </a-table>
   </div>
@@ -38,36 +34,38 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { TableColumnsType } from 'ant-design-vue'
+import type { SaleAttribute, SpecItem, SKU } from '@/types'
 
-// 类型定义
-interface SaleAttribute {
-  key: string
-  label: string
-  values: string[]
-}
-
-interface SpecItem {
-  attrId: string
-  attrName: string
-  value: string
-}
-
-interface SKU {
-  specs: SpecItem[]
-  stock: number
-  price?: number
-}
-
-// 组件通信
+/**
+ * 组件Props - 接收父组件传入的销售属性配置
+ */
 const props = defineProps<{
   saleAttributes: SaleAttribute[]
 }>()
 
+/**
+ * 组件事件 - 当SKU数据发生变化时通知父组件
+ * @param skus - 最新的SKU列表，包含所有规格组合的价格和库存
+ */
 const emit = defineEmits<{
   (e: 'change', skus: SKU[]): void
 }>()
 
-/* ---------- helper: 笛卡尔积 ---------- */
+/**
+ * 生成SKU的唯一标识键
+ * 格式: "attrId:value|attrId:value|..."
+ * 例如: "1:红色|2:S"
+ * 用于在不同地方唯一标识一个SKU组合
+ */
+function generateSkuKey(specs: SpecItem[]): string {
+  return specs.map(s => `${s.attrId}:${s.value}`).join('|')
+}
+
+/**
+ * 计算笛卡尔积
+ * 将多个数组的所有可能组合生成出来
+ * 例如: [['红色','蓝色'], ['S','M']] -> [['红色','S'], ['红色','M'], ['蓝色','S'], ['蓝色','M']]
+ */
 function cartesian<T>(list: T[][]): T[][] {
   if (!list || list.length === 0) return []
   return list.reduce(
@@ -76,19 +74,44 @@ function cartesian<T>(list: T[][]): T[][] {
   )
 }
 
-/* ---------- 内部存储：stockMap / priceMap ---------- */
-/*
-  用一个稳定的 map 保存可变数据，key 用规格组合生成的唯一字符串
-  形式： "attrId:value|attrId:value"
-*/
-const stockMap = ref<Record<string, number>>({})
-const priceMap = ref<Record<string, number>>({}) // 可选：如果需要价格列
+/**
+ * 库存数据映射
+ * key: SKU唯一标识键
+ * value: 库存数量
+ * 使用Map而非数组，便于通过key快速查找和更新
+ */
+const stockMap = ref(new Map<string, number>())
 
-/* ---------- 生成 skuList（纯只读） ---------- */
+/**
+ * 价格数据映射
+ * key: SKU唯一标识键
+ * value: 价格
+ */
+const priceMap = ref(new Map<string, number>())
+
+/**
+ * 从Map中安全获取值
+ */
+function getStock(key: string): number {
+  return stockMap.value.get(key) ?? 0
+}
+
+function getPrice(key: string): number {
+  return priceMap.value.get(key) ?? 0
+}
+
+/**
+ * SKU列表计算属性
+ * 根据销售属性配置，生成所有可能的SKU组合
+ * 1. 将每个属性的可选值转换为 SpecItem 数组
+ * 2. 使用笛卡尔积生成所有组合
+ * 3. 为每个组合生成唯一key，并关联库存和价格
+ */
 const skuList = computed(() => {
-  const attrs = props.saleAttributes || []
+  const attrs = props.saleAttributes
   if (attrs.length === 0) return []
 
+  // 将每个属性的值转换为 SpecItem 数组
   const groups = attrs.map(attr =>
     (attr.values || []).map(v => ({
       attrId: attr.key,
@@ -97,104 +120,91 @@ const skuList = computed(() => {
     }))
   )
 
-  // 当任一属性没有 values 时，返回空数组（没有 SKU）
+  // 如果有属性没有可选值，返回空
   if (groups.some(g => !g || g.length === 0)) return []
 
+  // 生成笛卡尔积
   const combos = cartesian(groups)
+
+  // 为每个组合生成SKU对象
   return combos.map(specs => {
-    const key = specs.map(s => `${s.attrId}:${s.value}`).join('|')
+    const key = generateSkuKey(specs)
     return {
       specs,
-      stock: stockMap.value[key] ?? 0,
-      price: priceMap.value[key] ?? 0
+      stock: stockMap.value.get(key) ?? 0,
+      price: priceMap.value.get(key) ?? 0,
+      _key: key
     }
   })
 })
 
-/* ---------- 表头动态构造（属性列 + 库存/价格列） ---------- */
-const columns = computed<TableColumnsType>(() => {
-  const specCols = (props.saleAttributes || []).map(attr => ({
+/**
+ * 表格列配置计算属性
+ * 根据销售属性动态生成列：
+ * - 每个销售属性一列，显示其值
+ * - 库存列
+ * - 价格列
+ */
+const columns = computed<TableColumnsType>(() => [
+  ...props.saleAttributes.map(attr => ({
     title: attr.label,
     dataIndex: attr.key,
     key: attr.key
-  }))
+  })),
+  { title: '库存', key: 'stock' },
+  { title: '价格', key: 'price' }
+])
 
-  // 最后一列：库存，倒数第二（可选）价格
-  return [
-    ...specCols,
-    { title: '库存', key: 'stock' }
-    ,{ title: '价格', key: 'price' }
-  ]
-})
-
-/* ---------- 表格数据（扁平化） ---------- */
-/*
-  我们在每一行添加 __skuKey__ 字段（唯一键），并把每一列值放到 row[attrId]
-*/
+/**
+ * 表格数据计算属性
+ * 将SKU列表转换为表格需要的数据格式
+ * - __skuKey__: 内部使用的SKU标识（不显示）
+ * - attrId: 各属性值（动态列的数据）
+ * - stock: 库存
+ * - price: 价格
+ */
 const tableData = computed(() => {
-  return skuList.value.map((sku, idx) => {
-    const row: Record<string, any> = { key: idx }
-    const key = sku.specs.map(s => `${s.attrId}:${s.value}`).join('|')
-    row.__skuKey__ = key
-    sku.specs.forEach(spec => {
-      row[spec.attrId] = spec.value
-    })
-    row.stock = sku.stock
-    row.price = sku.price
-    return row
-  })
+  return skuList.value.map((sku, idx) => ({
+    key: idx,
+    __skuKey__: sku._key,
+    ...Object.fromEntries(sku.specs.map(s => [s.attrId, s.value])),
+    stock: sku.stock,
+    price: sku.price
+  }))
 })
 
-/* ---------- rowKey function ---------- */
-const rowKey = (row: any) => row.__skuKey__ || row.key
+/**
+ * 行key函数 - 使用SKU的唯一标识作为行key
+ */
+const rowKey = (row: { __skuKey__?: string; key: number }) => row.__skuKey__ ?? row.key
 
-/* ---------- 获取 / 更新 库存（稳定的 map） ---------- */
-const getStockForRow = (skuKey: string) => {
-  return stockMap.value[skuKey] ?? 0
-}
-
+/**
+ * 更新库存
+ * @param skuKey - SKU唯一标识
+ * @param val - 新的库存值（可能为null）
+ */
 const updateStock = (skuKey: string, val: number | null) => {
-  const v = val ?? 0
-  stockMap.value = { ...stockMap.value, [skuKey]: v } // 保持响应式替换整个对象
-  // 同步 emit 给父组件最新的 skuList（包含 stock）
-  emit('change', buildSkuResult())
+  stockMap.value.set(skuKey, val ?? 0)
+  emit('change', skuList.value)
 }
 
-/* ---------- 可选：价格处理（与库存类似） ---------- */
-const getPriceForRow = (skuKey: string) => {
-  return priceMap.value[skuKey] ?? 0
-}
+/**
+ * 更新价格
+ * @param skuKey - SKU唯一标识
+ * @param val - 新的价格值（可能为null）
+ */
 const updatePrice = (skuKey: string, val: number | null) => {
-  const v = val ?? 0
-  priceMap.value = { ...priceMap.value, [skuKey]: v }
-  emit('change', buildSkuResult())
+  priceMap.value.set(skuKey, val ?? 0)
+  emit('change', skuList.value)
 }
 
-/* ---------- 构建对外的 SKU 结果 ---------- */
-function buildSkuResult() {
-  return skuList.value.map(sku => {
-    const key = sku.specs.map(s => `${s.attrId}:${s.value}`).join('|')
-    return {
-      specs: sku.specs.map(s => ({ attrId: s.attrId, attrName: s.attrName, value: s.value })),
-      stock: stockMap.value[key] ?? 0
-      , price: priceMap.value[key] ?? 0
-    }
-  })
-}
-
-/* ---------- 当 saleAttributes 发生变化时：保持已有 stockMap 值（不覆盖） ---------- */
-/* 如果你希望在属性变更时清空 stockMap，可以在这里处理 */
-watch(
-  () => props.saleAttributes,
-  () => {
-    // 不主动清空 stockMap：保留用户输入（若你想清空，取消注释下一行）
-    // stockMap.value = {}
-
-    // 注意：如果 saleAttributes 变化（比如值被删掉）导致某些 skuKey 不再存在，
-    // stockMap 里仍会保留旧 key，不影响显示；如果你需要清理，可在此处做筛选。
-  },
-  { deep: true }
-)
+/**
+ * 监听销售属性变化
+ * 当属性配置变化时，可能需要清空库存（可选）
+ */
+watch(() => props.saleAttributes, () => {
+  // stockMap.value = {} // 可选：清空库存重新填写
+}, { deep: true })
 </script>
 
 <style scoped>

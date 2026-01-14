@@ -24,7 +24,7 @@ public class SkuController {
     private final SkuService skuService;
 
     @Operation(summary = "创建SKU")
-    @SaCheckRole(UserRoleConstant.ADMIN_DESC)
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
     @PostMapping("/v1/sku")
     public Result<Void> createSku(@RequestBody SkuCreateReqDTO requestParam){
         skuService.createSku(requestParam);

@@ -29,7 +29,7 @@ export interface SkuItemDTO {
   image: string;
 
   /** 销售属性键值对 */
-  saleAttrs: Record<string, string>;
+  attrValues: Record<string, string>;
 }
 
 /**

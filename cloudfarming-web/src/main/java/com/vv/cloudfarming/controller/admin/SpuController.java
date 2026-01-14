@@ -34,9 +34,9 @@ public class SpuController {
     @Operation(summary = "创建或修改SPU")
     @SaCheckRole(UserRoleConstant.FARMER_DESC)
     @PostMapping("/v1/spu/save-or-update")
-    public Result<Void> saveOrUpdateSpu(@Validated @RequestBody SpuCreateOrUpdateReqDTO requestParam) {
-        spuService.saveSpu(requestParam);
-        return Results.success();
+    public Result<Long> saveOrUpdateSpu(@Validated @RequestBody SpuCreateOrUpdateReqDTO requestParam) {
+        Long spuId = spuService.saveSpu(requestParam);
+        return Results.success(spuId);
     }
 
     @Operation(summary = "根据id删除SPU")
