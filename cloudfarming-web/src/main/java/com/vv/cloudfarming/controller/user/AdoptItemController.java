@@ -1,13 +1,15 @@
 package com.vv.cloudfarming.controller.user;
 
-import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.constant.UserRoleConstant;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemCreateReqDTO;
+import com.vv.cloudfarming.shop.dto.req.AdoptItemPageReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemUpdateReqDTO;
+import com.vv.cloudfarming.shop.dto.resp.AdoptItemRespDTO;
 import com.vv.cloudfarming.shop.service.AdoptItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -96,5 +98,46 @@ public class AdoptItemController {
         Long userId = StpUtil.getLoginIdAsLong();
         adoptItemService.deleteAdoptItem(userId, adoptItemId);
         return Results.success();
+    }
+
+    /**
+     * 查询单个认养项目详情
+     *
+     * @param adoptItemId 认养项目ID
+     * @return 认养项目详情
+     */
+    @Operation(summary = "查询单个认养项目详情")
+    @GetMapping("/v1/adopt-item/{adoptItemId}")
+    public Result<AdoptItemRespDTO> getAdoptItemDetail(@PathVariable Long adoptItemId) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        return Results.success(adoptItemService.getAdoptItemDetail(userId, adoptItemId));
+    }
+
+    /**
+     * 分页查询认养项目
+     *
+     * @param reqDTO 分页查询请求DTO
+     * @return 分页查询结果
+     */
+    @Operation(summary = "分页查询认养项目")
+    @PostMapping("/v1/adopt-item/page")
+    public Result<IPage<AdoptItemRespDTO>> pageAdoptItems(@RequestBody AdoptItemPageReqDTO reqDTO) {
+        return Results.success(adoptItemService.pageAdoptItems(reqDTO));
+    }
+
+    /**
+     * 查询我的发布（分页）
+     *
+     * @param reqDTO 分页查询请求DTO
+     * @return 分页查询结果
+     */
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @Operation(summary = "查询我的发布")
+    @PostMapping("/v1/adopt-item/my/page")
+    public Result<IPage<AdoptItemRespDTO>> pageMyAdoptItems(@RequestBody AdoptItemPageReqDTO reqDTO) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        // 设置用户ID，查询我的发布
+        reqDTO.setUserId(userId);
+        return Results.success(adoptItemService.pageAdoptItems(reqDTO));
     }
 }

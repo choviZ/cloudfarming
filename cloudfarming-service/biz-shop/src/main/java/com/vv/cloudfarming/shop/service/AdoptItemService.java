@@ -1,9 +1,12 @@
 package com.vv.cloudfarming.shop.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.vv.cloudfarming.shop.dao.entity.AdoptItemDO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemCreateReqDTO;
+import com.vv.cloudfarming.shop.dto.req.AdoptItemPageReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemUpdateReqDTO;
+import com.vv.cloudfarming.shop.dto.resp.AdoptItemRespDTO;
 
 /**
  * 认养项目服务接口
@@ -43,4 +46,21 @@ public interface AdoptItemService extends IService<AdoptItemDO> {
      * @param adoptItemId 认养项目ID
      */
     void deleteAdoptItem(Long userId, Long adoptItemId);
+
+    /**
+     * 查询单个认养项目详情
+     * 
+     * @param userId 当前登录用户ID
+     * @param adoptItemId 认养项目ID
+     * @return 认养项目详情DTO
+     */
+    AdoptItemRespDTO getAdoptItemDetail(Long userId, Long adoptItemId);
+
+    /**
+     * 分页查询认养项目
+     * 
+     * @param reqDTO 分页查询请求DTO
+     * @return 分页查询结果
+     */
+    IPage<AdoptItemRespDTO> pageAdoptItems(AdoptItemPageReqDTO reqDTO);
 }
