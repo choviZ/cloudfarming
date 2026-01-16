@@ -120,6 +120,16 @@
           <!-- 操作 -->
           <template v-else-if="column.key === 'action'">
             <a-space>
+              <!-- 审核通过：可编辑 -->
+              <a-button 
+                v-if="record.reviewStatus === 1" 
+                type="link" 
+                size="small"
+                @click="handleEdit(record)"
+              >
+                编辑
+              </a-button>
+
               <!-- 审核通过且已下架：可上架 -->
               <a-popconfirm
                 v-if="record.reviewStatus === 1 && record.status === 0"
@@ -170,9 +180,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { message } from 'ant-design-vue'
-import { InfoCircleOutlined } from '@ant-design/icons-vue'
+import { ref, reactive, onMounted, createVNode } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import { InfoCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { useRouter } from 'vue-router'
 import { 
   pageMyAdoptItems, 
@@ -372,9 +382,25 @@ const handleDelete = async (record: AdoptItemResp) => {
 
 // 编辑
 const handleEdit = (record: AdoptItemResp) => {
-  // TODO: 需要实现编辑页面，并支持传参（例如通过 query 传递 id）
+  // 如果是已上架状态，需要确认
+  if (record.status === 1) {
+    Modal.confirm({
+      title: '提示',
+      icon: createVNode(ExclamationCircleOutlined),
+      content: '该项目当前处于上架状态。修改信息后项目将自动下架并重新进入审核流程，是否继续？',
+      onOk() {
+        router.push({ 
+          path: '/farmer/adopt/create',
+          query: { id: record.id } 
+        })
+      }
+    })
+    return
+  }
+
+  // 其他状态直接跳转
   router.push({ 
-    name: 'createAdopt', // 复用创建页面或新建编辑页面，这里假设复用
+    path: '/farmer/adopt/create',
     query: { id: record.id } 
   })
 }

@@ -1,136 +1,145 @@
 <template>
   <div class="create-adopt-container">
     <div class="page-header">
-      <h2 class="page-title">发布认养项目</h2>
-      <span class="page-desc">填写认养项目信息，提交后将进入审核流程</span>
+      <h2 class="page-title">{{ isEdit ? '编辑认养项目' : '发布认养项目' }}</h2>
+      <span class="page-desc">{{ isEdit ? '修改认养项目信息，修改后需要重新审核' : '填写认养项目信息，提交后将进入审核流程' }}</span>
     </div>
 
-    <a-form
-      ref="formRef"
-      :model="formState"
-      :rules="rules"
-      layout="vertical"
-      @finish="onSubmit"
-      class="adopt-form"
-    >
-      <!-- 基本信息 -->
-      <div class="form-section">
-        <h3 class="section-title">基本信息</h3>
-        <a-row :gutter="24">
-          <a-col :span="16">
-            <a-form-item label="认养标题" name="title">
-              <a-input 
-                v-model:value="formState.title" 
-                placeholder="请输入认养标题（如：生态黑猪认养）" 
-                :maxlength="100" 
-                show-count 
-                size="large"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :span="8">
-            <a-form-item label="动物分类" name="animalCategory">
-              <a-select 
-                v-model:value="formState.animalCategory" 
-                placeholder="请选择动物分类"
-                :loading="loadingCategories"
-                size="large"
-              >
-                <a-select-option 
-                  v-for="cat in categories" 
-                  :key="cat.code" 
-                  :value="cat.code"
+    <a-spin :spinning="loadingDetail">
+      <a-form
+        ref="formRef"
+        :model="formState"
+        :rules="rules"
+        layout="vertical"
+        @finish="onSubmit"
+        class="adopt-form"
+      >
+        <!-- 基本信息 -->
+        <div class="form-section">
+          <h3 class="section-title">基本信息</h3>
+          <a-row :gutter="24">
+            <a-col :span="16">
+              <a-form-item label="认养标题" name="title">
+                <a-input 
+                  v-model:value="formState.title" 
+                  placeholder="请输入认养标题（如：生态黑猪认养）" 
+                  :maxlength="100" 
+                  show-count 
+                  size="large"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item label="动物分类" name="animalCategory">
+                <a-select 
+                  v-model:value="formState.animalCategory" 
+                  placeholder="请选择动物分类"
+                  :loading="loadingCategories"
+                  size="large"
                 >
-                  {{ cat.name }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-        </a-row>
+                  <a-select-option 
+                    v-for="cat in categories" 
+                    :key="cat.code" 
+                    :value="cat.code"
+                  >
+                    {{ cat.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
 
-        <a-form-item label="封面图片" name="coverImage">
-          <div class="upload-placeholder">
-            <div class="upload-icon">📷</div>
-            <div class="upload-text">点击上传封面图片</div>
-            <div class="upload-hint">支持 JPG, PNG 格式，大小不超过 5MB (TODO)</div>
-            <a-input v-model:value="formState.coverImage" style="margin-top: 10px; display: none;" />
-          </div>
-        </a-form-item>
-      </div>
+          <a-form-item label="封面图片" name="coverImage">
+            <div class="upload-placeholder">
+              <div class="upload-icon">📷</div>
+              <div class="upload-text">点击上传封面图片</div>
+              <div class="upload-hint">支持 JPG, PNG 格式，大小不超过 5MB (TODO)</div>
+              <a-input v-model:value="formState.coverImage" style="margin-top: 10px; display: none;" />
+            </div>
+          </a-form-item>
+        </div>
 
-      <!-- 认养规则 -->
-      <div class="form-section">
-        <h3 class="section-title">认养规则与收益</h3>
-        <a-row :gutter="24">
-          <a-col :span="8">
-            <a-form-item label="认养周期 (天)" name="adoptDays">
-              <a-input-number 
-                v-model:value="formState.adoptDays" 
-                :min="1" 
-                :precision="0" 
-                style="width: 100%" 
-                placeholder="请输入天数" 
-                size="large"
-                addon-after="天"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :span="8">
-            <a-form-item label="认养价格 (元)" name="price">
-              <a-input-number 
-                v-model:value="formState.price" 
-                :min="0.01" 
-                :precision="2" 
-                style="width: 100%" 
-                placeholder="请输入价格" 
-                size="large"
-                prefix="¥"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :span="8">
-            <a-form-item label="预计收益" name="expectedYield">
-              <a-input 
-                v-model:value="formState.expectedYield" 
-                placeholder="例如：10kg肉" 
-                size="large"
-              />
-            </a-form-item>
-          </a-col>
-        </a-row>
+        <!-- 认养规则 -->
+        <div class="form-section">
+          <h3 class="section-title">认养规则与收益</h3>
+          <a-row :gutter="24">
+            <a-col :span="8">
+              <a-form-item label="认养周期 (天)" name="adoptDays">
+                <a-input-number 
+                  v-model:value="formState.adoptDays" 
+                  :min="1" 
+                  :precision="0" 
+                  style="width: 100%" 
+                  placeholder="请输入天数" 
+                  size="large"
+                  addon-after="天"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item label="认养价格 (元)" name="price">
+                <a-input-number 
+                  v-model:value="formState.price" 
+                  :min="0.01" 
+                  :precision="2" 
+                  style="width: 100%" 
+                  placeholder="请输入价格" 
+                  size="large"
+                  prefix="¥"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item label="预计收益" name="expectedYield">
+                <a-input 
+                  v-model:value="formState.expectedYield" 
+                  placeholder="例如：10kg肉" 
+                  size="large"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
 
-        <a-form-item label="认养说明" name="description">
-          <a-textarea 
-            v-model:value="formState.description" 
-            placeholder="请详细描述认养项目的环境、喂养方式、成长过程等信息..." 
-            :rows="8" 
-            show-count 
-            :minlength="20" 
-          />
-        </a-form-item>
-      </div>
+          <a-form-item label="认养说明" name="description">
+            <a-textarea 
+              v-model:value="formState.description" 
+              placeholder="请详细描述认养项目的环境、喂养方式、成长过程等信息..." 
+              :rows="8" 
+              show-count 
+              :minlength="20" 
+            />
+          </a-form-item>
+        </div>
 
-      <!-- 提交按钮 -->
-      <div class="form-actions">
-        <a-button type="primary" html-type="submit" :loading="loading" size="large" class="submit-btn">
-          立即发布
-        </a-button>
-        <a-button size="large" style="margin-left: 12px">取消</a-button>
-      </div>
-    </a-form>
+        <!-- 提交按钮 -->
+        <div class="form-actions">
+          <a-button type="primary" html-type="submit" :loading="loading" size="large" class="submit-btn">
+            {{ isEdit ? '保存修改' : '立即发布' }}
+          </a-button>
+          <a-button size="large" style="margin-left: 12px" @click="router.back()">取消</a-button>
+        </div>
+      </a-form>
+    </a-spin>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { createAdoptItem, listAnimalCategories } from '@cloudfarming/core'
+import { createAdoptItem, listAnimalCategories, getAdoptItemDetail, updateAdoptItem } from '@cloudfarming/core'
 import type { AdoptItemCreateReq, AnimalCategoryResp } from '@cloudfarming/core'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+const isEdit = computed(() => !!route.query.id)
+const adoptId = computed(() => route.query.id as string)
 
 // 状态管理
 const loading = ref(false)
 const loadingCategories = ref(false)
+const loadingDetail = ref(false)
 const categories = ref<AnimalCategoryResp[]>([])
 const formRef = ref<FormInstance>()
 
@@ -186,19 +195,66 @@ const fetchCategories = async () => {
   }
 }
 
+// 获取详情
+const fetchDetail = async () => {
+  if (!adoptId.value) return
+  
+  loadingDetail.value = true
+  try {
+    const res = await getAdoptItemDetail(adoptId.value)
+    if (res.code === '0' && res.data) {
+      // 回显数据
+      Object.assign(formState, {
+        title: res.data.title,
+        animalCategory: res.data.animalCategory,
+        coverImage: res.data.coverImage,
+        adoptDays: res.data.adoptDays,
+        price: res.data.price,
+        expectedYield: res.data.expectedYield,
+        description: res.data.description,
+      })
+    } else {
+      message.error(res.message || '获取项目详情失败')
+      router.back()
+    }
+  } catch (error) {
+    console.error('获取详情异常:', error)
+    message.error('获取详情异常')
+    router.back()
+  } finally {
+    loadingDetail.value = false
+  }
+}
+
 // 提交表单
 const onSubmit = async (values: AdoptItemCreateReq) => {
   loading.value = true
   try {
-    // 调用核心模块API
-    const res = await createAdoptItem(values)
+    let res
+    if (isEdit.value) {
+      // 编辑模式
+      res = await updateAdoptItem({
+        id: adoptId.value,
+        ...values
+      })
+    } else {
+      // 创建模式
+      res = await createAdoptItem(values)
+    }
     
     if (res.code === '0') {
-      message.success('提交成功，等待审核')
-      // 提交成功后重置表单，保留部分默认值
-      formRef.value?.resetFields()
+      message.success(isEdit.value ? '修改成功，已重新提交审核' : '提交成功，等待审核')
+      // 成功后返回列表页
+      if (isEdit.value) {
+        router.push('/farmer/adopt/my')
+      } else {
+        // 创建成功后重置表单
+        formRef.value?.resetFields()
+        // 或者也可以跳转到列表页
+        router.push('/farmer/adopt/my')
+      }
     } else {
-      message.error(res.message || '提交失败')
+      message.error(res.message || (isEdit.value ? '修改失败' : '提交失败'))
     }
   } catch (error) {
     console.error('提交异常:', error)
@@ -209,8 +265,11 @@ const onSubmit = async (values: AdoptItemCreateReq) => {
 }
 
 // 初始化
-onMounted(() => {
-  fetchCategories()
+onMounted(async () => {
+  await fetchCategories()
+  if (isEdit.value) {
+    fetchDetail()
+  }
 })
 </script>
 
