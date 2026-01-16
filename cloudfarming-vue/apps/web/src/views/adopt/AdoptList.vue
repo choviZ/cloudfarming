@@ -156,7 +156,7 @@ const handleSizeChange = (current: number, size: number) => {
 };
 
 const goToDetail = (id: string) => {
-  message.info('详情页开发中');
+  router.push(`/adopt/detail/${id}`);
 };
 
 onMounted(() => {

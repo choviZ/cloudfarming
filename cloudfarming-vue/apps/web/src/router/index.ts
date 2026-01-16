@@ -23,6 +23,11 @@ const router = createRouter({
           component: () => import('../views/adopt/AdoptList.vue')
         },
         {
+          path: 'adopt/detail/:id',
+          name: 'adoptDetail',
+          component: () => import('../views/adopt/AdoptDetail.vue')
+        },
+        {
           path: '/product/:id',
           name: 'productDetail',
           component: () => import('../views/ProductDetailView.vue')

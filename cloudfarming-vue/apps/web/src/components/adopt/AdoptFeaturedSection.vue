@@ -78,9 +78,7 @@ const goToAdoptList = () => {
 };
 
 const goToDetail = (id: string) => {
-  // TODO: 跳转到认养详情页，暂时未实现详情页，先去列表页
-  // router.push(`/adopt/${id}`);
-  message.info('详情页开发中');
+  router.push(`/adopt/detail/${id}`);
 };
 
 const getStatusText = (status: number) => {
