@@ -51,11 +51,6 @@ public class ReceiveAddressUpdateReqDTO implements Serializable {
     private String districtName;
 
     /**
-     * 乡镇/街道名称
-     */
-    private String townName;
-
-    /**
      * 详细地址
      */
     @NotBlank(message = "详细地址不能为空")

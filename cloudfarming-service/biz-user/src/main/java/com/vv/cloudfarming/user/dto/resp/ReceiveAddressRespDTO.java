@@ -47,11 +47,6 @@ public class ReceiveAddressRespDTO implements Serializable {
     private String districtName;
 
     /**
-     * 乡镇/街道名称
-     */
-    private String townName;
-
-    /**
      * 详细地址（如XX小区XX栋XX单元XX室）
      */
     private String detailAddress;
@@ -65,14 +60,4 @@ public class ReceiveAddressRespDTO implements Serializable {
      * 地址备注（如"公司地址""家里地址"）
      */
     private String remark;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 }

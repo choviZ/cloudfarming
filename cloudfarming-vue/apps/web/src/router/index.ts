@@ -28,6 +28,11 @@ const router = createRouter({
           component: () => import('../views/adopt/AdoptDetail.vue')
         },
         {
+          path: 'adopt/order/create/:id',
+          name: 'adoptOrderCreate',
+          component: () => import('../views/adopt/AdoptOrderCreate.vue')
+        },
+        {
           path: '/product/:id',
           name: 'productDetail',
           component: () => import('../views/ProductDetailView.vue')
@@ -47,7 +52,7 @@ const router = createRouter({
     // 用户相关路由组
     {
       path: '/user',
-      name: 'user',
+      name: 'userState',
       children: [
         {
           path: 'login',
@@ -58,6 +63,18 @@ const router = createRouter({
           path: 'register',
           name: 'register',
           component: Login
+        },
+      ]
+    },
+    {
+      path: '/user/info',
+      name: 'userInfo',
+      component: BasicLayout,
+      children: [
+        {
+          path: 'address',
+          name: 'userAddress',
+          component: () => import('../views/user/address/AddressList.vue')
         }
       ]
     },
