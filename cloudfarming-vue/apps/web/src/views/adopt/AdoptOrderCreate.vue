@@ -139,7 +139,6 @@ const handleSubmit = async () => {
 
   submitting.value = true;
   try {
-    // TODO: 目前API只定义了 adoptItemId，后续可能需要传入 addressId
     const res = await createAdoptOrder({
       adoptItemId: detail.value.id,
       receiveId: selectedAddressId.value
@@ -147,8 +146,14 @@ const handleSubmit = async () => {
 
     if (res.code === '0' && res.data) {
       message.success('订单创建成功！即将跳转支付...');
-      // TODO: 跳转到支付页面，携带 orderId
-      // router.push(`/pay?orderId=${res.data.id}`);
+      // 跳转到支付页面，携带 orderId 和 amount
+      router.push({
+        path: '/pay',
+        query: {
+          orderId: res.data.id,
+          amount: res.data.price
+        }
+      });
       console.log('Order created:', res.data);
     } else {
       message.error(res.message || '创建订单失败');
