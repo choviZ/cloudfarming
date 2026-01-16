@@ -12,6 +12,9 @@
       </a-carousel>
     </div>
 
+    <!-- 认养精选区域 -->
+    <AdoptFeaturedSection />
+
     <!-- 下部商品展示区域 -->
     <div class="product-section">
       <!-- 商品类型标签查询 -->
@@ -99,6 +102,7 @@ import { getProductList } from '@/api/product';
 import type { ProductPageQueryReqDTO, ProductRespDTO } from '@/types/product';
 import type { IPage } from '@/types/common';
 import { message } from 'ant-design-vue';
+import AdoptFeaturedSection from '@/components/adopt/AdoptFeaturedSection.vue';
 
 // 路由实例
 const router = useRouter();
