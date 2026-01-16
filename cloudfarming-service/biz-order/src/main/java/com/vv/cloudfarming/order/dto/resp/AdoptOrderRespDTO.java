@@ -1,4 +1,4 @@
-package com.vv.cloudfarming.shop.dto.resp;
+package com.vv.cloudfarming.order.dto.resp;
 
 import lombok.Data;
 
@@ -55,4 +55,9 @@ public class AdoptOrderRespDTO {
      * 更新时间
      */
     private Date updateTime;
+
+    /**
+     * 关联的收获地址id
+     */
+    private Long receiveId;
 }

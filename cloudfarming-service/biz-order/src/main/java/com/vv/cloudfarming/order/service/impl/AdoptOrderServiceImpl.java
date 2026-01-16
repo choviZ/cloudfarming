@@ -1,18 +1,18 @@
-package com.vv.cloudfarming.shop.service.impl;
+package com.vv.cloudfarming.order.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
+import com.vv.cloudfarming.order.dao.entity.AdoptOrderDO;
+import com.vv.cloudfarming.order.dto.req.AdoptOrderCreateReqDTO;
+import com.vv.cloudfarming.order.dto.resp.AdoptOrderRespDTO;
+import com.vv.cloudfarming.order.service.AdoptOrderService;
 import com.vv.cloudfarming.shop.dao.entity.AdoptItemDO;
-import com.vv.cloudfarming.shop.dao.entity.AdoptOrderDO;
 import com.vv.cloudfarming.shop.dao.mapper.AdoptItemMapper;
-import com.vv.cloudfarming.shop.dao.mapper.AdoptOrderMapper;
-import com.vv.cloudfarming.shop.dto.req.AdoptOrderCreateReqDTO;
-import com.vv.cloudfarming.shop.dto.resp.AdoptOrderRespDTO;
+import com.vv.cloudfarming.order.dao.mapper.AdoptOrderMapper;
 import com.vv.cloudfarming.shop.enums.AdoptOrderStatusEnum;
-import com.vv.cloudfarming.shop.service.AdoptOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,22 +44,18 @@ public class AdoptOrderServiceImpl extends ServiceImpl<AdoptOrderMapper, AdoptOr
         if (adoptItem == null) {
             throw new ClientException("认养项目不存在");
         }
-
         // 2. 校验认养项目审核状态
         if (!REVIEW_STATUS_APPROVED.equals(adoptItem.getReviewStatus())) {
             throw new ClientException("认养项目未审核通过，无法领养");
         }
-
         // 3. 校验认养项目上架状态
         if (!STATUS_ON_SHELF.equals(adoptItem.getStatus())) {
             throw new ClientException("认养项目未上架，无法领养");
         }
-
         // 4. 禁止用户领养自己发布的认养项目
         if (adoptItem.getUserId().equals(userId)) {
             throw new ClientException("不能领养自己发布的认养项目");
         }
-
         // 5. 校验同一用户是否已领养过该认养项目
         LambdaQueryWrapper<AdoptOrderDO> existQueryWrapper = new LambdaQueryWrapper<>();
         existQueryWrapper.eq(AdoptOrderDO::getBuyerId, userId);
@@ -82,15 +78,16 @@ public class AdoptOrderServiceImpl extends ServiceImpl<AdoptOrderMapper, AdoptOr
         calendar.setTime(adoptOrder.getStartDate());
         calendar.add(Calendar.DAY_OF_MONTH, adoptItem.getAdoptDays());
         adoptOrder.setEndDate(calendar.getTime());
-
-        adoptOrder.setStatus(AdoptOrderStatusEnum.IN_PROGRESS.getCode()); // 初始状态为认养中
-
+        adoptOrder.setOrderStatus(AdoptOrderStatusEnum.IN_PROGRESS.getCode()); // 初始状态为认养中
+        adoptOrder.setReceiveId(reqDTO.getReceiveId());
+        adoptOrder.setPayStatus(0); // 待支付
         // 7. 保存订单到数据库
         int inserted = adoptOrderMapper.insert(adoptOrder);
         if (inserted < 0) {
             throw new ServiceException("创建认养订单失败");
         }
-        // 8. 转换为响应DTO并返回
+        // TODO 发送消息
+        // 9. 转换为响应DTO并返回
         return BeanUtil.toBean(adoptOrder, AdoptOrderRespDTO.class);
     }
 }

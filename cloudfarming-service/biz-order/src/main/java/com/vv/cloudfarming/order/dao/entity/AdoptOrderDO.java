@@ -1,4 +1,4 @@
-package com.vv.cloudfarming.shop.dao.entity;
+package com.vv.cloudfarming.order.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -50,7 +50,22 @@ public class AdoptOrderDO extends BaseDO {
     private Date endDate;
 
     /**
+     * 支付状态
+     */
+    private Integer payStatus;
+
+    /**
+     * 支付时间
+     */
+    private Date payTime;
+
+    /**
      * 认养状态：1=认养中 2=已完成 3=已取消
      */
-    private Integer status;
+    private Integer orderStatus;
+
+    /**
+     * 关联的收获地址id
+     */
+    private Long receiveId;
 }

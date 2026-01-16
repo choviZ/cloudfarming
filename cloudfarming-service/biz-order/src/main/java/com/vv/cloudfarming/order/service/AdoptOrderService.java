@@ -1,9 +1,9 @@
-package com.vv.cloudfarming.shop.service;
+package com.vv.cloudfarming.order.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.vv.cloudfarming.shop.dao.entity.AdoptOrderDO;
-import com.vv.cloudfarming.shop.dto.req.AdoptOrderCreateReqDTO;
-import com.vv.cloudfarming.shop.dto.resp.AdoptOrderRespDTO;
+import com.vv.cloudfarming.order.dao.entity.AdoptOrderDO;
+import com.vv.cloudfarming.order.dto.req.AdoptOrderCreateReqDTO;
+import com.vv.cloudfarming.order.dto.resp.AdoptOrderRespDTO;
 
 /**
  * 认养订单服务接口

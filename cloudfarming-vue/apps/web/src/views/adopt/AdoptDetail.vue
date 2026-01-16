@@ -155,7 +155,9 @@ const formatDate = (dateStr: string) => {
 };
 
 const handleBuy = () => {
-  message.success('正在创建订单...（功能待开发）');
+  if (detail.value) {
+    router.push(`/adopt/order/create/${detail.value.id}`);
+  }
 };
 
 const handleChat = () => {

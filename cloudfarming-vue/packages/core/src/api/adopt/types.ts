@@ -90,6 +90,8 @@ export interface AdoptItemUpdateReq {
 export interface AdoptOrderCreateReq {
     /** 认养项目ID */
     adoptItemId: string
+    /** 收货地址ID */
+    receiveId: string
 }
 
 /**
@@ -136,6 +138,9 @@ export interface AdoptOrderResp {
 
     /** 认养状态：1=认养中 2=已完成 3=已取消 */
     status: number
+
+    /** 收货地址ID */
+    receiveId: string
 
     /** 创建时间 */
     createTime: string
