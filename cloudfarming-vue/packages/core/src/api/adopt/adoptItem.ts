@@ -5,8 +5,8 @@ import type {
     AdoptItemPageReq,
     AdoptItemResp
 } from './types'
-import type { Result } from '../../types/common'
-import type { IPage } from '../../types/common'
+import type { Result } from '../common'
+import type { IPage } from '../common'
 
 /**
  * 创建认养项目

@@ -3,7 +3,7 @@ import type {
     AdoptOrderCreateReq,
     AdoptOrderResp
 } from './types'
-import type { Result } from '../../types/common'
+import type { Result } from '../common'
 
 
 /**

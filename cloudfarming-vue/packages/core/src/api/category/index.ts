@@ -1,10 +1,11 @@
+// 请求方法
 import request from '../request.ts'
-import type { Result } from '../../types/common'
+import type { Result } from '../common'
 import type {
   CategoryRespDTO,
   CategoryCreateReqDTO,
   CategoryUpdateReqDTO
-} from '../../types/category'
+} from './types'
 
 /**
  * 创建商品分类
@@ -54,3 +55,6 @@ export const getTopLevelCategories = (): Promise<Result<CategoryRespDTO[]>> => {
 export const getChildrenByParentId = (parentId: string): Promise<Result<CategoryRespDTO[]>> => {
   return request.get('/v1/category/children', { params: { parentId } })
 }
+
+// 导出类型
+export * from './types'

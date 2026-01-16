@@ -1,12 +1,13 @@
+// 请求方法
 import request from '../request.ts'
-import type { Result, IPage } from '../../types/common'
+import type { Result, IPage } from '../common'
 import type { 
   UserRegisterReqDTO, 
   UserRespDTO, 
   UserCreateReqDTO, 
   UserUpdateReqDTO, 
   UserPageQueryReqDTO 
-} from '../../types/user'
+} from './types'
 
 // 用户注册
 export const userRegister = (data: UserRegisterReqDTO): Promise<Result<boolean>> => {
@@ -52,3 +53,6 @@ export const deleteUser = (id: string): Promise<Result<boolean>> => {
 export const getUserPage = (data: UserPageQueryReqDTO): Promise<Result<IPage<UserRespDTO>>> => {
   return request.post('/admin/v1/user/page', data)
 }
+
+// 导出类型
+export * from './types'

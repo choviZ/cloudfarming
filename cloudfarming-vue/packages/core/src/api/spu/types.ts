@@ -133,4 +133,3 @@ export interface SpuPageQueryReqDTO {
   /** 商品状态：0-下架，1-上架，2-待审核 */
   status?: number;
 }
-

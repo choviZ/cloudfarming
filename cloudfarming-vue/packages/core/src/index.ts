@@ -1,9 +1,4 @@
-export * from './types/user'
-export * from './types/category'
-export * from './types/spu'
-export * from './types/sku'
-export * from './types/attribute'
-export * from './types/common'
+
 export * from './api/user'
 export * from './api/category'
 export * from './api/spu'

@@ -1,5 +1,6 @@
+// 请求方法
 import request from '../request.ts'
-import type { Result } from '../../types/common'
+import type { Result, IPage } from '../common'
 import type {
   SpuRespDTO,
   SpuCreateOrUpdateReqDTO,
@@ -7,8 +8,7 @@ import type {
   SpuAttrValueCreateReqDTO,
   SpuAttrValueUpdateReqDTO,
   SpuAttrValueRespDTO
-} from '../../types/spu'
-import type { IPage } from '../../types/common'
+} from './types'
 
 /**
  * 创建或修改SPU
@@ -112,3 +112,6 @@ export const getSpuAttrValueBySpuIdAndAttrId = (
 ): Promise<Result<SpuAttrValueRespDTO>> => {
   return request.get('/v1/spu/attr/id', { params: { spuId, attrId } })
 }
+
+// 导出类型
+export * from './types'
