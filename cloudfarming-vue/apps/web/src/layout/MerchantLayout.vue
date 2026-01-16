@@ -30,12 +30,16 @@
         </a-menu-item>
         <a-sub-menu key="4">
           <template #title>
-            <appstore-outlined />
+            <project-outlined />
             <span>认养项目</span>
           </template>
           <a-menu-item key="4-1" @click="router.push('/farmer/adopt/create')">
             <plus-outlined />
-            <span>创建认养项目</span>
+            <span>发布认养</span>
+          </a-menu-item>
+          <a-menu-item key="4-2" @click="router.push('/farmer/adopt/my')">
+            <ordered-list-outlined />
+            <span>我的发布</span>
           </a-menu-item>
         </a-sub-menu>
         <a-menu-item key="5">
@@ -54,12 +58,12 @@
         </a-flex>
       </a-layout-header>
       <!-- 中间内容区域 -->
-      <a-layout-content style="margin: 0 16px">
+      <a-layout-content style="margin: 0 16px; display: flex; flex-direction: column;">
         <a-breadcrumb style="margin: 16px 0">
           <a-breadcrumb-item>农户端</a-breadcrumb-item>
           <a-breadcrumb-item>后台管理</a-breadcrumb-item>
         </a-breadcrumb>
-        <div :style="{ padding: '24px', background: '#fff', minHeight: '360px' }">
+        <div :style="{ flex: 1, minHeight: '360px' }">
           <router-view />
         </div>
       </a-layout-content>
@@ -80,7 +84,9 @@ import {
   TransactionOutlined,
   BarChartOutlined,
   RollbackOutlined,
-  PlusOutlined
+  PlusOutlined,
+  ProjectOutlined,
+  OrderedListOutlined
 } from '@ant-design/icons-vue'
 import { h } from 'vue'
 import { useRouter } from 'vue-router'

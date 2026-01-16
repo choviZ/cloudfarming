@@ -218,6 +218,9 @@ onMounted(() => {
 .create-adopt-container {
   max-width: 1000px;
   margin: 0 auto;
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
 }
 
 .page-header {

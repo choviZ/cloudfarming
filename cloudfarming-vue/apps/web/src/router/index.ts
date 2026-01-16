@@ -72,6 +72,11 @@ const router = createRouter({
           path: 'adopt/create',
           name: 'createAdopt',
           component: () => import('../views/farmer/adopt/CreateAdopt.vue')
+        },
+        {
+          path: 'adopt/my',
+          name: 'myAdopts',
+          component: () => import('../views/farmer/adopt/MyAdopts.vue')
         }
       ]
     }

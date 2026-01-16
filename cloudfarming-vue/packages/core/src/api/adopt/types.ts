@@ -106,6 +106,8 @@ export interface AdoptItemResp {
     description: string
     coverImage: string
     reviewStatus: number
+    /** 审核拒绝原因 */
+    reviewText?: string
     status: number
     createTime: string
 }
