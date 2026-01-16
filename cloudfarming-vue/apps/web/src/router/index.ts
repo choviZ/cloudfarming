@@ -67,6 +67,11 @@ const router = createRouter({
           path: 'spu/create',
           name: 'createSpu',
           component: () => import('../views/farmer/admin/Index.vue')
+        },
+        {
+          path: 'adopt/create',
+          name: 'createAdopt',
+          component: () => import('../views/farmer/adopt/CreateAdopt.vue')
         }
       ]
     }

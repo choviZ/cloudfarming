@@ -13,6 +13,10 @@
     "./types/*": {
       "types": "./src/types/*.ts",
       "import": "./src/types/*.ts"
+    },
+    "./api/*": {
+      "types": "./src/api/*.ts",
+      "import": "./src/api/*.ts"
     }
   },
   "files": [

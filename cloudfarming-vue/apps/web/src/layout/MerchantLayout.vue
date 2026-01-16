@@ -28,10 +28,16 @@
           <transaction-outlined />
           <span>查看交易订单</span>
         </a-menu-item>
-        <a-menu-item key="4">
-          <project-outlined />
-          <span>认养项目</span>
-        </a-menu-item>
+        <a-sub-menu key="4">
+          <template #title>
+            <appstore-outlined />
+            <span>认养项目</span>
+          </template>
+          <a-menu-item key="4-1" @click="router.push('/farmer/adopt/create')">
+            <plus-outlined />
+            <span>创建认养项目</span>
+          </a-menu-item>
+        </a-sub-menu>
         <a-menu-item key="5">
           <bar-chart-outlined />
           <span>数据统计分析</span>
@@ -72,7 +78,6 @@ import {
   ShopOutlined,
   AppstoreOutlined,
   TransactionOutlined,
-  ProjectOutlined,
   BarChartOutlined,
   RollbackOutlined,
   PlusOutlined
