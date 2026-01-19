@@ -1,6 +1,7 @@
 package com.vv.cloudfarming.shop.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -22,14 +23,17 @@ import com.vv.cloudfarming.shop.dto.req.SpuPageQueryReqDTO;
 import com.vv.cloudfarming.shop.dto.resp.CategoryRespDTO;
 import com.vv.cloudfarming.shop.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.shop.dto.resp.SpuRespDTO;
+import com.vv.cloudfarming.shop.dto.resp.SpuDetailRespDTO;
 import com.vv.cloudfarming.shop.service.AttributeService;
 import com.vv.cloudfarming.shop.service.CategoryService;
+import com.vv.cloudfarming.shop.service.SkuService;
 import com.vv.cloudfarming.shop.service.SpuService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -43,6 +47,7 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
     private final CategoryService categoryService;
     private final SpuAttrValueMapper spuAttrValueMapper;
     private final AttributeService attributeService;
+    private final SkuService skuService;
 
     @Override
     public Long saveSpu(SpuCreateOrUpdateReqDTO requestParam) {
@@ -86,6 +91,45 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         SpuRespDTO spuRespDTO = BeanUtil.toBean(spuDO, SpuRespDTO.class);
         spuRespDTO.setAttributes(getSpuAttributes(id));
         return spuRespDTO;
+    }
+
+    @Override
+    public SpuDetailRespDTO getSpuDetail(Long id) {
+        if (id == null || id <= 0) {
+            throw new ClientException("id不合法");
+        }
+        SpuDO spuDO = this.getById(id);
+        if (spuDO == null) {
+            return null;
+        }
+        SpuDetailRespDTO result = BeanUtil.toBean(spuDO, SpuDetailRespDTO.class);
+
+        // 1. 获取基础属性
+        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
+                .eq(SpuAttrValueDO::getSpuId, id);
+        List<SpuAttrValueDO> attrValues = spuAttrValueMapper.selectList(wrapper);
+
+        if (CollUtil.isNotEmpty(attrValues)) {
+            List<Long> attrIds = attrValues.stream().map(SpuAttrValueDO::getAttrId).collect(Collectors.toList());
+            if (CollUtil.isNotEmpty(attrIds)) {
+                Map<Long, String> attrNameMap = attributeService.listByIds(attrIds).stream()
+                        .collect(Collectors.toMap(AttributeDO::getId, AttributeDO::getName));
+
+                Map<String, String> baseAttrs = new HashMap<>();
+                for (SpuAttrValueDO av : attrValues) {
+                    String name = attrNameMap.get(av.getAttrId());
+                    if (name != null) {
+                        baseAttrs.put(name, av.getAttrValue());
+                    }
+                }
+                result.setBaseAttrs(baseAttrs);
+            }
+        }
+
+        // 2. 获取 SKU 列表
+        result.setSkuList(skuService.getSkusBySpuId(id));
+
+        return result;
     }
 
     @Override

@@ -10,6 +10,7 @@ import com.vv.cloudfarming.shop.dto.req.SpuAttrValueUpdateReqDTO;
 import com.vv.cloudfarming.shop.dto.req.SpuCreateOrUpdateReqDTO;
 import com.vv.cloudfarming.shop.dto.req.SpuPageQueryReqDTO;
 import com.vv.cloudfarming.shop.dto.resp.SpuAttrValueRespDTO;
+import com.vv.cloudfarming.shop.dto.resp.SpuDetailRespDTO;
 import com.vv.cloudfarming.shop.dto.resp.SpuRespDTO;
 import com.vv.cloudfarming.shop.service.SpuService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,8 +50,8 @@ public class SpuController {
 
     @Operation(summary = "根据id获取单个SPU详情")
     @GetMapping("/v1/spu/{id}")
-    public Result<SpuRespDTO> getSpuById(@PathVariable("id") Long id) {
-        SpuRespDTO spu = spuService.getSpuById(id);
+    public Result<SpuDetailRespDTO> getSpuById(@PathVariable("id") Long id) {
+        SpuDetailRespDTO spu = spuService.getSpuDetail(id);
         return Results.success(spu);
     }
 

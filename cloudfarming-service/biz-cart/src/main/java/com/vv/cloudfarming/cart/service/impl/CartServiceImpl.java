@@ -13,8 +13,8 @@ import com.vv.cloudfarming.cart.dto.resp.CartRespDTO;
 import com.vv.cloudfarming.cart.service.CartService;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
-import com.vv.cloudfarming.shop.dto.resp.ProductRespDTO;
-import com.vv.cloudfarming.shop.service.ProductService;
+import com.vv.cloudfarming.shop.dto.resp.SkuRespDTO;
+import com.vv.cloudfarming.shop.service.SkuService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 public class CartServiceImpl implements CartService {
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final ProductService productService;
+    private final SkuService skuService;
     private final CartArchiveMapper cartArchiveMapper;
     // 购物车Redis Key前缀
     private static final String CART_KEY_PREFIX = "cloudfarming:cart:user:";
@@ -51,8 +51,8 @@ public class CartServiceImpl implements CartService {
         Integer quantity = requestParam.getQuantity();
         Boolean selected = requestParam.getSelected();
         // 检查商品是否存在
-        ProductRespDTO product = productService.getProductById(skuId);
-        if (product == null) {
+        SkuRespDTO sku = skuService.getSkuDetail(skuId);
+        if (sku == null) {
             throw new ClientException("商品不存在");
         }
         try {
@@ -91,7 +91,7 @@ public class CartServiceImpl implements CartService {
                 cartItem.setSkuId(skuId);
                 cartItem.setQuantity(quantity);
                 cartItem.setSelected(selected != null ? selected : true);
-                cartItem.setHasStock(product.getStock() > quantity);
+                cartItem.setHasStock(sku.getStock() > quantity);
             }
             // 保存到Redis
             stringRedisTemplate.opsForHash().put(cartKey, skuId.toString(), JSON.toJSONString(cartItem));
@@ -213,9 +213,9 @@ public class CartServiceImpl implements CartService {
                     .map(CartItemDO::getSkuId)
                     .collect(Collectors.toList());
 
-            Map<Long, ProductRespDTO> productInfoMap = productService.batchProductsByIds(skuIds)
+            Map<Long, SkuRespDTO> skuInfoMap = skuService.listSkuDetailsByIds(skuIds)
                     .stream()
-                    .collect(Collectors.toMap(ProductRespDTO::getId, product -> product));
+                    .collect(Collectors.toMap(SkuRespDTO::getId, sku -> sku));
 
             // 转换为响应DTO
             List<CartItemRespDTO> cartItemRespList = new ArrayList<>();
@@ -224,24 +224,31 @@ public class CartServiceImpl implements CartService {
             Boolean allHasStock = true;
 
             for (CartItemDO cartItem : cartItems) {
-                ProductRespDTO productInfo = productInfoMap.get(cartItem.getSkuId());
-                if (productInfo == null) {
+                SkuRespDTO skuInfo = skuInfoMap.get(cartItem.getSkuId());
+                if (skuInfo == null) {
                     continue;
                 }
                 CartItemRespDTO cartItemResp = new CartItemRespDTO();
                 cartItemResp.setProductId(cartItem.getSkuId());
                 cartItemResp.setQuantity(cartItem.getQuantity());
                 cartItemResp.setSelected(cartItem.getSelected());
-                cartItemResp.setHasStock(productInfo.getStock() > 0);
+                cartItemResp.setHasStock(skuInfo.getStock() > 0);
 
                 // 设置商品信息
-                cartItemResp.setProductName(productInfo.getProductName());
-                cartItemResp.setProductImage(productInfo.getProductImg());
-                cartItemResp.setPrice(productInfo.getPrice());
-                cartItemResp.setShopId(productInfo.getShopId());
+                // 拼接规格信息到名称
+                String name = skuInfo.getSpuTitle();
+                if (skuInfo.getSaleAttrs() != null && !skuInfo.getSaleAttrs().isEmpty()) {
+                    StringBuilder spec = new StringBuilder();
+                    skuInfo.getSaleAttrs().forEach((k, v) -> spec.append(" ").append(v));
+                    name = name + spec.toString();
+                }
+                cartItemResp.setProductName(name);
+                cartItemResp.setProductImage(skuInfo.getSpuImage());
+                cartItemResp.setPrice(skuInfo.getPrice());
+                cartItemResp.setShopId(skuInfo.getShopId());
 
                 // 计算总价
-                BigDecimal totalPrice = productInfo.getPrice().multiply(new BigDecimal(cartItem.getQuantity()));
+                BigDecimal totalPrice = skuInfo.getPrice().multiply(new BigDecimal(cartItem.getQuantity()));
                 cartItemResp.setTotalPrice(totalPrice);
 
                 cartItemRespList.add(cartItemResp);
@@ -251,7 +258,7 @@ public class CartServiceImpl implements CartService {
                     totalQuantity += cartItem.getQuantity();
                     totalAmount = totalAmount.add(totalPrice);
 
-                    if (productInfo.getStock() <= 0) {
+                    if (skuInfo.getStock() <= 0) {
                         allHasStock = false;
                     }
                 }

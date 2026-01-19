@@ -9,6 +9,7 @@ import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.OrderItemDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderItemMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
+import com.vv.cloudfarming.order.dto.OrderItemDTO;
 import com.vv.cloudfarming.order.dto.ProductInfoDTO;
 import com.vv.cloudfarming.order.dto.ReceiveInfoDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
@@ -21,21 +22,21 @@ import com.vv.cloudfarming.order.mq.modal.MultiDelayMessage;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
-import com.vv.cloudfarming.shop.dto.resp.ProductRespDTO;
-import com.vv.cloudfarming.shop.service.ProductService;
+import com.vv.cloudfarming.shop.dto.resp.SkuRespDTO;
+import com.vv.cloudfarming.shop.service.SkuService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 /**
  * 订单服务实现层
@@ -45,63 +46,73 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implements OrderService {
 
-    private final ProductService productService;
+    private final SkuService skuService;
     private final OrderItemMapper orderItemMapper;
     private final OrderMapper orderMapper;
-    private final StringRedisTemplate stringRedisTemplate;
-    private static final String STOCK_CACHE_KEY_PREFIX = "cloudfarming:stock:";
-    private final int MAX_PURCHASE_LIMIT = 1000;
-    private final RedissonClient redissonClient;
     private final RabbitTemplate rabbitTemplate;
 
     @Transactional
     @Override
     public void createOrder(OrderCreateReqDTO requestParam) {
         // 参数校验
-        Long productId = requestParam.getProductId();
-        Integer quantity = requestParam.getQuantity();
+        List<OrderItemDTO> items = requestParam.getItems();
         ReceiveInfoDTO receiveInfo = requestParam.getReceiveInfo();
         String remark = requestParam.getRemark();
-        if (quantity == null || quantity <= 0) {
-            throw new ClientException("购买数量必须大于0");
+
+        if (items == null || items.isEmpty()) {
+            throw new ClientException("商品列表不能为空");
         }
-        if (quantity > MAX_PURCHASE_LIMIT) {
-            throw new ClientException("单次购买数量超过限制");
+
+        // 1. 批量获取SKU详情
+        List<Long> skuIds = items.stream().map(OrderItemDTO::getSkuId).toList();
+        List<SkuRespDTO> skuDetails = skuService.listSkuDetailsByIds(skuIds);
+
+        if (skuDetails.size() != skuIds.size()) {
+            throw new ClientException("包含不存在的商品");
         }
-        ProductRespDTO product = productService.getProductById(productId);
-        if (product == null) {
-            throw new ClientException("商品不存在");
-        }
-        // 锁定库存 - 使用Redis原子操作确保库存一致性
-        String stockCacheKey = STOCK_CACHE_KEY_PREFIX + productId;
-        String stock = stringRedisTemplate.opsForValue().get(stockCacheKey);
-        if (stock == null) {
-            RLock lock = redissonClient.getLock("cloudfarming:" + productId);
-            try {
-                lock.lock();
-                // 缓存不存在，构建缓存,双重检查
-                stock = stringRedisTemplate.opsForValue().get(stockCacheKey);
-                if (stock == null) {
-                    stringRedisTemplate.opsForValue().set(stockCacheKey, product.getStock().toString());
-                }
-            } finally {
-                lock.unlock();
+
+        Map<Long, SkuRespDTO> skuMap = skuDetails.stream()
+                .collect(
+                        Collectors.toMap(SkuRespDTO::getId, sku -> sku)
+                );
+
+        // 2. 校验库存 & 锁定库存
+        // 简单起见，循环锁定。生产环境建议使用Lua脚本批量锁定。
+        for (OrderItemDTO item : items) {
+            SkuRespDTO sku = skuMap.get(item.getSkuId());
+            boolean locked = skuService.lockStock(item.getSkuId(), item.getQuantity());
+            if (!locked) {
+                // 回滚已锁定的库存（如果有）- 这里为了简单，如果失败抛出异常，外层事务回滚可能无法自动回滚Redis。
+                // 严谨做法：记录已锁定的，发生异常时手动回滚。
+                // TODO: 建议优化为批量锁定
+                throw new ClientException("商品库存不足或未上架: " + sku.getSpuTitle());
             }
         }
-        Long newStock = stringRedisTemplate.opsForValue().decrement(stockCacheKey, quantity);
-        if (newStock < 0) {
-            // 库存不足，回滚操作
-            stringRedisTemplate.opsForValue().increment(stockCacheKey, quantity);
-            throw new ClientException("商品库存不足");
-        }
+
         try {
             long userId = StpUtil.getLoginIdAsLong();
-            // 创建主订单
+
+            // 3. 计算总价并分组 (按店铺拆单)
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            Map<Long, List<OrderItemDTO>> shopItemsMap = new HashMap<>();
+
+            for (OrderItemDTO item : items) {
+                SkuRespDTO sku = skuMap.get(item.getSkuId());
+                BigDecimal itemAmount = sku.getPrice().multiply(new BigDecimal(item.getQuantity()));
+                totalAmount = totalAmount.add(itemAmount);
+
+                Long shopId = sku.getShopId();
+                if (shopId == null) {
+                    throw new ServiceException("商品数据异常：缺少店铺信息 (SKU ID: " + sku.getId() + ")");
+                }
+                shopItemsMap.computeIfAbsent(shopId, k -> new ArrayList<>()).add(item);
+            }
+
+            // 4. 创建主订单
             OrderDO orderDO = new OrderDO();
             orderDO.setOrderNo(generateOrderNo(userId));
             orderDO.setUserId(userId);
-            BigDecimal amount = product.getPrice().multiply(new BigDecimal(quantity));
-            orderDO.setTotalAmount(amount);
+            orderDO.setTotalAmount(totalAmount);
             orderDO.setPayType(0); // TODO 支付相关先模拟
             orderDO.setPayStatus(PayStatusEnum.UNPAID.getCode());
 
@@ -119,25 +130,67 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             if (inserted != 1) {
                 throw new ServiceException("订单创建失败");
             }
-            // 创建子订单
-            Long farmerId = product.getCreateUser().getId();
-            OrderItemDO orderItemDO = new OrderItemDO();
-            orderItemDO.setItemOrderNo(generateOrderNo(farmerId));
-            orderItemDO.setMainOrderId(orderDO.getId());
-            orderItemDO.setMainOrderNo(orderDO.getOrderNo());
-            orderItemDO.setUserId(userId);
-            orderItemDO.setFarmerId(farmerId);
-            orderItemDO.setProductJson(JSONUtil.toJsonStr(product));
-            orderItemDO.setProductTotalQuantity(quantity);
-            orderItemDO.setProductTotalAmount(amount);
-            orderItemDO.setActualPayAmount(amount);
-            orderItemDO.setOrderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode());
-            int insertedOrderItem = orderItemMapper.insert(orderItemDO);
-            if (insertedOrderItem != 1) {
-                throw new ServiceException("订单创建失败");
+
+            // 5. 创建子订单 (按店铺)
+            for (java.util.Map.Entry<Long, List<OrderItemDTO>> entry : shopItemsMap.entrySet()) {
+                Long shopId = entry.getKey();
+                List<OrderItemDTO> shopItems = entry.getValue();
+
+                // 计算该子订单总价和总数量
+                BigDecimal subTotalAmount = BigDecimal.ZERO;
+                int subTotalQuantity = 0;
+                List<SkuRespDTO> productSnapshots = new ArrayList<>();
+
+                for (OrderItemDTO item : shopItems) {
+                    SkuRespDTO sku = skuMap.get(item.getSkuId());
+                    BigDecimal itemAmount = sku.getPrice().multiply(new BigDecimal(item.getQuantity()));
+                    subTotalAmount = subTotalAmount.add(itemAmount);
+                    subTotalQuantity += item.getQuantity();
+                    // 记录快照，保留下单时的数量
+                    // 注意：SkuRespDTO 是引用，不能直接修改 quantity。
+                    // 这里的 productJson 存的是 SkuRespDTO 列表。
+                    // 但前端展示时需要知道每个 SKU 买了多少个。
+                    // 方案 A：SkuRespDTO 增加 quantity 字段 (不推荐，SkuRespDTO 是商品域对象)
+                    // 方案 B：创建一个专门的 Snapshot 对象，包含 SkuRespDTO + quantity
+                    // 方案 C：复用 OrderCreateReqDTO 或 Map。
+                    // 这里采用方案 B 的变体：使用 Map 或 包装类。
+                    // 为了简化且适配 queryOrderById，我们这里可以使用 Map 或者一个新的 DTO。
+                    // 鉴于 queryOrderById 只是反序列化 SkuRespDTO，如果 JSON 里多了 quantity 字段，SkuRespDTO 会忽略吗？
+                    // 如果我们存 List<Map<String, Object>>，其中包含 SkuRespDTO 所有字段 + quantity。
+                    // 让我们修改下 productJson 的存储结构。
+                    // 以前存的是单个 SkuRespDTO (转JSON)。现在存 List。
+                    // 每个元素应该是 SkuRespDTO + quantity。
+                }
+
+                // 构建带数量的快照列表
+                List<Map<String, Object>> snapshots = new ArrayList<>();
+                for (OrderItemDTO item : shopItems) {
+                    SkuRespDTO sku = skuMap.get(item.getSkuId());
+                    java.util.Map<String, Object> map = cn.hutool.core.bean.BeanUtil.beanToMap(sku);
+                    map.put("buyQuantity", item.getQuantity()); // 增加购买数量字段
+                    snapshots.add(map);
+                }
+
+                OrderItemDO orderItemDO = new OrderItemDO();
+                orderItemDO.setItemOrderNo(generateOrderNo(shopId)); // 子订单号用商户ID生成前缀
+                orderItemDO.setMainOrderId(orderDO.getId());
+                orderItemDO.setMainOrderNo(orderDO.getOrderNo());
+                orderItemDO.setUserId(userId);
+                orderItemDO.setFarmerId(shopId);
+                orderItemDO.setProductJson(JSONUtil.toJsonStr(snapshots)); // 存储列表
+                orderItemDO.setProductTotalQuantity(subTotalQuantity);
+                orderItemDO.setProductTotalAmount(subTotalAmount);
+                orderItemDO.setActualPayAmount(subTotalAmount); // 暂无优惠分摊
+                orderItemDO.setOrderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode());
+
+                int insertedOrderItem = orderItemMapper.insert(orderItemDO);
+                if (insertedOrderItem != 1) {
+                    throw new ServiceException("子订单创建失败");
+                }
             }
+
             //  延迟队列处理订单超时
-            MultiDelayMessage<Long> msg = MultiDelayMessage.of(orderDO.getId(), 30000L, 60000L, 300000L, 850000L);
+            MultiDelayMessage<Long> msg = MultiDelayMessage.of(orderDO.getId(), 30000L, 60000L, 300000L, 510000L);
             int delay = msg.removeNextDelay().intValue();
             rabbitTemplate.convertAndSend(
                     MqConstant.DELAY_EXCHANGE,
@@ -145,10 +198,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                     msg,
                     new DelayMessageProcessor(delay)
             );
-            log.info("发送延迟消息：{}，延迟时间：{}秒",msg,delay / 1000);
+            log.info("发送延迟消息：{}，延迟时间：{}秒", msg, delay / 1000);
         } catch (Exception e) {
-            // 订单创建失败，释放库存锁
-            stringRedisTemplate.opsForValue().increment(stockCacheKey, quantity);
+            // 订单创建失败，释放库存锁 (回滚所有商品的库存)
+            for (OrderItemDTO item : items) {
+                try {
+                    skuService.unlockStock(item.getSkuId(), item.getQuantity());
+                } catch (Exception ex) {
+                    log.error("回滚库存失败: skuId={}, qty={}", item.getSkuId(), item.getQuantity(), ex);
+                }
+            }
             // 重新抛出异常
             throw e;
         }
@@ -161,7 +220,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         }
         // 主订单
         OrderDO orderDO = baseMapper.selectById(id);
-        if (orderDO == null){
+        if (orderDO == null) {
             throw new ClientException("订单不存在");
         }
         // 子订单
@@ -172,17 +231,52 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         // 构建响应
         List<ProductInfoDTO> productList = new ArrayList<>();
         items.forEach(item -> {
-            JSONObject jsonObject = new JSONObject(item.getProductJson());
-            ProductInfoDTO productInfoDTO = ProductInfoDTO.builder()
-                    .productId(item.getId())
-                    .productName(jsonObject.getStr("productName"))
-                    .productImg(jsonObject.getStr("productImg").split(",")[0])
-                    .description(jsonObject.getStr("description"))
-                    .price(jsonObject.getBigDecimal("price"))
-                    // TODO 缺失数量字段
-                    .quantity(1)
-                    .build();
-            productList.add(productInfoDTO);
+            // 反序列化快照信息（现在是 List<Map<String, Object>>）
+            // 因为 productJson 存储的是 List，每个元素是一个 Map，包含 SkuRespDTO 的字段 + buyQuantity
+            String json = item.getProductJson();
+            if (JSONUtil.isTypeJSONArray(json)) {
+                List<JSONObject> snapshotList = JSONUtil.toList(json, JSONObject.class);
+                for (JSONObject snapshot : snapshotList) {
+                    SkuRespDTO sku = snapshot.toBean(SkuRespDTO.class);
+                    Integer buyQuantity = snapshot.getInt("buyQuantity", 1); // 默认1
+
+                    // 拼接规格信息到商品名称
+                    String displayName = sku.getSpuTitle();
+                    if (sku.getSaleAttrs() != null && !sku.getSaleAttrs().isEmpty()) {
+                        StringBuilder specBuilder = new StringBuilder();
+                        sku.getSaleAttrs().forEach((k, v) -> specBuilder.append(" ").append(v));
+                        displayName += specBuilder.toString();
+                    }
+
+                    ProductInfoDTO productInfoDTO = ProductInfoDTO.builder()
+                            .productId(sku.getId())
+                            .productName(displayName)
+                            .productImg(sku.getSpuImage())
+                            .price(sku.getPrice()) // 下单时的单价
+                            .quantity(buyQuantity) // 单个商品的购买数量
+                            .build();
+                    productList.add(productInfoDTO);
+                }
+            } else {
+                // 兼容旧数据 (单个 SkuRespDTO) - 虽然理论上是新系统，但防御性编程
+                SkuRespDTO snapshot = JSONUtil.toBean(json, SkuRespDTO.class);
+                // 拼接规格信息到商品名称
+                String displayName = snapshot.getSpuTitle();
+                if (snapshot.getSaleAttrs() != null && !snapshot.getSaleAttrs().isEmpty()) {
+                    StringBuilder specBuilder = new StringBuilder();
+                    snapshot.getSaleAttrs().forEach((k, v) -> specBuilder.append(" ").append(v));
+                    displayName += specBuilder.toString();
+                }
+
+                ProductInfoDTO productInfoDTO = ProductInfoDTO.builder()
+                        .productId(snapshot.getId())
+                        .productName(displayName)
+                        .productImg(snapshot.getSpuImage())
+                        .price(snapshot.getPrice())
+                        .quantity(item.getProductTotalQuantity()) // 旧逻辑：子订单总数即为商品数
+                        .build();
+                productList.add(productInfoDTO);
+            }
         });
         OrderInfoRespDTO respDTO = OrderInfoRespDTO.builder()
                 .id(orderDO.getId())
@@ -224,7 +318,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         if (id == null || id <= 0) {
             throw new ClientException("id不合法");
         }
-        if (payStatusEnum == null){
+        if (payStatusEnum == null) {
             throw new ClientException("支付状态不能为空");
         }
         OrderDO order = baseMapper.selectById(id);

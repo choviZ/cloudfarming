@@ -26,10 +26,9 @@ public class SkuDO extends BaseDO implements Serializable {
     private Long spuId;
 
     /**
-     * 所属农户/店铺ID
+     * sku图片
      */
-    private Long shopId;
-
+    private String skuImage;
 
     /**
      * SKU状态：0-下架，1-上架
