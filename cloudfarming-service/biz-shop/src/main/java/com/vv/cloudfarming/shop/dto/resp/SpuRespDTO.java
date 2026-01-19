@@ -10,7 +10,7 @@ public class SpuRespDTO {
     /**
      * 标准商品名称
      */
-    private String spuName;
+    private String title;
 
     /**
      * 商品分类id

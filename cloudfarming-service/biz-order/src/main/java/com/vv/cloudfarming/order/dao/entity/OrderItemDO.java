@@ -44,9 +44,9 @@ public class OrderItemDO extends BaseDO implements Serializable {
     private Long userId;
 
     /**
-     * 供货农户ID
+     * 店铺ID
      */
-    private Long farmerId;
+    private Long shopId;
 
     /**
      * 该农户的商品列表（JSON格式，存储多个商品的详细属性）

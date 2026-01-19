@@ -11,7 +11,7 @@ import java.io.Serializable;
 /**
  * 用户实体
  */
-@TableName("users")
+@TableName("t_users")
 @Data
 public class UserDO extends BaseDO implements Serializable {
 

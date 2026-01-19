@@ -1,7 +1,6 @@
 package com.vv.cloudfarming.order.dto.req;
 
 import com.vv.cloudfarming.order.dto.OrderItemDTO;
-import com.vv.cloudfarming.order.dto.ReceiveInfoDTO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -26,7 +25,7 @@ public class OrderCreateReqDTO {
      * 收货相关信息
      */
     @NotNull(message = "收货信息不能为空")
-    private ReceiveInfoDTO receiveInfo;
+    private Long receiveId;
 
     /**
      * 订单备注

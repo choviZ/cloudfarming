@@ -11,7 +11,6 @@ import com.vv.cloudfarming.order.dao.mapper.OrderItemMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dto.OrderItemDTO;
 import com.vv.cloudfarming.order.dto.ProductInfoDTO;
-import com.vv.cloudfarming.order.dto.ReceiveInfoDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderInfoRespDTO;
 import com.vv.cloudfarming.order.enums.OrderStatusEnum;
@@ -24,6 +23,8 @@ import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.shop.dto.resp.SkuRespDTO;
 import com.vv.cloudfarming.shop.service.SkuService;
+import com.vv.cloudfarming.user.dto.resp.ReceiveAddressRespDTO;
+import com.vv.cloudfarming.user.service.ReceiveAddressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implements OrderService {
 
     private final SkuService skuService;
+    private final ReceiveAddressService receiveAddressService;
     private final OrderItemMapper orderItemMapper;
     private final OrderMapper orderMapper;
     private final RabbitTemplate rabbitTemplate;
@@ -56,7 +58,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     public void createOrder(OrderCreateReqDTO requestParam) {
         // 参数校验
         List<OrderItemDTO> items = requestParam.getItems();
-        ReceiveInfoDTO receiveInfo = requestParam.getReceiveInfo();
+        Long receiveId = requestParam.getReceiveId();
         String remark = requestParam.getRemark();
 
         if (items == null || items.isEmpty()) {
@@ -109,19 +111,20 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             }
 
             // 4. 创建主订单
+            ReceiveAddressRespDTO receiveAddress = receiveAddressService.getReceiveAddressById(receiveId);
             OrderDO orderDO = new OrderDO();
             orderDO.setOrderNo(generateOrderNo(userId));
             orderDO.setUserId(userId);
             orderDO.setTotalAmount(totalAmount);
             orderDO.setPayType(0); // TODO 支付相关先模拟
+            // 设置收获地址快照
             orderDO.setPayStatus(PayStatusEnum.UNPAID.getCode());
-
-            orderDO.setReceiveName(receiveInfo.getReceiveName());
-            orderDO.setReceivePhone(receiveInfo.getReceivePhone());
-            orderDO.setReceiveProvince(receiveInfo.getReceiveProvince());
-            orderDO.setReceiveCity(receiveInfo.getReceiveCity());
-            orderDO.setReceiveDistrict(receiveInfo.getReceiveDistrict());
-            orderDO.setReceiveDetail(receiveInfo.getReceiveDetail());
+            orderDO.setReceiveName(receiveAddress.getReceiverName());
+            orderDO.setReceivePhone(receiveAddress.getReceiverPhone());
+            orderDO.setReceiveProvince(receiveAddress.getProvinceName());
+            orderDO.setReceiveCity(receiveAddress.getCityName());
+            orderDO.setReceiveDistrict(receiveAddress.getDistrictName());
+            orderDO.setReceiveDetail(receiveAddress.getDetailAddress());
 
             orderDO.setOrderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode());
             orderDO.setRemark(remark);
@@ -176,7 +179,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 orderItemDO.setMainOrderId(orderDO.getId());
                 orderItemDO.setMainOrderNo(orderDO.getOrderNo());
                 orderItemDO.setUserId(userId);
-                orderItemDO.setFarmerId(shopId);
+                orderItemDO.setShopId(shopId);
                 orderItemDO.setProductJson(JSONUtil.toJsonStr(snapshots)); // 存储列表
                 orderItemDO.setProductTotalQuantity(subTotalQuantity);
                 orderItemDO.setProductTotalAmount(subTotalAmount);
