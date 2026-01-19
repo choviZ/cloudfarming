@@ -33,6 +33,35 @@ export interface SkuItemDTO {
 }
 
 /**
+ * SKU 响应数据
+ */
+export interface SkuRespDTO {
+  /** SKU ID */
+  id: string;
+
+  /** SPU ID */
+  spuId: string;
+
+  /** SPU 标题 */
+  spuTitle: string;
+
+  /** SPU 图片 */
+  spuImage: string;
+
+  /** 价格 */
+  price: number;
+
+  /** 库存 */
+  stock: number;
+
+  /** 状态 */
+  status: number;
+
+  /** 销售属性集合 */
+  saleAttrs: Record<string, string>;
+}
+
+/**
  * 创建 SKU 请求参数
  */
 export interface SkuCreateReqDTO {

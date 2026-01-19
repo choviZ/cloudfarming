@@ -2,6 +2,25 @@
  * 农产品商品 SPU 相关类型定义
  */
 
+import { SkuRespDTO } from '../sku/types';
+
+/**
+ * SPU 价格摘要
+ */
+export interface SpuPriceSummary {
+  /** 所属 SPU ID */
+  spuId: number;
+
+  /** 最低价格 */
+  minPrice: number;
+
+  /** 最高价格 */
+  maxPrice: number;
+
+  /** 最低价格对应的 SKU ID */
+  minPriceSkuId: number;
+}
+
 /**
  * SPU 响应数据
  */
@@ -20,15 +39,30 @@ export interface SpuRespDTO {
 
   /** 商品状态：0-下架，1-上架，2-待审核 */
   status: number;
+  
+  /** 价格摘要 */
+  priceSummary?: SpuPriceSummary;
 
   /** 店铺ID */
   shopId: string;
+
 
   /** 创建时间 */
   createTime: string;
 
   /** 更新时间 */
   updateTime: string;
+}
+
+/**
+ * SPU 详情响应数据
+ */
+export interface SpuDetailRespDTO extends SpuRespDTO {
+  /** 基础属性 */
+  baseAttrs: Record<string, string>;
+
+  /** SKU 列表 */
+  skuList: SkuRespDTO[];
 }
 
 /**

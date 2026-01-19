@@ -3,6 +3,7 @@ import request from '../request.ts'
 import type { Result, IPage } from '../common'
 import type {
   SpuRespDTO,
+  SpuDetailRespDTO,
   SpuCreateOrUpdateReqDTO,
   SpuPageQueryReqDTO,
   SpuAttrValueCreateReqDTO,
@@ -27,7 +28,7 @@ export const deleteSpuById = (id: number): Promise<Result<void>> => {
 /**
  * 根据id获取单个SPU详情
  */
-export const getSpuById = (id: number): Promise<Result<SpuRespDTO>> => {
+export const getSpuDetail = (id: number): Promise<Result<SpuDetailRespDTO>> => {
   return request.get(`/v1/spu/${id}`)
 }
 

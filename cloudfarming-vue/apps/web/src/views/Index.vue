@@ -49,25 +49,17 @@
                 <a-card hoverable class="product-card" @click="goToProductDetail(product.id)">
                   <template #cover>
                     <img
-                      :alt="product.productName"
-                      :src="getFirstImage(product.productImg)"
+                      :alt="product.title"
+                      :src="getFirstImage(product.image)"
                       class="product-image"
                     />
                   </template>
                   <div class="product-info">
-                    <div class="product-title">{{ product.productName }}</div>
-                    <div class="product-price">¥{{ product.price }}</div>
-                    <a-flex align="center" justify="space-between">
-                      <a-space>
-                        <a-avatar :src="product.createUser.avatar" v-if="product.createUser.avatar"/>
-                        <a-avatar size="small" v-else>
-                          <template #icon><UserOutlined /></template>
-                        </a-avatar>
-                        <div class="product-origin">{{ product.createUser.username }}</div>
-                      </a-space>
-                      <div class="product-origin">{{ product.originPlace }}</div>
-                    </a-flex>
-
+                    <div class="product-title">{{ product.title }}</div>
+                    <div class="product-price">
+                      <span v-if="product.priceSummary">¥{{ product.priceSummary.minPrice }}</span>
+                      <span v-else style="font-size: 14px; color: #999;">暂无价格</span>
+                    </div>
                   </div>
                 </a-card>
               </div>
@@ -98,9 +90,9 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { getShowAdverts } from '@/api/advert';
 import type { AdvertRespDTO } from '@/types/advert';
-import { getProductList } from '@/api/product';
-import type { ProductPageQueryReqDTO, ProductRespDTO } from '@/types/product';
-import type { IPage } from '@/types/common';
+import { listSpuByPage } from '@cloudfarming/core/api/spu';
+import type { SpuPageQueryReqDTO, SpuRespDTO } from '@cloudfarming/core/api/spu';
+import type { IPage } from '@cloudfarming/core/api/common';
 import { message } from 'ant-design-vue';
 import AdoptFeaturedSection from '@/components/adopt/AdoptFeaturedSection.vue';
 
@@ -112,7 +104,7 @@ const adverts = ref<AdvertRespDTO[]>([]);
 const advertLoading = ref(false);
 
 // 商品相关
-const productList = ref<ProductRespDTO[]>([]);
+const productList = ref<SpuRespDTO[]>([]);
 const productLoading = ref(false);
 const activeTag = ref('all');
 
@@ -159,15 +151,15 @@ const fetchProducts = async () => {
   productLoading.value = true;
   try {
     // 构建查询参数
-    const queryParam: ProductPageQueryReqDTO = {
+    const queryParam: SpuPageQueryReqDTO = {
       current: pagination.value.current,
       size: pagination.value.size,
-      stock: 0,
+      status: 1, // 上架商品
     };
 
-    const response = await getProductList(queryParam);
+    const response = await listSpuByPage(queryParam);
     if (response.code === '0' && response.data) {
-      const pageData: IPage<ProductRespDTO> = response.data;
+      const pageData: IPage<SpuRespDTO> = response.data;
       productList.value = pageData.records;
       pagination.value.total = pageData.total;
     } else {

@@ -46,38 +46,57 @@
         <div class="right-section">
           <div class="product-info">
             <!-- 商品名称 -->
-            <h1 class="product-title">{{ productInfo.name || '商品名称加载中...' }}</h1>
+            <h1 class="product-title">{{ spuInfo.title || '商品名称加载中...' }}</h1>
+            
             <!-- 商品基本信息 -->
             <div class="product-basic-info">
-              <div class="info-item">
-                <span class="info-label">分类：</span>
-                <span class="info-value">{{ productInfo.productCategory || '未分类' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">产地：</span>
-                <span class="info-value">{{ productInfo.originPlace || '未知' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">规格：</span>
-                <span class="info-value">{{ productInfo.specification || '标准规格' }}</span>
+              <!-- 基础属性 -->
+              <div class="info-item" v-for="(value, key) in spuInfo.baseAttrs" :key="key">
+                <span class="info-label">{{ key }}：</span>
+                <span class="info-value">{{ value }}</span>
               </div>
             </div>
+            
             <!-- 商品描述 -->
-            <p class="product-description">{{ productInfo.description || '商品描述加载中...' }}</p>
+            <!-- <p class="product-description">{{ spuInfo.description || '暂无描述' }}</p> -->
+
             <!-- 商品价格 -->
             <div class="product-price">
               <span class="price-symbol">¥</span>
-              <span class="price-value">{{ productInfo.price }}</span>
+              <span class="price-value">{{ displayPrice }}</span>
             </div>
+
+            <!-- SKU 规格选择 -->
+            <div class="sku-selector" v-if="specKeys.length > 0">
+              <div v-for="key in specKeys" :key="key" class="spec-row">
+                <div class="spec-label">{{ key }}</div>
+                <div class="spec-values">
+                  <a-tag
+                    v-for="val in specs[key]" 
+                    :key="val"
+                    :color="selectedSpecs[key] === val ? 'blue' : 'default'"
+                    class="spec-tag"
+                    @click="selectSpec(key, val)"
+                  >
+                    {{ val }}
+                  </a-tag>
+                </div>
+              </div>
+            </div>
+
             <!-- 购买数量选择器 -->
             <div class="quantity-selector">
               <span class="quantity-label">数量</span>
               <a-input-number
                 v-model:value="quantity"
                 :min="1"
+                :max="currentSku ? currentSku.stock : 9999"
                 @change="handleQuantityChange"
+                :disabled="!currentSku && specKeys.length > 0"
               />
-              <span class="stock-info">{{ productInfo.stock > 0 ? '有货' : '售无' }}</span>
+              <span class="stock-info">
+                {{ currentSku ? `库存: ${currentSku.stock}` : (specKeys.length > 0 ? '请选择规格' : '暂无库存') }}
+              </span>
             </div>
           </div>
         </div>
@@ -86,13 +105,13 @@
 
     <!-- 固定悬浮操作按钮区域 -->
     <div class="fixed-action-buttons">
-      <a-button @click="addToCart" class="action-btn cart-btn">
+      <a-button @click="addToCart" class="action-btn cart-btn" :disabled="!canBuy">
         <template #icon>
           <ShoppingCartOutlined />
         </template>
         加入购物车
       </a-button>
-      <a-button type="primary" @click="buyNow" class="action-btn buy-btn">
+      <a-button type="primary" @click="buyNow" class="action-btn buy-btn" :disabled="!canBuy">
         <template #icon>
           <ShoppingOutlined />
         </template>
@@ -113,11 +132,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { addToCart as addToCartApi } from '@/api/cart'
-import { getProductDetail } from '@/api/product'
+import { getSpuDetail } from '@cloudfarming/core/api/spu'
+import type { SpuDetailRespDTO } from '@cloudfarming/core/api/spu'
+import type { SkuRespDTO } from '@cloudfarming/core/api/sku'
 import {
   ShopOutlined,
   ShoppingCartOutlined,
@@ -127,59 +148,84 @@ import {
 
 // 获取路由参数
 const route = useRoute()
-const productId = route.params.id as string
+const spuId = route.params.id as string
 
-// 商品图片数据
+// 数据状态
+const loading = ref(false)
+const spuInfo = ref<Partial<SpuDetailRespDTO>>({})
+const skuList = ref<SkuRespDTO[]>([])
 const productImages = ref<string[]>([])
-
-// 当前选中的图片索引
 const currentImageIndex = ref(0)
-
-// 商品信息
-const productInfo = reactive({
-  name: '',
-  productCategory: '',
-  originPlace: '',
-  specification: '',
-  description: '',
-  price: '0',
-  stock: 0
-})
-
-// 购买数量
 const quantity = ref(1)
-
-// 是否已收藏
 const isFavorited = ref(false)
 
-// 加载状态
-const loading = ref(false)
+// 规格选择状态
+// specs: { '颜色': ['红色', '蓝色'], '尺寸': ['L', 'M'] }
+const specs = reactive<Record<string, string[]>>({})
+const specKeys = computed(() => Object.keys(specs))
+// selectedSpecs: { '颜色': '红色' }
+const selectedSpecs = reactive<Record<string, string>>({})
 
-// 根据商品ID获取商品详情
+// 计算当前选中的 SKU
+const currentSku = computed(() => {
+  if (specKeys.value.length === 0) {
+    // 如果没有规格，且有唯一的 SKU，则直接返回
+    if (skuList.value.length === 1) return skuList.value[0];
+    return null;
+  }
+  
+  // 检查是否所有规格都已选择
+  for (const key of specKeys.value) {
+    if (!selectedSpecs[key]) return null;
+  }
+
+  // 查找匹配的 SKU
+  return skuList.value.find(sku => {
+    for (const key of specKeys.value) {
+      if (sku.saleAttrs[key] !== selectedSpecs[key]) return false;
+    }
+    return true;
+  }) || null
+})
+
+// 计算展示价格
+const displayPrice = computed(() => {
+  if (currentSku.value) {
+    return currentSku.value.price;
+  }
+  // 计算价格区间
+  if (skuList.value.length > 0) {
+    const prices = skuList.value.map(s => s.price).sort((a, b) => a - b);
+    const min = prices[0];
+    const max = prices[prices.length - 1];
+    if (min === max) return min;
+    return `${min} ~ ${max}`;
+  }
+  return spuInfo.value.price || '待定';
+})
+
+// 是否可购买
+const canBuy = computed(() => {
+  return !!currentSku.value && currentSku.value.stock > 0;
+})
+
+// 获取商品详情
 const fetchProductDetail = async (id: string) => {
   loading.value = true
   try {
-    // 调用API获取商品详情
-    const response = await getProductDetail(id)
+    const response = await getSpuDetail(Number(id))
     if (response.code === '0' && response.data) {
-      const productData = response.data
-      // 更新商品信息
-      productInfo.name = productData.productName || ''
-      productInfo.description = productData.description || ''
-      productInfo.price = productData.price || '0'
-      productInfo.stock = productData.stock || 0
-      productInfo.productCategory = productData.productCategory || ''
-      productInfo.originPlace = productData.originPlace || ''
-      productInfo.specification = productData.specification || ''
-
-      // 更新商品图片，如果有多个图片则分割，否则使用单张图片
-      if (productData.productImg) {
-        const images = productData.productImg.split(',').filter(img => img.trim())
-        productImages.value = images
-      } else {
-        // 如果没有图片，设置为空数组
-        productImages.value = []
+      const data = response.data
+      spuInfo.value = data
+      skuList.value = data.skuList || []
+      
+      // 处理图片
+      if (data.image) {
+        productImages.value = data.image.split(',').filter(img => img.trim())
       }
+
+      // 提取规格信息
+      extractSpecs(data.skuList || [])
     } else {
       message.error('获取商品详情失败：' + (response.message || '未知错误'))
     }
@@ -190,35 +236,59 @@ const fetchProductDetail = async (id: string) => {
   }
 }
 
-// 组件挂载时获取商品详情
-onMounted(() => {
-  if (productId) {
-    fetchProductDetail(productId)
-  }
-})
+// 提取规格
+const extractSpecs = (skus: SkuRespDTO[]) => {
+  // 清空现有规格
+  for (const key in specs) delete specs[key];
+  
+  if (!skus || skus.length === 0) return;
 
-// 选择图片
+  const tempSpecs: Record<string, Set<string>> = {};
+  
+  skus.forEach(sku => {
+    if (sku.saleAttrs) {
+      Object.entries(sku.saleAttrs).forEach(([key, val]) => {
+        if (!tempSpecs[key]) tempSpecs[key] = new Set();
+        tempSpecs[key].add(val);
+      });
+    }
+  });
+
+  Object.entries(tempSpecs).forEach(([key, valSet]) => {
+    specs[key] = Array.from(valSet);
+  });
+}
+
+// 选择规格
+const selectSpec = (key: string, val: string) => {
+  if (selectedSpecs[key] === val) {
+    // 取消选择
+    delete selectedSpecs[key];
+  } else {
+    // 选择
+    selectedSpecs[key] = val;
+  }
+}
+
+// 图片选择
 const selectImage = (index: number) => {
   currentImageIndex.value = index
 }
 
-// 处理数量变化
+// 数量变化
 const handleQuantityChange = (value: number | null) => {
-  if (value === null) {
-    quantity.value = 1
-  } else if (value < 1) {
-    quantity.value = 1
-    message.warning('购买数量不能小于1')
-  } else if (value > productInfo.stock) {
-    quantity.value = productInfo.stock
-    message.warning(`购买数量不能超过库存数量${productInfo.stock}`)
-  }
+  if (!value) quantity.value = 1;
 }
 
 // 加入购物车
 const addToCart = async () => {
+  if (!currentSku.value) {
+    message.warning('请先选择规格');
+    return;
+  }
+  
   const res = await addToCartApi({
-      skuId: productId,
+      skuId: String(currentSku.value.id),
       quantity: quantity.value,
       selected: false
     }
@@ -235,11 +305,17 @@ const buyNow = () => {
   message.success('正在跳转到结算页面...')
 }
 
-// 切换收藏状态
+// 收藏
 const toggleFavorite = () => {
   isFavorited.value = !isFavorited.value
   message.success(isFavorited.value ? '已收藏' : '已取消收藏')
 }
+
+onMounted(() => {
+  if (spuId) {
+    fetchProductDetail(spuId)
+  }
+})
 </script>
 
 <style scoped>
@@ -259,7 +335,7 @@ const toggleFavorite = () => {
 
 /* 左侧区域样式 */
 .left-section {
-  flex: 0 0 60%;
+  flex: 0 0 50%;
   background-color: #fff;
   border-radius: 8px;
   padding: 20px;
@@ -305,11 +381,7 @@ const toggleFavorite = () => {
   transition: all 0.3s;
 }
 
-.thumbnail-item:hover {
-  border-color: #1890ff;
-}
-
-.thumbnail-item.active {
+.thumbnail-item:hover, .thumbnail-item.active {
   border-color: #1890ff;
 }
 
@@ -327,13 +399,12 @@ const toggleFavorite = () => {
   background-color: #f8f8f8;
   border-radius: 8px;
   overflow: hidden;
+  height: 500px;
 }
 
 .main-image img {
-  max-width: 500px;
-  max-height: 500px;
-  width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -350,7 +421,7 @@ const toggleFavorite = () => {
 
 /* 右侧区域样式 */
 .right-section {
-  flex: 0 0 40%;
+  flex: 0 0 50%;
   background-color: #fff;
   border-radius: 8px;
   padding: 20px;
@@ -373,9 +444,8 @@ const toggleFavorite = () => {
 
 .product-basic-info {
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin: 15px 0;
+  flex-direction: column;
+  gap: 10px;
   padding: 15px 0;
   border-top: 1px solid #f0f0f0;
   border-bottom: 1px solid #f0f0f0;
@@ -384,14 +454,13 @@ const toggleFavorite = () => {
 .info-item {
   display: flex;
   align-items: center;
-  min-width: 150px;
 }
 
 .info-label {
   font-size: 14px;
   color: #666;
   font-weight: 500;
-  margin-right: 8px;
+  min-width: 60px;
 }
 
 .info-value {
@@ -399,16 +468,10 @@ const toggleFavorite = () => {
   color: #333;
 }
 
-.product-description {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.6;
-  margin: 0;
-}
-
 .product-price {
   display: flex;
   align-items: baseline;
+  margin-top: 10px;
 }
 
 .price-symbol {
@@ -424,10 +487,42 @@ const toggleFavorite = () => {
   margin-left: 2px;
 }
 
+/* SKU Selector */
+.sku-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.spec-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spec-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.spec-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.spec-tag {
+  cursor: pointer;
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
 .quantity-selector {
   display: flex;
   align-items: center;
   gap: 15px;
+  margin-top: 10px;
 }
 
 .quantity-label {
@@ -440,7 +535,7 @@ const toggleFavorite = () => {
   color: #999;
 }
 
-/* 固定悬浮操作按钮区域样式 */
+/* Fixed Action Buttons */
 .fixed-action-buttons {
   position: fixed;
   bottom: 32px;
@@ -465,7 +560,7 @@ const toggleFavorite = () => {
   color: #ff4d4f;
 }
 
-.cart-btn:hover {
+.cart-btn:hover:not(:disabled) {
   background-color: #fff2f0;
   border-color: #ff4d4f;
 }
@@ -475,7 +570,7 @@ const toggleFavorite = () => {
   border-color: #ff4d4f;
 }
 
-.buy-btn:hover {
+.buy-btn:hover:not(:disabled) {
   background-color: #ff7875;
   border-color: #ff7875;
 }
@@ -497,31 +592,14 @@ const toggleFavorite = () => {
   color: #fff;
 }
 
-/* 响应式设计 */
+/* Responsive */
 @media (max-width: 992px) {
   .main-content {
     flex-direction: column;
   }
-
-  .left-section,
-  .right-section {
-    flex: 1;
-    width: 100%;
-  }
-
-  .fixed-action-buttons {
-    position: static;
-    margin-top: 20px;
-    justify-content: center;
-  }
-
-  .product-basic-info {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .info-item {
-    min-width: auto;
+  
+  .left-section, .right-section {
+    flex: 1 1 100%;
   }
 }
 </style>
