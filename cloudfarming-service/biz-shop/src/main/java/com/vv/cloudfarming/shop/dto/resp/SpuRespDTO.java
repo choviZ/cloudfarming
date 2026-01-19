@@ -1,11 +1,22 @@
 package com.vv.cloudfarming.shop.dto.resp;
 
+import com.vv.cloudfarming.shop.dto.SpuPriceSummaryDTO;
 import lombok.Data;
 
 import java.util.Map;
 
 @Data
 public class SpuRespDTO {
+
+    /**
+     * SPU ID
+     */
+    private Long id;
+
+    /**
+     * 价格摘要
+     */
+    private SpuPriceSummaryDTO priceSummary;
 
     /**
      * 标准商品名称

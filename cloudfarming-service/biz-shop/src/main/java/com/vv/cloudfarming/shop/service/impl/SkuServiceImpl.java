@@ -16,6 +16,7 @@ import com.vv.cloudfarming.shop.dto.SaleAttrDTO;
 import com.vv.cloudfarming.shop.dto.SkuItemDTO;
 import com.vv.cloudfarming.shop.dto.req.SkuCreateReqDTO;
 import com.vv.cloudfarming.shop.dto.resp.SkuRespDTO;
+import com.vv.cloudfarming.shop.dto.SpuPriceSummaryDTO;
 import com.vv.cloudfarming.shop.service.AttributeService;
 import com.vv.cloudfarming.shop.service.SkuService;
 import lombok.RequiredArgsConstructor;
@@ -131,6 +132,49 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
                 .collect(Collectors.toList());
         result.forEach(this::fillRealTimeStock);
         return result;
+    }
+
+    @Override
+    public List<SpuPriceSummaryDTO> listPriceSummaryBySpuIds(List<Long> spuIds) {
+        if (CollUtil.isEmpty(spuIds)) {
+            return Collections.emptyList();
+        }
+        
+        // 查询这些 SPU 下的所有 SKU（仅需 id, spuId, price）
+        List<SkuDO> skuList = this.list(new LambdaQueryWrapper<SkuDO>()
+                .in(SkuDO::getSpuId, spuIds)
+                .eq(SkuDO::getStatus, 1) // 仅计算上架的 SKU
+                .gt(SkuDO::getStock, 0) // 仅计算有库存的 SKU (可选)
+        );
+
+        if (CollUtil.isEmpty(skuList)) {
+            return Collections.emptyList();
+        }
+
+        // 按 spuId 分组
+        Map<Long, List<SkuDO>> spuSkuMap = skuList.stream()
+                .collect(Collectors.groupingBy(SkuDO::getSpuId));
+
+        List<SpuPriceSummaryDTO> summaries = new ArrayList<>();
+        spuSkuMap.forEach((spuId, skus) -> {
+            if (CollUtil.isNotEmpty(skus)) {
+                // 计算最低价、最高价
+                Optional<SkuDO> minSkuOpt = skus.stream().min(Comparator.comparing(SkuDO::getPrice));
+                Optional<SkuDO> maxSkuOpt = skus.stream().max(Comparator.comparing(SkuDO::getPrice));
+
+                if (minSkuOpt.isPresent() && maxSkuOpt.isPresent()) {
+                    SpuPriceSummaryDTO summary = SpuPriceSummaryDTO.builder()
+                            .spuId(spuId)
+                            .minPrice(minSkuOpt.get().getPrice())
+                            .maxPrice(maxSkuOpt.get().getPrice())
+                            .minPriceSkuId(minSkuOpt.get().getId())
+                            .build();
+                    summaries.add(summary);
+                }
+            }
+        });
+
+        return summaries;
     }
 
     @Override

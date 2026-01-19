@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.vv.cloudfarming.shop.dao.entity.SkuDO;
 import com.vv.cloudfarming.shop.dto.req.SkuCreateReqDTO;
 import com.vv.cloudfarming.shop.dto.resp.SkuRespDTO;
+import com.vv.cloudfarming.shop.dto.SpuPriceSummaryDTO;
 
 import java.util.List;
 
@@ -41,6 +42,13 @@ public interface SkuService extends IService<SkuDO> {
      * @return 详情列表
      */
     List<SkuRespDTO> listSkuDetailsByIds(List<Long> ids);
+
+    /**
+     * 批量获取 SPU 的价格摘要
+     * @param spuIds SPU ID 列表
+     * @return 价格摘要列表
+     */
+    List<SpuPriceSummaryDTO> listPriceSummaryBySpuIds(List<Long> spuIds);
 
     /**
      * 锁定库存（扣减库存）

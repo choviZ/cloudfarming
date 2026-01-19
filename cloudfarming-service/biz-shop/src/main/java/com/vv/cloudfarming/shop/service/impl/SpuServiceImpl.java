@@ -23,6 +23,7 @@ import com.vv.cloudfarming.shop.dto.req.SpuPageQueryReqDTO;
 import com.vv.cloudfarming.shop.dto.resp.CategoryRespDTO;
 import com.vv.cloudfarming.shop.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.shop.dto.resp.SpuRespDTO;
+import com.vv.cloudfarming.shop.dto.SpuPriceSummaryDTO;
 import com.vv.cloudfarming.shop.dto.resp.SpuDetailRespDTO;
 import com.vv.cloudfarming.shop.service.AttributeService;
 import com.vv.cloudfarming.shop.service.CategoryService;
@@ -148,9 +149,23 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
                 .eq(status != null, SpuDO::getStatus, status);
         // 查询
         IPage<SpuDO> spuDOPage = baseMapper.selectPage(queryParam, queryWrapper);
+
+        // 批量查询价格摘要 (避免 N+1)
+        List<Long> spuIds = spuDOPage.getRecords().stream()
+                .map(SpuDO::getId)
+                .collect(Collectors.toList());
+        List<SpuPriceSummaryDTO> priceSummaries = skuService.listPriceSummaryBySpuIds(spuIds);
+        Map<Long, SpuPriceSummaryDTO> priceSummaryMap = priceSummaries.stream()
+                .collect(Collectors.toMap(SpuPriceSummaryDTO::getSpuId, p -> p));
+
         return spuDOPage.convert(spuDO -> {
             SpuRespDTO spuRespDTO = BeanUtil.toBean(spuDO, SpuRespDTO.class);
             spuRespDTO.setAttributes(getSpuAttributes(spuDO.getId()));
+            // 填充价格摘要
+            SpuPriceSummaryDTO summary = priceSummaryMap.get(spuDO.getId());
+            if (summary != null) {
+                spuRespDTO.setPriceSummary(summary);
+            }
             return spuRespDTO;
         });
     }
