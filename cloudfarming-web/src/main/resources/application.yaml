@@ -1,6 +1,8 @@
 server:
   port: 8080
 spring:
+  profiles:
+    active: local
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/cloud_breeding
@@ -24,6 +26,11 @@ spring:
           max-idle: 10
           # 连接池中的最小空闲连接
           min-idle: 0
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: your username
+    password: your password
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -50,3 +57,6 @@ sa-token:
   is-share: false
   token-style: uuid
   is-log: false
+logging:
+  pattern:
+    dateformat: yyyy-MM-dd HH:mm:ss.SSS

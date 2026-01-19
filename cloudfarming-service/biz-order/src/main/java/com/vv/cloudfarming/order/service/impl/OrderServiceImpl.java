@@ -15,14 +15,19 @@ import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderInfoRespDTO;
 import com.vv.cloudfarming.order.enums.OrderStatusEnum;
 import com.vv.cloudfarming.order.enums.PayStatusEnum;
+import com.vv.cloudfarming.order.mq.DelayMessageProcessor;
+import com.vv.cloudfarming.order.mq.constant.MqConstant;
+import com.vv.cloudfarming.order.mq.modal.MultiDelayMessage;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.shop.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.shop.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,15 +41,18 @@ import java.util.concurrent.ThreadLocalRandom;
  * 订单服务实现层
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implements OrderService {
 
     private final ProductService productService;
     private final OrderItemMapper orderItemMapper;
+    private final OrderMapper orderMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private static final String STOCK_CACHE_KEY_PREFIX = "cloudfarming:stock:";
     private final int MAX_PURCHASE_LIMIT = 1000;
     private final RedissonClient redissonClient;
+    private final RabbitTemplate rabbitTemplate;
 
     @Transactional
     @Override
@@ -128,7 +136,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             if (insertedOrderItem != 1) {
                 throw new ServiceException("订单创建失败");
             }
-            // TODO 延迟队列处理订单超时
+            //  延迟队列处理订单超时
+            MultiDelayMessage<Long> msg = MultiDelayMessage.of(orderDO.getId(), 30000L, 60000L, 300000L, 850000L);
+            int delay = msg.removeNextDelay().intValue();
+            rabbitTemplate.convertAndSend(
+                    MqConstant.DELAY_EXCHANGE,
+                    MqConstant.DELAY_ORDER_ROUTING_KEY,
+                    msg,
+                    new DelayMessageProcessor(delay)
+            );
+            log.info("发送延迟消息：{}，延迟时间：{}秒",msg,delay / 1000);
         } catch (Exception e) {
             // 订单创建失败，释放库存锁
             stringRedisTemplate.opsForValue().increment(stockCacheKey, quantity);
@@ -187,6 +204,76 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             respDTO.setCloseTime(FormatConvertUtil.convertToLocalDateTime(orderDO.getUpdateTime()));
         }
         return respDTO;
+    }
+
+    @Override
+    public PayStatusEnum queryOrderPayStatusById(Long id) {
+        if (id == null || id <= 0) {
+            throw new ClientException("id不合法");
+        }
+        int payStatus = orderMapper.queryOrderPayStatusById(id);
+        PayStatusEnum payStatusEnum = PayStatusEnum.getByCode(payStatus);
+        if (payStatusEnum == null) {
+            throw new ClientException("支付状态异常");
+        }
+        return payStatusEnum;
+    }
+
+    @Override
+    public void updateOrderPayStatus(Long id, PayStatusEnum payStatusEnum) {
+        if (id == null || id <= 0) {
+            throw new ClientException("id不合法");
+        }
+        if (payStatusEnum == null){
+            throw new ClientException("支付状态不能为空");
+        }
+        OrderDO order = baseMapper.selectById(id);
+        if (order == null) {
+            throw new ClientException("订单不存在");
+        }
+        if (order.getPayStatus().equals(payStatusEnum.getCode())) {
+            return;
+        }
+        order.setPayStatus(payStatusEnum.getCode());
+        int updated = baseMapper.updateById(order);
+        if (updated < 0) {
+            throw new ServiceException("更新状态失败");
+        }
+    }
+
+    @Override
+    public OrderStatusEnum queryOrderStatusById(Long id) {
+        if (id == null || id <= 0) {
+            throw new ClientException("id不合法");
+        }
+        int orderStatus = orderMapper.queryOrderStatusById(id);
+        OrderStatusEnum orderStatusEnum = OrderStatusEnum.getByCode(orderStatus);
+        if (orderStatusEnum == null) {
+            throw new ClientException("订单状态异常");
+        }
+        return orderStatusEnum;
+    }
+
+    @Override
+    public void updateOrderStatus(Long id, OrderStatusEnum orderStatusEnum) {
+        if (id == null || id <= 0) {
+            throw new ClientException("id不合法");
+        }
+        if (orderStatusEnum == null) {
+            throw new ClientException("订单状态不能为空");
+        }
+        OrderDO order = baseMapper.selectById(id);
+        if (order == null) {
+            throw new ClientException("订单不存在");
+        }
+        if (order.getOrderStatus().equals(orderStatusEnum.getCode())) {
+            return;
+        }
+        order.setOrderStatus(orderStatusEnum.getCode());
+        int updated = baseMapper.updateById(order);
+        if (updated < 0) {
+            throw new ServiceException("更新状态失败");
+        }
     }
 
     /**

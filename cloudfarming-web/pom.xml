@@ -41,6 +41,11 @@
             <artifactId>sa-token-redis-template</artifactId>
             <version>${sa-token.version}</version>
         </dependency>
+        <!-- RabbitMQ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
         <!-- 接口文档 -->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>

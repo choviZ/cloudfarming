@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.order.enums;
 
+import com.vv.cloudfarming.common.exception.ClientException;
 import lombok.Getter;
 
 /**
@@ -21,5 +22,21 @@ public enum OrderStatusEnum {
     OrderStatusEnum(int code, String desc) {
         this.code = code;
         this.desc = desc;
+    }
+
+    public static OrderStatusEnum getByCode(Integer code) {
+        if (code == null) {
+            throw new ClientException("订单状态码不能为null");
+        }
+        for (OrderStatusEnum status : values()) {
+            if (status.getCode() == code) {
+                return status;
+            }
+        }
+        throw new ClientException("不存在的订单状态码：" + code);
+    }
+
+    public static OrderStatusEnum getByCode(int code) {
+        return getByCode(Integer.valueOf(code));
     }
 }
