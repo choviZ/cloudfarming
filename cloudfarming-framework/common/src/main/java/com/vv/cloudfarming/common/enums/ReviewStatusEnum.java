@@ -23,7 +23,7 @@ public enum ReviewStatusEnum {
      */
     REJECTED(2, "未通过");
 
-    private final int status;
+    private final Integer status;
 
     private final String desc;
 

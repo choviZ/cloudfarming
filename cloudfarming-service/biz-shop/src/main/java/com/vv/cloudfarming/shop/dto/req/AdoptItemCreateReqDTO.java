@@ -44,4 +44,9 @@ public class AdoptItemCreateReqDTO {
      * 封面图片
      */
     private String coverImage;
+
+    /**
+     * 牲畜总数
+     */
+    private Integer totalCount;
 }

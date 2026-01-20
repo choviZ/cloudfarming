@@ -1,52 +1,62 @@
 package com.vv.cloudfarming.shop.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.vv.cloudfarming.common.enums.ReviewStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.shop.dao.entity.AdoptItemDO;
+import com.vv.cloudfarming.shop.dao.entity.LivestockDO;
 import com.vv.cloudfarming.shop.dao.mapper.AdoptItemMapper;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemCreateReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemPageReqDTO;
+import com.vv.cloudfarming.shop.dto.req.AdoptItemReviewReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemUpdateReqDTO;
 import com.vv.cloudfarming.shop.dto.resp.AdoptItemRespDTO;
+import com.vv.cloudfarming.shop.enums.LivestockStatusEnum;
 import com.vv.cloudfarming.shop.service.AdoptItemService;
+import com.vv.cloudfarming.shop.service.LiveStockService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
 
 /**
  * 认养项目服务实现类
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItemDO> implements AdoptItemService {
-
-    // 审核状态常量
-    private static final Integer REVIEW_STATUS_PENDING = 0; // 待审核
-    private static final Integer REVIEW_STATUS_APPROVED = 1; // 通过
-    private static final Integer REVIEW_STATUS_REJECTED = 2; // 拒绝
 
     // 上架状态常量
     private static final Integer STATUS_ON_SHELF = 1; // 上架
     private static final Integer STATUS_OFF_SHELF = 0; // 下架
 
+    private final LiveStockService liveStockService;
+
     @Override
     public Long createAdoptItem(Long userId, AdoptItemCreateReqDTO reqDTO) {
+        Integer totalCount = reqDTO.getTotalCount();
         // 构建认养项目实体
-        AdoptItemDO adoptItem = new AdoptItemDO();
-        adoptItem.setUserId(userId);
-        adoptItem.setTitle(reqDTO.getTitle());
-        adoptItem.setAnimalCategory(reqDTO.getAnimalCategory());
-        adoptItem.setAdoptDays(reqDTO.getAdoptDays());
-        adoptItem.setPrice(reqDTO.getPrice());
-        adoptItem.setExpectedYield(reqDTO.getExpectedYield());
-        adoptItem.setDescription(reqDTO.getDescription());
-        adoptItem.setCoverImage(reqDTO.getCoverImage());
-        adoptItem.setReviewStatus(REVIEW_STATUS_PENDING); // 创建后默认待审核
-        adoptItem.setStatus(STATUS_OFF_SHELF); // 创建后默认未上架
-
+        AdoptItemDO adoptItem = AdoptItemDO.builder()
+                .userId(userId)
+                .title(reqDTO.getTitle())
+                .animalCategory(reqDTO.getAnimalCategory())
+                .adoptDays(reqDTO.getAdoptDays())
+                .price(reqDTO.getPrice())
+                .expectedYield(reqDTO.getExpectedYield())
+                .description(reqDTO.getDescription())
+                .coverImage(reqDTO.getCoverImage())
+                .reviewStatus(ReviewStatusEnum.PENDING.getStatus()) // 创建后默认待审核
+                .status(STATUS_OFF_SHELF)            // 创建后默认未上架
+                .totalCount(totalCount)
+                .availableCount(totalCount)
+                .build();
         // 保存到数据库
         if (!this.save(adoptItem)) {
             throw new ServiceException("创建认养项目失败");
@@ -68,7 +78,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 仅当审核状态不是通过时允许修改
-        if (REVIEW_STATUS_APPROVED.equals(adoptItem.getReviewStatus())) {
+        if (ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
             throw new ClientException("已审核通过的认养项目不允许修改");
         }
 
@@ -80,7 +90,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         adoptItem.setExpectedYield(reqDTO.getExpectedYield());
         adoptItem.setDescription(reqDTO.getDescription());
         adoptItem.setCoverImage(reqDTO.getCoverImage());
-        adoptItem.setReviewStatus(REVIEW_STATUS_PENDING); // 修改后重置为待审核
+        adoptItem.setReviewStatus(ReviewStatusEnum.PENDING.getStatus()); // 修改后重置为待审核
 
         // 保存到数据库
         if (!this.updateById(adoptItem)) {
@@ -102,7 +112,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 上架时校验审核状态
-        if (STATUS_ON_SHELF.equals(status) && !REVIEW_STATUS_APPROVED.equals(adoptItem.getReviewStatus())) {
+        if (STATUS_ON_SHELF.equals(status) && !ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
             throw new ClientException("仅审核通过的认养项目允许上架");
         }
 
@@ -155,7 +165,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         } else {
             isOwner = userId == null ? false : adoptItem.getUserId().equals(userId);
         }
-        if (!isOwner && !REVIEW_STATUS_APPROVED.equals(adoptItem.getReviewStatus())) {
+        if (!isOwner && !ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
             throw new ClientException("认养项目不存在");
         }
         // 转换为响应DTO
@@ -184,7 +194,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         // 业务规则：普通用户查询时，仅返回审核通过且已上架的项目
         boolean isMyPublish = reqDTO.getUserId() != null;
         if (!isMyPublish) {
-            queryWrapper.eq(AdoptItemDO::getReviewStatus, REVIEW_STATUS_APPROVED);
+            queryWrapper.eq(AdoptItemDO::getReviewStatus, ReviewStatusEnum.APPROVED.getStatus());
             queryWrapper.eq(AdoptItemDO::getStatus, STATUS_ON_SHELF);
         } else {
             // 查询"我的发布"时，根据user_id返回自己的全部项目
@@ -211,5 +221,40 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
             }
             return respDTO;
         });
+    }
+
+    @Override
+    public void updateReviewStatus(Long userId, AdoptItemReviewReqDTO requestParam) {
+        Long id = requestParam.getId();
+        Integer status = requestParam.getStatus();
+        String message = requestParam.getMessage();
+
+        AdoptItemDO item = this.getById(id);
+        if (item.getStatus().equals(status)) {
+            throw new ClientException("请勿重复修改状态");
+        }
+        item.setStatus(status);
+        if (StrUtil.isNotBlank(message)) {
+            item.setReviewText(message);
+        }
+        boolean updated = this.updateById(item);
+        if (!updated) {
+            throw new ServiceException("审核状态修改失败");
+        }
+        // 审核成功 - 创建对应总数的牲畜记录
+        Integer totalCount = item.getTotalCount();
+        ArrayList<LivestockDO> liveStocks = new ArrayList<>(totalCount);
+        for (int i = 0; i < totalCount; i++) {
+            LivestockDO livestockDO = LivestockDO.builder()
+                    .itemId(item.getId())
+                    .status(LivestockStatusEnum.AVAILABLE.getCode())
+                    .build();
+            liveStocks.add(livestockDO);
+        }
+        boolean saveBatch = liveStockService.saveBatch(liveStocks);
+        if (!saveBatch) {
+            // TODO 失败处理
+            log.error("批量创建牲畜记录失败，认养项目id：{}", item.getId());
+        }
     }
 }

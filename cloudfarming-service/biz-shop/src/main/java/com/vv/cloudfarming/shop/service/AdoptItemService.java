@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.vv.cloudfarming.shop.dao.entity.AdoptItemDO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemCreateReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemPageReqDTO;
+import com.vv.cloudfarming.shop.dto.req.AdoptItemReviewReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemUpdateReqDTO;
 import com.vv.cloudfarming.shop.dto.resp.AdoptItemRespDTO;
 
@@ -63,4 +64,12 @@ public interface AdoptItemService extends IService<AdoptItemDO> {
      * @return 分页查询结果
      */
     IPage<AdoptItemRespDTO> pageAdoptItems(AdoptItemPageReqDTO reqDTO);
+
+    /**
+     * 修改审核状态
+     *
+     * @param userId       修改人
+     * @param requestParam 请求参数
+     */
+    void updateReviewStatus(Long userId, AdoptItemReviewReqDTO requestParam);
 }
