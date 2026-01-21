@@ -7,6 +7,21 @@
     "url": "https://github.com/choviZ/cloudfarming.git"
   },
   "private": true,
+  "packageManager": "pnpm@10.26.2",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:admin": "turbo run dev --filter=cloudfarming-admin",
+    "dev:web": "turbo run dev --filter=cloudfarming-web",
+    "build": "turbo run build",
+    "build:admin": "turbo run build --filter=cloudfarming-admin",
+    "build:web": "turbo run build --filter=cloudfarming-web",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.7.5"
+  },
   "dependencies": {
     "dayjs": "^1.11.19"
   }
