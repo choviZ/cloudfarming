@@ -50,3 +50,37 @@ export interface AttributeValueRespDTO {
   /** 更新时间 */
   updateTime: string;
 }
+
+/**
+ * 创建属性请求参数
+ */
+export interface AttributeCreateReqDTO {
+  /** 关联的分类ID */
+  categoryId: string;
+
+  /** 属性名 */
+  name: string;
+
+  /** 属性类型：0-基本属性 / 1-销售属性 */
+  attrType: number;
+
+  /** 排序权重 */
+  sort: number;
+}
+
+export interface AttributeUpdateReqDTO {
+  /** 属性ID */
+  id: string;
+
+  /** 关联的分类ID */
+  categoryId: string;
+
+  /** 属性名 */
+  name: string;
+
+  /** 属性类型：0-基本属性 / 1-销售属性 */
+  attrType: number;
+
+  /** 排序权重 */
+  sort: number;
+}
