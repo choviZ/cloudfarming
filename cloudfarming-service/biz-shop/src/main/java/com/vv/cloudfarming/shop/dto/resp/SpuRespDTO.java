@@ -3,6 +3,7 @@ package com.vv.cloudfarming.shop.dto.resp;
 import com.vv.cloudfarming.shop.dto.SpuPriceSummaryDTO;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Data
@@ -42,4 +43,9 @@ public class SpuRespDTO {
      * 基本属性
      */
     private Map<String,String> attributes;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createTime;
 }

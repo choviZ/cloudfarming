@@ -39,6 +39,20 @@ const router = createRouter({
           name: 'admin-attribute',
           component: () => import('@/views/admin/attribute/index.vue'),
         },
+        {
+          path: '/admin/product',
+          name: 'admin-product',
+          component: () => import('@/views/admin/product/index.vue'),
+        },
+        {
+          path: '/admin/product/detail/:id',
+          name: 'admin-product-detail',
+          component: () => import('@/views/admin/product/detail.vue'),
+          meta: {
+            title: '商品详情',
+            hideInMenu: true
+          }
+        },
       ]
     }
   ],
