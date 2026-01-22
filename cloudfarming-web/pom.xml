@@ -86,5 +86,11 @@
             <artifactId>biz-cart</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <!-- 存储 -->
+        <dependency>
+            <groupId>com.vv.cloudfarming</groupId>
+            <artifactId>cloudfarming-storage-spring-boot-starter</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>
