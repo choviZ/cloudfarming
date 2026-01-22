@@ -50,12 +50,7 @@
           </a-row>
 
           <a-form-item label="封面图片" name="coverImage">
-            <div class="upload-placeholder">
-              <div class="upload-icon">📷</div>
-              <div class="upload-text">点击上传封面图片</div>
-              <div class="upload-hint">支持 JPG, PNG 格式，大小不超过 5MB (TODO)</div>
-              <a-input v-model:value="formState.coverImage" style="margin-top: 10px; display: none;" />
-            </div>
+            <image-upload v-model:value="formState.coverImage" biz-code="ADOPT_ITEM_COVER"/>
           </a-form-item>
         </div>
 
@@ -130,6 +125,7 @@ import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { createAdoptItem, listAnimalCategories, getAdoptItemDetail, updateAdoptItem } from '@cloudfarming/core'
 import type { AdoptItemCreateReq, AnimalCategoryResp } from '@cloudfarming/core'
 import { useRoute, useRouter } from 'vue-router'
+import ImageUpload from "@/components/Upload/ImageUpload.vue";
 
 const route = useRoute()
 const router = useRouter()
@@ -147,7 +143,7 @@ const formRef = ref<FormInstance>()
 const formState = reactive<AdoptItemCreateReq>({
   title: '',
   animalCategory: '',
-  coverImage: 'https://placeholder.com/default-cover.png', // 默认占位图，因接口必填
+  coverImage: '', // 默认占位图，因接口必填
   adoptDays: 30,
   price: 100,
   expectedYield: '',

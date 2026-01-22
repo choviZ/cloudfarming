@@ -26,6 +26,10 @@
         />
       </a-form-item>
 
+      <a-form-item label="商品主图">
+        <image-upload v-model:value="spuCover" :biz-code="UploadType.PRODUCT_SPU_COVER"/>
+      </a-form-item>
+
       <a-divider />
 
       <!-- 商品基本属性（类型0）- 这些是固定的商品属性，如产地、保质期等 -->
@@ -103,13 +107,15 @@ import {
   saveSpu,
   createSku,
   type SkuItemDTO,
-  type SaleAttrDTO
+  type SaleAttrDTO,
+  UploadType
 } from '@cloudfarming/core'
 import type {
   BaseAttributeItem,
   SaleAttributeItem,
   SKU
 } from '@/types'
+import ImageUpload from "@/components/Upload/ImageUpload.vue";
 import { message } from 'ant-design-vue'
 
 /**
@@ -126,6 +132,11 @@ const selectedCategoryId = ref<string>('')
  * 商品标题
  */
 const spuTitle = ref('')
+
+/**
+ * 商品主图
+ */
+const spuCover = ref('')
 
 /**
  * 当前分类下的所有可用属性列表
@@ -288,7 +299,7 @@ const handleSave = async () => {
       shopId: '1',
       categoryId: selectedCategoryId.value,
       title: spuTitle.value,
-      image: '',
+      images: spuCover.value,
       status: 2
     })
     if (spuRes.code != '0') {

@@ -2,7 +2,7 @@
  * 农产品商品 SPU 相关类型定义
  */
 
-import { SkuRespDTO } from '../sku/types';
+import type { SkuRespDTO } from '../sku/types';
 
 /**
  * SPU 价格摘要
@@ -82,7 +82,7 @@ export interface SpuCreateOrUpdateReqDTO {
   categoryId: string;
 
   /** 商品图片 URL，多个图片用逗号分隔 */
-  image: string;
+  images: string;
 
   /** 商品状态：0-下架，1-上架，2-待审核 */
   status: number;
