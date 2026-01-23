@@ -13,8 +13,8 @@ import java.util.Date;
  */
 @Data
 @Builder
-@TableName("t_livestock")
-public class LivestockDO extends BaseDO implements Serializable {
+@TableName("t_adopt_instance")
+public class AdoptInstanceDO extends BaseDO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -35,9 +35,9 @@ public class LivestockDO extends BaseDO implements Serializable {
     private Long earTagNo;
 
     /**
-     * 生日
+     * 图片
      */
-    private Date birthDate;
+    private String image;
 
     /**
      * 可认养 / 已认养 / 已履约完成

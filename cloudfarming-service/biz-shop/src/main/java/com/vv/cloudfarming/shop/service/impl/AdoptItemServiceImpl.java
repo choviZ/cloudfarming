@@ -6,24 +6,20 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vv.cloudfarming.common.enums.ReviewStatusEnum;
+import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.shop.dao.entity.AdoptItemDO;
-import com.vv.cloudfarming.shop.dao.entity.LivestockDO;
 import com.vv.cloudfarming.shop.dao.mapper.AdoptItemMapper;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemCreateReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemPageReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemReviewReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemUpdateReqDTO;
 import com.vv.cloudfarming.shop.dto.resp.AdoptItemRespDTO;
-import com.vv.cloudfarming.shop.enums.LivestockStatusEnum;
 import com.vv.cloudfarming.shop.service.AdoptItemService;
-import com.vv.cloudfarming.shop.service.LiveStockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
 
 /**
  * 认养项目服务实现类
@@ -32,12 +28,6 @@ import java.util.ArrayList;
 @Slf4j
 @RequiredArgsConstructor
 public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItemDO> implements AdoptItemService {
-
-    // 上架状态常量
-    private static final Integer STATUS_ON_SHELF = 1; // 上架
-    private static final Integer STATUS_OFF_SHELF = 0; // 下架
-
-    private final LiveStockService liveStockService;
 
     @Override
     public Long createAdoptItem(Long userId, AdoptItemCreateReqDTO reqDTO) {
@@ -53,7 +43,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
                 .description(reqDTO.getDescription())
                 .coverImage(reqDTO.getCoverImage())
                 .reviewStatus(ReviewStatusEnum.PENDING.getStatus()) // 创建后默认待审核
-                .status(STATUS_OFF_SHELF)            // 创建后默认未上架
+                .status(ShelfStatusEnum.OFFLINE.getCode())            // 创建后默认未上架
                 .totalCount(totalCount)
                 .availableCount(totalCount)
                 .build();
@@ -112,7 +102,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 上架时校验审核状态
-        if (STATUS_ON_SHELF.equals(status) && !ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
+        if (ShelfStatusEnum.ONLINE.getCode().equals(status) && !ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
             throw new ClientException("仅审核通过的认养项目允许上架");
         }
 
@@ -195,7 +185,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         boolean isMyPublish = reqDTO.getUserId() != null;
         if (!isMyPublish) {
             queryWrapper.eq(AdoptItemDO::getReviewStatus, ReviewStatusEnum.APPROVED.getStatus());
-            queryWrapper.eq(AdoptItemDO::getStatus, STATUS_ON_SHELF);
+            queryWrapper.eq(AdoptItemDO::getStatus, ShelfStatusEnum.ONLINE.getCode());
         } else {
             // 查询"我的发布"时，根据user_id返回自己的全部项目
             queryWrapper.eq(AdoptItemDO::getUserId, reqDTO.getUserId());
@@ -240,21 +230,6 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         boolean updated = this.updateById(item);
         if (!updated) {
             throw new ServiceException("审核状态修改失败");
-        }
-        // 审核成功 - 创建对应总数的牲畜记录
-        Integer totalCount = item.getTotalCount();
-        ArrayList<LivestockDO> liveStocks = new ArrayList<>(totalCount);
-        for (int i = 0; i < totalCount; i++) {
-            LivestockDO livestockDO = LivestockDO.builder()
-                    .itemId(item.getId())
-                    .status(LivestockStatusEnum.AVAILABLE.getCode())
-                    .build();
-            liveStocks.add(livestockDO);
-        }
-        boolean saveBatch = liveStockService.saveBatch(liveStocks);
-        if (!saveBatch) {
-            // TODO 失败处理
-            log.error("批量创建牲畜记录失败，认养项目id：{}", item.getId());
         }
     }
 }
