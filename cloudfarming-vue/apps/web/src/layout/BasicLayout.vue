@@ -36,7 +36,7 @@ const isCartPage = computed(() => route.path.startsWith('/cart'))
 }
 
 .layout-header {
-  background-color: #ffffff;
+  height: 32px;
   padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
   z-index: 10;
@@ -45,23 +45,23 @@ const isCartPage = computed(() => route.path.startsWith('/cart'))
 .layout-content {
   flex: 1;
   padding: 20px 0;
-  background-color: #f5f5f5;
+  background-color: white;
   display: flex;
   justify-content: center;
 }
 
 .content-wrapper {
   width: 100%;
-  max-width: 1550px;
+  max-width: 1620px;
   padding: 0 20px;
   box-sizing: border-box;
 }
 
 .layout-footer {
   position: relative;
-  background-color: #ffffff;
-  padding: 24px 0;
-  border-top: 1px solid #e8e8e8;
+  background-color: #FFFFFF;
+  padding: 40px 0;
+  border-top: 1px solid #E2E8F0;
 }
 
 /* 有购物车时的footer样式 */
@@ -71,11 +71,11 @@ const isCartPage = computed(() => route.path.startsWith('/cart'))
 
 .footer-content {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1620px;
   margin: 0 auto;
   padding: 0 20px;
   text-align: center;
-  color: #666;
+  color: #8D6E63;
   font-size: 14px;
 }
 </style>

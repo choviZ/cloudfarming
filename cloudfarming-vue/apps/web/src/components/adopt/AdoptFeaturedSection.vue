@@ -7,7 +7,7 @@
 
     <a-skeleton :loading="loading" active>
       <div v-if="adoptItems.length > 0" class="adopt-list">
-        <a-row :gutter="[20, 20]">
+        <a-row :gutter="[12, 20]">
           <a-col
             v-for="item in adoptItems"
             :key="item.id"
@@ -15,6 +15,7 @@
             :sm="12"
             :md="8"
             :lg="6"
+            :xl="4"
           >
             <a-card hoverable class="adopt-card" @click="goToDetail(item.id)">
               <template #cover>
@@ -27,7 +28,6 @@
               </template>
               <div class="adopt-info">
                 <h3 class="adopt-title" :title="item.title">{{ item.title }}</h3>
-                <p class="adopt-desc">{{ item.description || '暂无描述' }}</p>
                 <div class="adopt-meta">
                   <span class="adopt-price">¥{{ item.price }}</span>
                   <span class="adopt-period">周期: {{ item.adoptDays }}天</span>
@@ -47,7 +47,6 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { pageAdoptItems } from '@cloudfarming/core';
 import type { AdoptItemResp } from '@cloudfarming/core';
-import { message } from 'ant-design-vue';
 
 const router = useRouter();
 const loading = ref(false);
@@ -56,11 +55,11 @@ const adoptItems = ref<AdoptItemResp[]>([]);
 const fetchFeaturedItems = async () => {
   loading.value = true;
   try {
-    // 模拟精选：查询前4条
     const res = await pageAdoptItems({
       current: 1,
-      size: 4,
-      status: 1 // 仅查询上架的
+      size: 6,
+      status: 1,
+      reviewStatus: 1
     });
     
     if (res.code === '0' && res.data) {
@@ -98,9 +97,8 @@ onMounted(() => {
 <style scoped>
 .adopt-featured-section {
   width: 100%;
-  max-width: 1550px;
+  max-width: 1620px;
   margin: 0 auto;
-  padding: 20px 0;
 }
 
 .section-header {
@@ -137,9 +135,12 @@ onMounted(() => {
 }
 
 .adopt-card {
+  width: 253px;
+  height: 335px;
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.3s;
+  margin: 0 auto;
 }
 
 .adopt-card:hover {
@@ -147,15 +148,26 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+:deep(.ant-card-body) {
+  padding: 10px 12px;
+  height: 82px; /* 335 - 253 */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
 .image-wrapper {
   position: relative;
-  height: 200px;
+  width: 253px;
+  height: 253px;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
 }
 
 .adopt-image {
-  width: 100%;
-  height: 100%;
+  width: 253px;
+  height: 253px;
   object-fit: cover;
   transition: transform 0.3s;
 }
@@ -175,35 +187,24 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.status-active {
-  background-color: rgba(82, 196, 26, 0.9); /* Green */
-}
-
-.status-inactive {
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
 .adopt-info {
-  padding: 12px;
+  /* padding removed from here as it is now on ant-card-body */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .adopt-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.adopt-desc {
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 12px;
-  height: 20px;
+  color: #1f1f1f;
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  width: 100%;
 }
 
 .adopt-meta {
@@ -213,9 +214,14 @@ onMounted(() => {
 }
 
 .adopt-price {
-  font-size: 18px;
+  align-items: flex-end;
+  color: #ff5000;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 20px;
   font-weight: 700;
-  color: #ff4d4f;
+  line-height: 24px;
+  margin: 0;
 }
 
 .adopt-period {

@@ -1,5 +1,34 @@
 <template>
   <div class="index-container">
+    <!-- 头部搜索区域 -->
+    <div class="main-header">
+      <div class="header-container main-content">
+        <!-- Logo -->
+        <div class="logo" @click="router.push('/')">
+          <h1 class="logo-text">
+            云农场
+            <span class="logo-sub">优质农产品直供</span>
+          </h1>
+        </div>
+        <!-- Search Box -->
+        <div class="search-section">
+          <div class="search-box">
+            <div class="search-input-wrapper">
+              <SearchOutlined class="search-icon"/>
+              <input
+                  type="text"
+                  placeholder="搜索 新鲜水果 / 蔬菜 / 农特产"
+                  class="search-input"
+              />
+            </div>
+            <button class="search-button">
+              搜索
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 上部广告展示区域 -->
     <div class="advert-section">
       <a-carousel :autoplay="true" :dots="true" :autoplay-speed="3000" :effect="'fade'">
@@ -13,10 +42,16 @@
     </div>
 
     <!-- 认养精选区域 -->
-    <AdoptFeaturedSection />
+    <AdoptFeaturedSection style="margin-top:24px"/>
 
     <!-- 下部商品展示区域 -->
     <div class="product-section">
+      <!-- 商品列表头部 -->
+      <div class="section-header">
+        <h2 class="section-title">农产品特惠</h2>
+        <a-button type="link">查看全部 ></a-button>
+      </div>
+
       <!-- 商品类型标签查询 -->
       <div class="product-types">
         <a-tag
@@ -40,10 +75,7 @@
               :xs="24"
               :sm="12"
               :md="8"
-              :lg="8"
-              :xl="6"
-              :xxl="4"
-              class="product-item-wrapper"
+              :lg="6"
             >
               <div class="product-item">
                 <a-card hoverable class="product-card" @click="goToProductDetail(product.id)">
@@ -88,6 +120,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import {SearchOutlined} from '@ant-design/icons-vue';
 import { getShowAdverts } from '@/api/advert';
 import type { AdvertRespDTO } from '@/types/advert';
 import { listSpuByPage } from '@cloudfarming/core/api/spu';
@@ -210,15 +243,119 @@ onMounted(() => {
 <style scoped>
 .index-container {
   min-height: 100vh;
-  background-color: #f5f5f5;
+}
+
+.header-container {
+  width: 100%;
+  max-width: 1620px; /* Updated to 1620px */
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Main Header */
+.main-header {
+  padding: 24px 0;
+  background-color: #FFFFFF;
+}
+
+.main-content {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.logo {
+  width: 180px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.logo-text {
+  font-size: 30px;
+  font-weight: bold;
+  color: #388E3C;
+  margin: 0;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.logo-sub {
+  font-size: 14px;
+  color: #FF9800;
+  font-weight: normal;
+  display: block;
+  letter-spacing: normal;
+  margin-top: 4px;
+}
+
+/* Search Box */
+.search-section {
+  flex: 1;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.search-box {
+  display: flex;
+  position: relative;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  border: 2px solid #388E3C;
+  border-radius: 24px 0 0 24px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding-left: 16px;
+  background-color: #FFFFFF;
+  height: 40px;
+}
+
+.search-icon {
+  color: #A0AEC0;
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.search-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #2D3748;
+}
+
+.search-input::placeholder {
+  color: #A0AEC0;
+}
+
+.search-button {
+  background-color: #388E3C;
+  color: #FFFFFF;
+  padding: 0 32px;
+  border-radius: 0 24px 24px 0;
+  font-weight: bold;
+  font-size: 18px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-button:hover {
+  background-color: #1B5E20;
 }
 
 /* 广告区域样式 */
 .advert-section {
   width: 100%;
-  max-width: 1550px;
+  max-width: 1620px;
   margin: 0 auto;
-  padding: 20px 0;
 }
 
 .advert-item {
@@ -227,14 +364,16 @@ onMounted(() => {
   align-items: center;
   height: 400px;
   overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .advert-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 8px;
-  transition: transform 0.3s ease;
+  border-radius: 16px;
+  transition: transform 0.5s ease;
 }
 
 .advert-image:hover {
@@ -244,20 +383,55 @@ onMounted(() => {
 /* 商品区域样式 */
 .product-section {
   width: 100%;
-  max-width: 100%;
+  max-width: 1620px;
   margin: 0 auto;
-  padding: 20px 0 40px;
+  padding: 20px 0 60px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 20px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  position: relative;
+  padding-left: 15px;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 24px;
+  background-color: #388E3C;
+  border-radius: 2px;
 }
 
 .product-types {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 24px;
-  padding: 20px;
-  background-color: white;
+  margin-bottom: 32px;
+  padding: 24px 20px;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.tag-item {
+  cursor: pointer;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 4px 16px;
+  font-size: 14px;
 }
 
 .product-list {
@@ -272,21 +446,25 @@ onMounted(() => {
 
 .product-item {
   width: 100%;
-  max-width: 240px;
   margin: 0 auto;
 }
 
 .product-card {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: box-shadow 0.3s ease;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
+  background-color: #FFFFFF;
+  overflow: hidden;
 }
 
 .product-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* 商品图片样式 */
@@ -300,7 +478,6 @@ onMounted(() => {
   background-color: #f8f8f8;
   margin: 0;
   padding: 0;
-  border-radius: 0;
 }
 
 .product-image {
@@ -308,7 +485,7 @@ onMounted(() => {
   height: 240px;
   object-fit: cover;
   object-position: center;
-  transition: transform 0.3s ease;
+  transition: transform 0.5s ease;
 }
 
 .product-card:hover .product-image {
@@ -317,42 +494,45 @@ onMounted(() => {
 
 /* 使用Vue深度选择器覆盖Ant Design卡片默认样式 */
 .product-card :deep(.ant-card-body) {
-  padding: 2px !important;
-  border-radius: 0 0 8px 8px !important;
+  padding: 16px !important;
+  border-radius: 0 0 16px 16px !important;
 }
 
 /* 商品信息样式 */
 .product-info {
-  padding: 8px 10px;
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .product-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
-  margin-bottom: 3px;
+  color: #2D3748;
+  margin-bottom: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .product-price {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
-  color: #ff4d4f;
-  margin-bottom: 2px;
+  color: #FF9800;
+  display: flex;
+  align-items: baseline;
 }
 
-.product-origin {
+.product-price::before {
+  content: '¥';
   font-size: 14px;
-  color: #999;
+  margin-right: 2px;
 }
 
 /* 分页容器样式 */
 .pagination-container {
   display: flex;
   justify-content: center;
-  margin-top: 40px;
+  margin-top: 48px;
 }
 </style>
