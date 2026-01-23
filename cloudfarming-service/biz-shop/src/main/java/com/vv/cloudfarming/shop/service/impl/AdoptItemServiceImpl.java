@@ -1,6 +1,7 @@
 package com.vv.cloudfarming.shop.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -168,45 +169,29 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
     }
 
     @Override
-    public IPage<AdoptItemRespDTO> pageAdoptItems(AdoptItemPageReqDTO reqDTO) {
-        // 使用LambdaQueryWrapper构建查询条件
+    public IPage<AdoptItemRespDTO> pageAdoptItems(AdoptItemPageReqDTO requestParam) {
+        String animalCategory = requestParam.getAnimalCategory();
+        String title = requestParam.getTitle();
+        Integer reviewStatus = requestParam.getReviewStatus();
+        Integer status = requestParam.getStatus();
+        Long userId = requestParam.getUserId();
+        // 构建查询条件
         LambdaQueryWrapper<AdoptItemDO> queryWrapper = new LambdaQueryWrapper<>();
-        // 动物分类条件
-        if (reqDTO.getAnimalCategory() != null) {
-            queryWrapper.eq(AdoptItemDO::getAnimalCategory, reqDTO.getAnimalCategory());
-        }
-        // 标题模糊查询
-        if (reqDTO.getTitle() != null) {
-            queryWrapper.like(AdoptItemDO::getTitle, reqDTO.getTitle());
-        }
-        // 未删除
-        queryWrapper.eq(AdoptItemDO::getDelFlag, 0);
-        // 业务规则：普通用户查询时，仅返回审核通过且已上架的项目
-        boolean isMyPublish = reqDTO.getUserId() != null;
-        if (!isMyPublish) {
-            queryWrapper.eq(AdoptItemDO::getReviewStatus, ReviewStatusEnum.APPROVED.getStatus());
-            queryWrapper.eq(AdoptItemDO::getStatus, ShelfStatusEnum.ONLINE.getCode());
-        } else {
-            // 查询"我的发布"时，根据user_id返回自己的全部项目
-            queryWrapper.eq(AdoptItemDO::getFarmerId, reqDTO.getUserId());
-            // 审核状态条件（可选）
-            if (reqDTO.getReviewStatus() != null) {
-                queryWrapper.eq(AdoptItemDO::getReviewStatus, reqDTO.getReviewStatus());
-            }
-        }
-        // 上架状态条件（可选）
-        if (reqDTO.getStatus() != null) {
-            queryWrapper.eq(AdoptItemDO::getStatus, reqDTO.getStatus());
-        }
-        // 默认按创建时间倒序排列
-        queryWrapper.orderByDesc(AdoptItemDO::getCreateTime);
+        queryWrapper
+                .eq(StrUtil.isNotBlank(animalCategory), AdoptItemDO::getAnimalCategory, animalCategory) // 分类
+                .like(StrUtil.isNotBlank(title), AdoptItemDO::getTitle, title) // 标题
+                .eq(ObjectUtil.isNotNull(reviewStatus), AdoptItemDO::getReviewStatus, reviewStatus) // 审核状态
+                .eq(ObjectUtil.isNotNull(status), AdoptItemDO::getStatus, status) // 上架状态
+                .eq(ObjectUtil.isNotNull(userId),AdoptItemDO::getFarmerId, requestParam.getUserId()) // 用户id
+                .orderByDesc(AdoptItemDO::getCreateTime)
+        ;
         // 分页查询
-        IPage<AdoptItemDO> pageResult = this.page(reqDTO, queryWrapper);
+        IPage<AdoptItemDO> pageResult = this.page(requestParam, queryWrapper);
         // 转换为响应DTO
         return pageResult.convert(adoptItem -> {
             AdoptItemRespDTO respDTO = BeanUtil.toBean(adoptItem, AdoptItemRespDTO.class);
             // 仅发布者本人可查看审核说明
-            if (isMyPublish && reqDTO.getUserId().equals(adoptItem.getFarmerId())) {
+            if (userId.equals(adoptItem.getFarmerId())) {
                 respDTO.setReviewText(adoptItem.getReviewText());
             }
             return respDTO;

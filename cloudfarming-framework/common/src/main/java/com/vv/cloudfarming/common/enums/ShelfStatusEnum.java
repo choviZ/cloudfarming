@@ -8,8 +8,8 @@ import lombok.Getter;
 @Getter
 public enum ShelfStatusEnum {
 
-    ONLINE(0,"上架"),
-    OFFLINE(1,"下架");
+    OFFLINE(0, "下架"),
+    ONLINE(1, "上架");
 
     private final Integer code;
     private final String desc;
