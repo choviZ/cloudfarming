@@ -55,7 +55,7 @@ public class AdoptOrderServiceImpl extends ServiceImpl<AdoptOrderMapper, AdoptOr
             throw new ClientException("认养项目未上架，无法领养");
         }
         // 4. 禁止用户领养自己发布的认养项目
-        if (adoptItem.getUserId().equals(userId)) {
+        if (adoptItem.getFarmerId().equals(userId)) {
             throw new ClientException("不能领养自己发布的认养项目");
         }
 
@@ -83,6 +83,9 @@ public class AdoptOrderServiceImpl extends ServiceImpl<AdoptOrderMapper, AdoptOr
         for (int i = 0; i < quantity; i++) {
             AdoptInstanceDO livestockDO = AdoptInstanceDO.builder()
                     .itemId(adoptItem.getId())
+                    .farmerId(adoptItem.getFarmerId())
+                    .ownerOrderId(adoptOrder.getId())
+                    .ownerUserId(userId)
                     .status(LivestockStatusEnum.AVAILABLE.getCode())
                     .build();
             liveStocks.add(livestockDO);

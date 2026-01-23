@@ -31,7 +31,7 @@ public class AdoptItemDO extends BaseDO implements Serializable {
     /**
      * 发布者用户ID
      */
-    private Long userId;
+    private Long farmerId;
 
     /**
      * 认养标题

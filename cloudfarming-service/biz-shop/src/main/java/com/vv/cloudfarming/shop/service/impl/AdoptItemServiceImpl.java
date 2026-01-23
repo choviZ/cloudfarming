@@ -34,7 +34,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         Integer totalCount = reqDTO.getTotalCount();
         // 构建认养项目实体
         AdoptItemDO adoptItem = AdoptItemDO.builder()
-                .userId(userId)
+                .farmerId(userId)
                 .title(reqDTO.getTitle())
                 .animalCategory(reqDTO.getAnimalCategory())
                 .adoptDays(reqDTO.getAdoptDays())
@@ -63,7 +63,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 校验用户权限
-        if (!adoptItem.getUserId().equals(userId)) {
+        if (!adoptItem.getFarmerId().equals(userId)) {
             throw new ClientException("没有权限修改该认养项目");
         }
 
@@ -97,7 +97,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 校验用户权限
-        if (!adoptItem.getUserId().equals(userId)) {
+        if (!adoptItem.getFarmerId().equals(userId)) {
             throw new ClientException("没有权限操作该认养项目");
         }
 
@@ -124,7 +124,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 校验用户权限
-        if (!adoptItem.getUserId().equals(userId)) {
+        if (!adoptItem.getFarmerId().equals(userId)) {
             throw new ClientException("没有权限删除该认养项目");
         }
 
@@ -153,7 +153,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         if (userId == null) {
             isOwner = false;
         } else {
-            isOwner = userId == null ? false : adoptItem.getUserId().equals(userId);
+            isOwner = userId == null ? false : adoptItem.getFarmerId().equals(userId);
         }
         if (!isOwner && !ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
             throw new ClientException("认养项目不存在");
@@ -188,7 +188,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
             queryWrapper.eq(AdoptItemDO::getStatus, ShelfStatusEnum.ONLINE.getCode());
         } else {
             // 查询"我的发布"时，根据user_id返回自己的全部项目
-            queryWrapper.eq(AdoptItemDO::getUserId, reqDTO.getUserId());
+            queryWrapper.eq(AdoptItemDO::getFarmerId, reqDTO.getUserId());
             // 审核状态条件（可选）
             if (reqDTO.getReviewStatus() != null) {
                 queryWrapper.eq(AdoptItemDO::getReviewStatus, reqDTO.getReviewStatus());
@@ -206,7 +206,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         return pageResult.convert(adoptItem -> {
             AdoptItemRespDTO respDTO = BeanUtil.toBean(adoptItem, AdoptItemRespDTO.class);
             // 仅发布者本人可查看审核说明
-            if (isMyPublish && reqDTO.getUserId().equals(adoptItem.getUserId())) {
+            if (isMyPublish && reqDTO.getUserId().equals(adoptItem.getFarmerId())) {
                 respDTO.setReviewText(adoptItem.getReviewText());
             }
             return respDTO;

@@ -1,6 +1,5 @@
-package com.vv.cloudfarming.shop.dao.entity;
+package com.vv.cloudfarming.shop.dto.resp;
 
-import com.baomidou.mybatisplus.annotation.*;
 import com.vv.cloudfarming.common.database.BaseDO;
 import lombok.Builder;
 import lombok.Data;
@@ -8,19 +7,17 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 认养牲畜表 DO
+ * 认养实例响应
  */
 @Data
 @Builder
-@TableName("t_adopt_instance")
-public class AdoptInstanceDO extends BaseDO implements Serializable {
+public class AdoptInstanceRespDTO extends BaseDO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     /**
      * 主键id
      */
-    @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
 
     /**
@@ -42,16 +39,6 @@ public class AdoptInstanceDO extends BaseDO implements Serializable {
      * 可认养 / 已认养 / 已履约完成
      */
     private Integer status;
-
-    /**
-     * 农户id
-     */
-    private Long farmerId;
-
-    /**
-     * 绑定用户id
-     */
-    private Long ownerUserId;
 
     /**
      * 绑定订单id
