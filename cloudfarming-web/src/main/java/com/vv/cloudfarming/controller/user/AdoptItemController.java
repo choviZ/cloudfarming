@@ -5,7 +5,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
-import com.vv.cloudfarming.constant.UserRoleConstant;
+import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemCreateReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemPageReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemReviewReqDTO;

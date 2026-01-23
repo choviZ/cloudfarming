@@ -1,4 +1,4 @@
-package com.vv.cloudfarming.constant;
+package com.vv.cloudfarming.common.cosntant;
 
 /**
  * 用户角色常量类
@@ -8,17 +8,17 @@ public interface UserRoleConstant {
     /**
      * 普通用户编码
      */
-    int USER_CODE = 0;
+    Integer USER_CODE = 0;
 
     /**
      * 农户编码
      */
-    int FARMER_CODE = 1;
+    Integer FARMER_CODE = 1;
 
     /**
      * 管理员编码
      */
-    int ADMIN_CODE = 2;
+    Integer ADMIN_CODE = 2;
 
     /**
      * 普通用户描述

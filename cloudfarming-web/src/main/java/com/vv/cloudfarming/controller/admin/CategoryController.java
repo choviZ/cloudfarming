@@ -3,7 +3,7 @@ package com.vv.cloudfarming.controller.admin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
-import com.vv.cloudfarming.constant.UserRoleConstant;
+import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.shop.dto.req.CategoryCreateReqDTO;
 import com.vv.cloudfarming.shop.dto.req.CategoryUpdateReqDTO;
 import com.vv.cloudfarming.shop.dto.resp.CategoryRespDTO;

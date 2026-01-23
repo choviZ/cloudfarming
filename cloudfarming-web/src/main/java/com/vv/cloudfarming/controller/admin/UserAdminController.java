@@ -5,7 +5,7 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
-import com.vv.cloudfarming.constant.UserRoleConstant;
+import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.user.dto.req.UserCreateReqDTO;
 import com.vv.cloudfarming.user.dto.req.UserPageQueryReqDTO;
 import com.vv.cloudfarming.user.dto.req.UserUpdateReqDTO;

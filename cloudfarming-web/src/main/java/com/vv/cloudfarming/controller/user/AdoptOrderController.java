@@ -2,9 +2,11 @@ package com.vv.cloudfarming.controller.user;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.dto.req.AdoptOrderCreateReqDTO;
+import com.vv.cloudfarming.order.dto.req.AdoptOrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderRespDTO;
 import com.vv.cloudfarming.order.service.AdoptOrderService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,5 +37,12 @@ public class AdoptOrderController {
         // 从Sa-Token中获取当前登录用户ID
         Long userId = StpUtil.getLoginIdAsLong();
         return Results.success(adoptOrderService.createAdoptOrder(userId, reqDTO));
+    }
+
+    @SaCheckLogin
+    @Operation(summary = "分页查询认养订单")
+    @PostMapping("/v1/adopt/order/page")
+    public Result<IPage<AdoptOrderRespDTO>> pageAdoptOrders(@RequestBody AdoptOrderPageReqDTO reqDTO) {
+        return Results.success(adoptOrderService.pageAdoptOrders(reqDTO));
     }
 }

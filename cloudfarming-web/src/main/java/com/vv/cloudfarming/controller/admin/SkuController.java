@@ -3,7 +3,7 @@ package com.vv.cloudfarming.controller.admin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
-import com.vv.cloudfarming.constant.UserRoleConstant;
+import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.shop.dto.req.SkuCreateReqDTO;
 import com.vv.cloudfarming.shop.service.SkuService;
 import io.swagger.v3.oas.annotations.Operation;
