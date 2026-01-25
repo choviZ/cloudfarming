@@ -7,7 +7,7 @@
         SELECT
             item.id,
             item.item_order_no,
-            item.farmer_id,
+            item.user_id,
             item.product_json,
             item.product_total_quantity,
             item.product_total_amount,

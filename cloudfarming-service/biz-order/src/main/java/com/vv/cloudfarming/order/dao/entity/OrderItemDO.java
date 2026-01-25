@@ -2,7 +2,10 @@ package com.vv.cloudfarming.order.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.vv.cloudfarming.common.database.BaseDO;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -12,6 +15,9 @@ import java.time.LocalDateTime;
  * 子订单表 DO
  */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName(value = "t_order_item")
 public class OrderItemDO extends BaseDO implements Serializable {
 

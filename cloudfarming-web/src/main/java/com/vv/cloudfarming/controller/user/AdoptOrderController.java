@@ -5,7 +5,6 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
-import com.vv.cloudfarming.order.dto.req.AdoptOrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.AdoptOrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderRespDTO;
 import com.vv.cloudfarming.order.service.AdoptOrderService;
@@ -23,21 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class AdoptOrderController {
 
     private final AdoptOrderService adoptOrderService;
-
-    /**
-     * 创建认养订单
-     *
-     * @param reqDTO 创建认养订单请求DTO
-     * @return 认养订单响应DTO
-     */
-    @SaCheckLogin
-    @Operation(summary = "创建认养订单")
-    @PostMapping("/v1/adopt/order")
-    public Result<AdoptOrderRespDTO> createAdoptOrder(@RequestBody AdoptOrderCreateReqDTO reqDTO) {
-        // 从Sa-Token中获取当前登录用户ID
-        Long userId = StpUtil.getLoginIdAsLong();
-        return Results.success(adoptOrderService.createAdoptOrder(userId, reqDTO));
-    }
 
     @SaCheckLogin
     @Operation(summary = "分页查询认养订单")

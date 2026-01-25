@@ -3,6 +3,7 @@ package com.vv.cloudfarming.order.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderInfoRespDTO;
 import com.vv.cloudfarming.order.enums.OrderStatusEnum;
 import com.vv.cloudfarming.order.enums.PayStatusEnum;
@@ -14,10 +15,8 @@ public interface OrderService extends IService<OrderDO> {
 
     /**
      * 创建订单
-     *
-     * @param requestParam 参数
      */
-    void createOrder(OrderCreateReqDTO requestParam);
+    OrderCreateRespDTO createOrder(OrderCreateReqDTO reqDTO);
 
     /**
      * 根据id查询订单信息

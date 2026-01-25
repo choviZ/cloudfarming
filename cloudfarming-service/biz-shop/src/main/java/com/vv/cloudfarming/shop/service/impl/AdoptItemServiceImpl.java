@@ -191,7 +191,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         return pageResult.convert(adoptItem -> {
             AdoptItemRespDTO respDTO = BeanUtil.toBean(adoptItem, AdoptItemRespDTO.class);
             // 仅发布者本人可查看审核说明
-            if (userId.equals(adoptItem.getFarmerId())) {
+            if (userId != null && userId.equals(adoptItem.getFarmerId())) {
                 respDTO.setReviewText(adoptItem.getReviewText());
             }
             return respDTO;

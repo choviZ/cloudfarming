@@ -5,13 +5,13 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * 创建认养订单请求DTO
+ * 认养订单创建请求参数
  */
 @Data
 public class AdoptOrderCreateReqDTO {
 
     /**
-     * 认养项目ID
+     * 认养项目id
      */
     @NotNull
     private Long adoptItemId;
@@ -19,12 +19,13 @@ public class AdoptOrderCreateReqDTO {
     /**
      * 下单数量
      */
+    @NotNull
     @Min(value = 1)
     private Integer quantity;
 
     /**
-     * 关联的收获地址id
+     * 收获地址
      */
     @NotNull
-    private Long receiveId;
+    Long receiveId;
 }
