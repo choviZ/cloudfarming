@@ -1,6 +1,7 @@
 package com.vv.cloudfarming.order.strategy;
 
 import cn.hutool.json.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.vv.cloudfarming.common.enums.ReviewStatusEnum;
 import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
@@ -143,6 +144,31 @@ public class AdoptOrderCreateStrategy extends AbstractOrderCreateTemplate<AdoptO
             log.error("批量创建牲畜记录失败，认养项目id：{}", adoptItem.getId());
         }
         return adoptOrder.getId();
+    }
+
+    @Override
+    protected void lockStock(Long userId, AdoptOrderCreateReqDTO data) {
+        Integer quantity = data.getQuantity();
+        LambdaUpdateWrapper<AdoptItemDO> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(AdoptItemDO::getId, data.getAdoptItemId())
+                .eq(AdoptItemDO::getDelFlag, 0)
+                .eq(AdoptItemDO::getStatus, ShelfStatusEnum.ONLINE.getCode())
+                .eq(AdoptItemDO::getReviewStatus, ReviewStatusEnum.APPROVED.getStatus())
+                .ge(AdoptItemDO::getAvailableCount, quantity)
+                .setSql("available_count = available_count - " + quantity);
+        int updated = adoptItemMapper.update(null, wrapper);
+        if (updated != 1) {
+            throw new ClientException("认养库存不足");
+        }
+    }
+
+    @Override
+    protected void releaseStock(Long userId, AdoptOrderCreateReqDTO data) {
+        Integer quantity = data.getQuantity();
+        LambdaUpdateWrapper<AdoptItemDO> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(AdoptItemDO::getId, data.getAdoptItemId())
+                .setSql("available_count = available_count + " + quantity);
+        adoptItemMapper.update(null, wrapper);
     }
 
     private AdoptItemDO getAdoptItem(Long adoptItemId) {

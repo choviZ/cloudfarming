@@ -52,17 +52,7 @@ public class GoodsOrderCreateStrategy extends AbstractOrderCreateTemplate<GoodsO
         if (data.getReceiveId() == null) {
             throw new ClientException("收货信息不能为空");
         }
-        Map<Long, SkuRespDTO> skuMap = getSkuMap(data.getItems());
-        for (OrderItemDTO item : data.getItems()) {
-            SkuRespDTO sku = skuMap.get(item.getSkuId());
-            if (sku == null) {
-                throw new ClientException("包含不存在的商品");
-            }
-            boolean locked = skuService.lockStock(item.getSkuId(), item.getQuantity());
-            if (!locked) {
-                throw new ClientException("商品库存不足或未上架: " + sku.getSpuTitle());
-            }
-        }
+        getSkuMap(data.getItems());
     }
 
     @Override
@@ -173,6 +163,34 @@ public class GoodsOrderCreateStrategy extends AbstractOrderCreateTemplate<GoodsO
         return lastSubOrderId;
     }
 
+    @Override
+    protected void lockStock(Long userId, GoodsOrderCreateReqDTO data) {
+        Map<Long, Integer> skuQuantityMap = getSkuQuantityMap(data.getItems());
+        Map<Long, Integer> locked = new HashMap<>();
+        for (Map.Entry<Long, Integer> entry : skuQuantityMap.entrySet()) {
+            try {
+                boolean result = skuService.lockStock(entry.getKey(), entry.getValue());
+                if (!result) {
+                    throw new ClientException("商品库存不足");
+                }
+                locked.put(entry.getKey(), entry.getValue());
+            } catch (RuntimeException ex) {
+                for (Map.Entry<Long, Integer> lockedEntry : locked.entrySet()) {
+                    skuService.unlockStock(lockedEntry.getKey(), lockedEntry.getValue());
+                }
+                throw ex;
+            }
+        }
+    }
+
+    @Override
+    protected void releaseStock(Long userId, GoodsOrderCreateReqDTO data) {
+        Map<Long, Integer> skuQuantityMap = getSkuQuantityMap(data.getItems());
+        for (Map.Entry<Long, Integer> entry : skuQuantityMap.entrySet()) {
+            skuService.unlockStock(entry.getKey(), entry.getValue());
+        }
+    }
+
 
     private Map<Long, SkuRespDTO> getSkuMap(List<OrderItemDTO> items) {
         List<Long> skuIds = items.stream().map(OrderItemDTO::getSkuId).collect(Collectors.toList());
@@ -182,4 +200,12 @@ public class GoodsOrderCreateStrategy extends AbstractOrderCreateTemplate<GoodsO
         }
         return skuDetails.stream().collect(Collectors.toMap(SkuRespDTO::getId, sku -> sku));
     }
-}
+
+    private Map<Long, Integer> getSkuQuantityMap(List<OrderItemDTO> items) {
+        Map<Long, Integer> quantityMap = new HashMap<>();
+        for (OrderItemDTO item : items) {
+            quantityMap.merge(item.getSkuId(), item.getQuantity(), Integer::sum);
+        }
+        return quantityMap;
+    }
+    }

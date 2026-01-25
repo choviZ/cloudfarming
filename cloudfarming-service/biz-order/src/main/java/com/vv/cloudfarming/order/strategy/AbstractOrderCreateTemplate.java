@@ -6,7 +6,13 @@ import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
+import com.vv.cloudfarming.order.mq.DelayMessageProcessor;
+import com.vv.cloudfarming.order.mq.constant.MqConstant;
+import com.vv.cloudfarming.order.mq.modal.MultiDelayMessage;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
@@ -16,26 +22,45 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * 创建订单模板
  */
+@Slf4j
 public abstract class AbstractOrderCreateTemplate<T> {
 
     @Autowired
-    protected OrderMapper orderMapper;
+    private OrderMapper orderMapper;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
+    @Transactional
     public OrderCreateRespDTO create(Long userId, OrderCreateReqDTO reqDTO) {
         // 解析数据
         T bizData = parseBizData(reqDTO.getBizData());
         // 参数 校验
         validate(userId, bizData);
-        // 构建主订单
-        OrderDO mainOrder = buildMainOrder(userId, bizData, reqDTO.getOrderType());
-        // 保存主订单
-        saveMainOrder(mainOrder);
-        // 创建子订单
-        Long subOrderId = createSubOrder(userId, mainOrder, bizData);
-        // 子订单创建后的处理
-        afterCreate(userId, mainOrder, bizData, subOrderId);
-        // 构建响应
-        return buildResp(mainOrder.getId(), mainOrder.getOrderNo(), mainOrder.getTotalAmount(), mainOrder.getCreateTime());
+        OrderDO order = null;
+        boolean stockLocked = false;
+        try {
+            lockStock(userId, bizData);
+            stockLocked = true;
+            order = buildMainOrder(userId, bizData, reqDTO.getOrderType());
+            saveMainOrder(order);
+            Long subOrderId = createSubOrder(userId, order, bizData);
+            afterCreate(userId, order, bizData, subOrderId);
+            // 发送消息
+            MultiDelayMessage<Long> message = new MultiDelayMessage<>(order.getId(),MqConstant.timeList);
+            rabbitTemplate.convertAndSend(
+                    MqConstant.DELAY_EXCHANGE,MqConstant.DELAY_ORDER_ROUTING_KEY,message,new DelayMessageProcessor(message.removeNextDelay())
+            );
+            return buildResp(order.getId(), order.getOrderNo(), order.getTotalAmount(), order.getCreateTime());
+        } catch (RuntimeException ex) {
+            if (stockLocked) {
+                try {
+                    releaseStock(userId, bizData);
+                } catch (RuntimeException ignored) {
+                    log.error("库存释放失败：订单id{}",order.getId());
+                }
+            }
+            throw ex;
+        }
     }
 
     /**
@@ -54,6 +79,10 @@ public abstract class AbstractOrderCreateTemplate<T> {
     protected abstract OrderDO buildMainOrder(Long userId, T data, Integer orderType);
 
     protected abstract Long createSubOrder(Long userId, OrderDO mainOrder, T data);
+
+    protected abstract void lockStock(Long userId, T data);
+
+    protected abstract void releaseStock(Long userId, T data);
 
     protected void afterCreate(Long userId, OrderDO mainOrder, T data, Long subOrderId) {
     }
