@@ -1,8 +1,15 @@
 <template>
   <div class="adopt-featured-section">
     <div class="section-header">
-      <h2 class="section-title">云养殖精选</h2>
-      <a-button type="link" @click="goToAdoptList">查看全部 ></a-button>
+      <div class="header-left">
+        <h2 class="section-title">
+          <FireFilled class="title-icon" /> 热门认养
+        </h2>
+        <p class="section-subtitle">做一回云端农场主，享受耕种的乐趣与收获</p>
+      </div>
+      <button class="view-all-btn" @click="goToAdoptList">
+        查看全部 <RightOutlined class="btn-icon" />
+      </button>
     </div>
 
     <a-skeleton :loading="loading" active>
@@ -45,6 +52,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { FireFilled, RightOutlined } from '@ant-design/icons-vue';
 import { pageAdoptItems } from '@cloudfarming/core';
 import type { AdoptItemResp } from '@cloudfarming/core';
 
@@ -104,34 +112,69 @@ onMounted(() => {
 .section-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 0 20px;
+  align-items: flex-end;
+  margin-bottom: 32px;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .section-title {
   font-size: 24px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  position: relative;
-  padding-left: 15px;
 }
 
-.section-title::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 24px;
-  background-color: #1890ff; /* Ant Design Blue */
-  border-radius: 2px;
+.title-icon {
+  color: #ef4444;
+  font-size: 24px;
+}
+
+.section-subtitle {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.view-all-btn {
+  padding: 4px 20px;
+  height: 36px;
+  border-radius: 9999px;
+  font-size: 14px;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  background: white;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.view-all-btn:hover {
+  color: #15803d;
+  border-color: #bbf7d0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.btn-icon {
+  font-size: 12px;
+  transition: transform 0.3s;
+}
+
+.view-all-btn:hover .btn-icon {
+  transform: translateX(4px);
 }
 
 .adopt-list {
-  padding: 0 20px;
+  /* No special styles needed for grid container */
 }
 
 .adopt-card {
