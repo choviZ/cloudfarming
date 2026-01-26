@@ -5,7 +5,6 @@ import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderInfoRespDTO;
 import com.vv.cloudfarming.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,10 +24,9 @@ public class OrderController {
 
     @Operation(summary = "创建订单")
     @PostMapping("/v1/order")
-    public Result<Void> createOrder(@RequestBody @Valid OrderCreateReqDTO requestParam) {
+    public Result<OrderCreateRespDTO> createOrder(@RequestBody @Valid OrderCreateReqDTO requestParam) {
         long userId = StpUtil.getLoginIdAsLong();
-        orderService.createOrder(userId, requestParam);
-        return Results.success();
+        return Results.success(orderService.createOrder(userId, requestParam));
     }
 
 }

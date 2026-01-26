@@ -5,5 +5,5 @@ package com.vv.cloudfarming.order.constant;
  */
 public interface PayChannelConstant {
 
-    String ALIPAY = "alipay";
+    int ALIPAY = 0;
 }

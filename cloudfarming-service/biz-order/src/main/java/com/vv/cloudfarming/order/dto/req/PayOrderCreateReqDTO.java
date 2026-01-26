@@ -9,5 +9,7 @@ public class PayOrderCreateReqDTO {
 
     private Long buyerId;
 
+    private String payOrderNo;
+
     private BigDecimal totalAmount;
 }

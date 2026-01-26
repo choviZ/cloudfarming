@@ -49,7 +49,7 @@ public class PayOrderDO extends BaseDO implements Serializable {
     /**
      * 支付方式：alipay
      */
-    private String payChannel;
+    private Integer payChannel;
 
     /**
      * 支付时间

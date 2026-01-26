@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayOrderDO> implements PayService {
@@ -21,12 +20,14 @@ public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayOrderDO> impl
     @Override
     public PayOrderDO createPayOrder(PayOrderCreateReqDTO requestParam) {
         Long buyerId = requestParam.getBuyerId();
+        String payOrderNo = requestParam.getPayOrderNo();
         BigDecimal totalAmount = requestParam.getTotalAmount();
 
         PayOrderDO payOrder = PayOrderDO.builder()
-                .payOrderNo(generatePayOrderNo(buyerId))
+                .payOrderNo(payOrderNo)
                 .buyerId(buyerId)
                 .payStatus(PayStatusEnum.UNPAID.getCode())
+                .payTime(null)
                 .payChannel(PayChannelConstant.ALIPAY)
                 .expireTime(LocalDateTime.now().plusMinutes(15))
                 .totalAmount(totalAmount)
@@ -36,20 +37,5 @@ public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayOrderDO> impl
             throw new ServiceException("创建支付单失败");
         }
         return payOrder;
-    }
-
-    /**
-     * 生成支付单号
-     *
-     * @param buyerId
-     * @return
-     */
-    private String generatePayOrderNo(Long buyerId) {
-        long timestamp = System.currentTimeMillis() / 1000;
-        String timePart = String.format("%08d", timestamp % 100000000);
-        String buyerPart = String.format("%06d", buyerId);
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        String randomPart = String.format("%04d", random.nextInt(10000));
-        return timePart + buyerPart + randomPart;
     }
 }
