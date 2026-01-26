@@ -1,0 +1,10 @@
+package com.vv.cloudfarming.order.dao.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.vv.cloudfarming.order.dao.entity.PayOrderDO;
+
+/**
+ * 支付单持久层
+ */
+public interface PayOrderMapper extends BaseMapper<PayOrderDO> {
+}
