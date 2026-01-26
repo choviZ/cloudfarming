@@ -1,20 +1,21 @@
 package com.vv.cloudfarming.order.strategy;
 
-import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
+import cn.hutool.json.JSONObject;
+import com.vv.cloudfarming.order.dao.entity.OrderDO;
+
+import java.util.List;
 
 /**
- * 创建订单策略接口
+ * 订单创建策略接口
  */
 public interface OrderCreateStrategy {
 
     /**
-     * 获取订单类型
+     * 创建业务订单
+     * @param userId 用户ID
+     * @param payOrderNo 支付单号 (透传给生成的订单)
+     * @param bizData 业务数据
+     * @return 生成的订单列表
      */
-    Integer getOrderType();
-
-    /**
-     * 创建订单
-     */
-    OrderCreateRespDTO create(Long userId, OrderCreateReqDTO reqDTO);
+    List<OrderDO> createOrders(Long userId, String payOrderNo, JSONObject bizData);
 }

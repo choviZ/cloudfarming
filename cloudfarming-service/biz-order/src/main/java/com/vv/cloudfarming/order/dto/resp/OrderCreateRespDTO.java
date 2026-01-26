@@ -17,4 +17,7 @@ public class OrderCreateRespDTO {
     // 支付相关（这是重点！）
     private BigDecimal payAmount; // 需要支付的金额
     private Long expireTime;      // 订单过期时间（前端做倒计时用）
+    
+    private Long payOrderId;
+    private String payOrderNo;
 }

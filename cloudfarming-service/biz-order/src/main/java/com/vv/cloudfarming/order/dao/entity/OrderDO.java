@@ -12,13 +12,18 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 主订单表 DO
+ * 订单表 DO
+ * <p>
+ * 核心业务订单表，一次下单行为（按店铺/业务）生成一条记录。
+ * 支付相关信息（状态、时间、方式）通过 pay_order_no 关联 t_pay_order 获取。
+ * 订单自身仅维护 order_status (业务流转状态)。
+ * </p>
  */
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Builder
-@TableName(value = "t_order_main")
+@NoArgsConstructor
+@AllArgsConstructor
+@TableName(value = "t_order")
 public class OrderDO extends BaseDO implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -30,9 +35,14 @@ public class OrderDO extends BaseDO implements Serializable {
     private Long id;
 
     /**
-     * 主订单号
+     * 订单号 (业务唯一标识)
      */
     private String orderNo;
+
+    /**
+     * 支付单号 (关联 t_pay_order)
+     */
+    private String payOrderNo;
 
     /**
      * 下单用户ID
@@ -40,39 +50,40 @@ public class OrderDO extends BaseDO implements Serializable {
     private Long userId;
 
     /**
-     * 所有子订单商品总价之和
+     * 店铺ID
+     */
+    private Long shopId;
+
+    /**
+     * 订单类型: 1-普通电商, 2-认养项目
+     */
+    private Integer orderType;
+
+    /**
+     * 订单总金额 (商品总价 + 运费 - 优惠)
      */
     private BigDecimal totalAmount;
 
     /**
-     * 主订单总优惠金额
-     */
-    private BigDecimal discountAmount;
-
-    /**
-     * 主订单总运费
-     */
-    private BigDecimal freightAmount;
-
-    /**
-     * 实付金额
+     * 实付金额 (应付)
      */
     private BigDecimal actualPayAmount;
 
     /**
-     * 支付方式：1-微信支付 2-支付宝 3-银行卡 4-分期支付（NULL表示未支付）
+     * 运费
      */
-    private Integer payType;
+    private BigDecimal freightAmount;
 
     /**
-     * 支付状态：0-未支付 1-已支付 2-退款中 3-部分退款 4-全部退款 5-支付失败
+     * 优惠金额
      */
-    private Integer payStatus;
+    private BigDecimal discountAmount;
 
     /**
-     * 支付完成时间
+     * 订单状态: 0-待支付 1-待发货 2-已发货 ...
+     * (支付成功后，状态流转为 1-待发货，无需独立的 pay_status)
      */
-    private LocalDateTime payTime;
+    private Integer orderStatus;
 
     /**
      * 收货人姓名
@@ -85,32 +96,27 @@ public class OrderDO extends BaseDO implements Serializable {
     private String receivePhone;
 
     /**
-     * 收货省份
+     * 收货地址详情
      */
-    private String receiveProvince;
+    private String receiveAddress;
 
     /**
-     * 收货城市
+     * 物流单号
      */
-    private String receiveCity;
+    private String logisticsNo;
 
     /**
-     * 收货区县
+     * 物流公司
      */
-    private String receiveDistrict;
+    private String logisticsCompany;
 
     /**
-     * 收货详细地址
+     * 发货时间
      */
-    private String receiveDetail;
+    private LocalDateTime deliveryTime;
 
     /**
-     * 主订单状态
+     * 收货时间
      */
-    private Integer orderStatus;
-
-    /**
-     * 订单类型
-     */
-    private Integer orderType;
+    private LocalDateTime receiveTime;
 }

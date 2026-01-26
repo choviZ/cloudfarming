@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.controller.user;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
@@ -25,19 +26,9 @@ public class OrderController {
     @Operation(summary = "创建订单")
     @PostMapping("/v1/order")
     public Result<Void> createOrder(@RequestBody @Valid OrderCreateReqDTO requestParam) {
-        orderService.createOrder(requestParam);
+        long userId = StpUtil.getLoginIdAsLong();
+        orderService.createOrder(userId, requestParam);
         return Results.success();
     }
 
-    @Operation(summary = "创建订单(统一入口)")
-    @PostMapping("/v1/order/create")
-    public Result<OrderCreateRespDTO> createUnifiedOrder(@RequestBody @Valid OrderCreateReqDTO requestParam) {
-        return Results.success(orderService.createOrder(requestParam));
-    }
-
-    @Operation(summary = "根据id查询订单")
-    @GetMapping("/v1/order/")
-    public Result<OrderInfoRespDTO> getOrder(@RequestParam Long id){
-         return Results.success(orderService.queryOrderById(id));
-    }
 }
