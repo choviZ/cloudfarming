@@ -1,72 +1,94 @@
 <template>
   <div class="adopt-list-container">
-    <!-- 头部筛选区 -->
-    <div class="filter-section">
-      <div class="filter-bar">
-        <a-form layout="inline" class="filter-form">
-          <a-form-item>
-             <a-radio-group v-model:value="searchParams.status" button-style="solid" @change="handleSearch">
-                <a-radio-button :value="undefined">全部</a-radio-button>
-                <a-radio-button :value="1">可认养</a-radio-button>
-                <a-radio-button :value="0">已结束</a-radio-button>
-             </a-radio-group>
-          </a-form-item>
-          
-          <div class="right-filters">
-             <a-input-search
-              v-model:value="searchParams.title"
-              placeholder="搜索认养项目"
-              enter-button
-              allow-clear
-              @search="handleSearch"
-              style="width: 260px"
-            />
-          </div>
-        </a-form>
+    <!-- Header Section -->
+    <section class="header-section">
+      <!-- Logo/Home Link -->
+      <div class="logo-container" @click="router.push('/')">
+        <div class="logo-icon">
+          <i class="fas fa-leaf"></i>
+        </div>
+        <span class="logo-text">云养殖平台</span>
       </div>
-    </div>
 
-    <!-- 列表展示区 -->
-    <div class="list-section">
+      <div class="header-content">
+        <h1 class="page-title">探索优质认养项目</h1>
+        <p class="page-subtitle">真实的农场体验，看得见的绿色健康</p>
+        
+        <!-- Search Bar -->
+        <div class="search-container group">
+          <div class="search-icon-wrapper">
+            <i class="fas fa-search search-icon"></i>
+          </div>
+          <input 
+            type="text" 
+            class="search-input"
+            v-model="searchParams.title"
+            @keyup.enter="handleSearch"
+            placeholder="搜索动物、农场或产品名称..."
+          >
+          <button class="search-btn" @click="handleSearch">
+            搜索
+          </button>
+        </div>
+
+        <!-- Filter Tags -->
+        <div class="filter-tags">
+          <button 
+            class="filter-tag" 
+            :class="{ active: searchParams.status === undefined }"
+            @click="handleFilterChange(undefined)"
+          >
+            全部
+          </button>
+          <!-- User requested to keep only "All" for now -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Project List Section -->
+    <main class="main-content">
       <a-spin :spinning="loading">
         <div class="card-grid">
-          <div v-for="item in list" :key="item.id" class="card-wrapper">
-            <div class="idle-card" @click="goToDetail(item.id)">
-              <div class="card-cover">
-                <img :src="item.coverImage" :alt="item.title" />
-                <div v-if="item.status === 1" class="status-tag active">可认养</div>
-                <div v-else class="status-tag over">已结束</div>
+          <div 
+            v-for="item in list" 
+            :key="item.id" 
+            class="project-card group"
+            @click="goToDetail(item.id)"
+          >
+            <!-- Image Area -->
+            <div class="card-image-wrapper">
+              <img :src="item.coverImage" :alt="item.title" class="card-image">
+              <!-- Status Tag -->
+              <div 
+                class="status-badge"
+                :class="item.status === 1 ? 'status-active' : 'status-ended'"
+              >
+                {{ item.status === 1 ? '可认养' : '已结束' }}
+              </div>
+            </div>
+            
+            <!-- Content Area -->
+            <div class="card-content">
+              <h3 class="card-title" :title="item.title">{{ item.title }}</h3>
+              
+              <div class="price-row">
+                <div class="price-container">
+                  <span class="currency">¥</span>
+                  <span class="amount">{{ item.price }}</span>
+                </div>
+                <div class="period-badge">
+                  {{ item.adoptDays }}天周期
+                </div>
               </div>
               
-              <div class="card-info">
-                <h3 class="card-title" :title="item.title">{{ item.title }}</h3>
-                
-                <div class="card-price-row">
-                  <div class="price-box">
-                    <span class="currency">¥</span>
-                    <span class="amount">{{ item.price }}</span>
-                  </div>
-                  <div class="period-tag">{{ item.adoptDays }}天周期</div>
+              <p class="yield-info">预计收益 {{ item.expectedYield || '暂无' }}</p>
+              
+              <div class="card-footer">
+                <div class="footer-left">
+                  <div class="pure-icon">纯</div>
+                  <span class="footer-text">云农场精选</span>
                 </div>
-
-                <div class="card-meta">
-                  <div class="meta-item">
-                    <span class="label">预计收益</span>
-                    <span class="value">{{ item.expectedYield || '暂无' }}</span>
-                  </div>
-                </div>
-
-                <!-- 底部用户信息模拟 -->
-                <!-- TODO 实际应根据用户信息展示 -->
-                <div class="card-footer">
-                  <div class="user-info">
-                    <div class="avatar-placeholder">
-                       {{ item.title.charAt(0) }}
-                    </div>
-                    <span class="username">云农场精选</span>
-                  </div>
-                  <span class="location">云端牧场</span>
-                </div>
+                <span class="footer-right">云端牧场</span>
               </div>
             </div>
           </div>
@@ -76,7 +98,7 @@
           <a-empty description="暂无认养项目" />
         </div>
 
-        <!-- 分页 -->
+        <!-- Pagination -->
         <div class="pagination-wrapper" v-if="total > 0">
           <a-pagination
             v-model:current="pagination.current"
@@ -89,7 +111,7 @@
           />
         </div>
       </a-spin>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -107,7 +129,7 @@ const total = ref(0);
 
 const pagination = reactive({
   current: 1,
-  size: 20 // 增加每页显示数量，适应瀑布流感觉
+  size: 20
 });
 
 const searchParams = reactive({
@@ -144,6 +166,11 @@ const handleSearch = () => {
   fetchData();
 };
 
+const handleFilterChange = (status: number | undefined) => {
+  searchParams.status = status;
+  handleSearch();
+};
+
 const handlePageChange = (page: number) => {
   pagination.current = page;
   fetchData();
@@ -165,226 +192,402 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* FontAwesome for icons (ensure it's loaded in index.html or use Ant icons if preferred, keeping existing link if any) */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+
 .adopt-list-container {
-  width: 100%;
-  max-width: 1400px; /* 加宽容器 */
-  margin: 0 auto;
-  padding: 20px;
-  min-height: calc(100vh - 64px);
-  background-color: #f6f7f8;
+  min-height: 100vh;
+  background-color: #f9fafb; /* gray-50 */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* 筛选区样式优化 */
-.filter-section {
-  margin-bottom: 20px;
+/* Header Section */
+.header-section {
   background: #fff;
-  padding: 16px 24px;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  border-bottom: 1px solid #f3f4f6;
+  padding: 3rem 1rem;
+  position: relative;
 }
 
-.filter-bar {
+.logo-container {
+  position: absolute;
+  top: 1.5rem;
+  left: 2rem;
   display: flex;
   align-items: center;
-}
-
-.filter-form {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.right-filters {
-  margin-left: auto;
-}
-
-/* Grid 布局模拟瀑布流卡片效果 */
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 20px;
-}
-
-.card-wrapper {
-  height: 100%;
-}
-
-/* 闲鱼风格卡片 */
-.idle-card {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
+  gap: 0.75rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  height: 100%;
+  transition: opacity 0.3s;
+  z-index: 10;
+}
+
+.logo-container:hover {
+  opacity: 0.8;
+}
+
+.logo-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: #10b981;
+  color: white;
+  border-radius: 0.75rem;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+}
+
+.logo-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.025em;
+}
+
+@media (max-width: 768px) {
+  .logo-container {
+    position: static;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+  
+  .header-section {
+    padding-top: 1.5rem;
+  }
+}
+
+.header-content {
+  max-width: 48rem; /* max-w-3xl */
+  margin: 0 auto;
+  text-align: center;
+}
+
+.page-title {
+  font-size: 1.875rem; /* 3xl */
+  font-weight: 700;
+  color: #111827; /* gray-900 */
+  margin-bottom: 1rem;
+}
+
+.page-subtitle {
+  color: #6b7280; /* gray-500 */
+  margin-bottom: 2rem;
+}
+
+/* Search Bar */
+.search-container {
+  position: relative;
+  margin-bottom: 2rem;
+  max-width: 100%;
+}
+
+.search-icon-wrapper {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  padding-left: 1rem;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.search-icon {
+  color: #9ca3af; /* gray-400 */
+  transition: color 0.3s;
+}
+
+.search-container:focus-within .search-icon {
+  color: #10b981; /* primary */
+}
+
+.search-input {
+  display: block;
+  width: 100%;
+  padding-left: 3rem;
+  padding-right: 1rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  border: 1px solid #e5e7eb; /* gray-200 */
+  border-radius: 9999px;
+  line-height: 1.25rem;
+  color: #1f2937;
+  outline: none;
+  transition: all 0.3s;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.search-input:focus {
+  background-color: #fff;
+  border-color: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.search-btn {
+  position: absolute;
+  top: 0.375rem;
+  bottom: 0.375rem;
+  right: 0.375rem;
+  padding: 0 1.5rem;
+  background-color: #10b981; /* primary */
+  color: white;
+  border-radius: 9999px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.search-btn:hover {
+  background-color: #059669; /* emerald-600 */
+}
+
+/* Filter Tags */
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.filter-tag {
+  padding: 0.375rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
   border: 1px solid transparent;
 }
 
-.idle-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-  border-color: rgba(0,0,0,0.03);
+.filter-tag.active {
+  background-color: #10b981;
+  color: white;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.card-cover {
-  position: relative;
-  padding-top: 100%; /* 1:1 正方形图片区域，或者可以改小一点如 75% */
-  background: #f4f4f4;
-  overflow: hidden;
+.filter-tag:not(.active) {
+  background-color: #fff;
+  color: #4b5563; /* gray-600 */
+  border-color: #e5e7eb; /* gray-200 */
 }
 
-.card-cover img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s ease;
+.filter-tag:not(.active):hover {
+  border-color: #10b981;
+  color: #10b981;
 }
 
-.idle-card:hover .card-cover img {
-  transform: scale(1.05);
+/* Main Content */
+.main-content {
+  background-color: white;
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
 }
 
-.status-tag {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  z-index: 2;
+@media (min-width: 640px) {
+  .main-content { padding: 2rem 1.5rem; }
+}
+@media (min-width: 1024px) {
+  .main-content { padding: 2rem 2rem; }
 }
 
-.status-tag.active {
-  background: linear-gradient(135deg, #32cd32 0%, #228b22 100%);
-}
-
-.status-tag.over {
-  background: rgba(0,0,0,0.6);
-}
-
-.card-info {
-  padding: 12px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.card-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: #111;
-  line-height: 1.4;
-  height: 42px; /* 限制两行 */
-  margin-bottom: 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.card-price-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.price-box {
-  color: #ff4400;
-  font-weight: bold;
-  margin-right: 8px;
-  line-height: 1;
-}
-
-.currency {
-  font-size: 12px;
-  margin-right: 1px;
-}
-
-.amount {
-  font-size: 18px;
-}
-
-.period-tag {
-  font-size: 10px;
-  color: #666;
-  background: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.card-meta {
-  margin-bottom: 12px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  font-size: 12px;
-}
-
-.meta-item .label {
-  color: #999;
-  margin-right: 4px;
-}
-
-.meta-item .value {
-  color: #333;
-  font-weight: 500;
-}
-
-/* 底部用户信息栏 */
-.card-footer {
-  margin-top: auto;
-  padding-top: 8px;
-  border-top: 1px solid #f8f8f8;
+.list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
-  color: #999;
+  margin-bottom: 1.5rem;
 }
 
-.user-info {
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
 }
 
-.avatar-placeholder {
-  width: 16px;
-  height: 16px;
-  background: #e0e0e0;
-  border-radius: 50%;
-  margin-right: 4px;
+.title-indicator {
+  width: 0.375rem;
+  height: 1.5rem;
+  background-color: #10b981;
+  border-radius: 9999px;
+}
+
+/* Card Grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem; /* gap-5 */
+}
+
+@media (min-width: 768px) {
+  .card-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1024px) {
+  .card-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 1280px) {
+  .card-grid { grid-template-columns: repeat(5, 1fr); }
+}
+@media (min-width: 1536px) {
+  .card-grid { grid-template-columns: repeat(6, 1fr); }
+}
+
+/* Project Card */
+.project-card {
+  background: #fff;
+  border-radius: 0.75rem; /* rounded-xl */
+  border: 1px solid #f3f4f6; /* gray-100 */
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.project-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transform: translateY(-0.25rem);
+}
+
+.card-image-wrapper {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background-color: #f3f4f6;
+  overflow: hidden;
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s;
+}
+
+.project-card:hover .card-image {
+  transform: scale(1.05);
+}
+
+.status-badge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: white;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.status-active {
+  background: linear-gradient(to right, #22c55e, #059669); /* green-500 to emerald-600 */
+}
+
+.status-ended {
+  background: linear-gradient(to right, #6b7280, #4b5563); /* gray-500 to gray-600 */
+}
+
+.card-content {
+  padding: 0.75rem; /* p-3 */
+}
+
+.card-title {
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+  line-height: 1.25rem;
+  
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.3s;
+}
+
+.project-card:hover .card-title {
+  color: #10b981;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.price-container {
+  color: #ef4444; /* red-500 */
+  font-weight: 700;
+  font-size: 1.125rem; /* lg */
+}
+
+.currency {
+  font-size: 0.875rem; /* sm */
+}
+
+.period-badge {
+  background-color: #f3f4f6; /* gray-100 */
+  color: #6b7280; /* gray-500 */
+  font-size: 0.625rem; /* 10px */
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.yield-info {
+  font-size: 0.75rem; /* xs */
+  color: #6b7280; /* gray-500 */
+  margin-bottom: 0.75rem;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #f9fafb; /* gray-50 */
+  padding-top: 0.5rem;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pure-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  background-color: #e5e7eb; /* gray-200 */
+  border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  color: #fff;
+  font-size: 0.5rem; /* 8px */
+  color: #6b7280; /* gray-500 */
 }
 
-.location {
-  transform: scale(0.9);
-  transform-origin: right center;
+.footer-text {
+  font-size: 0.625rem; /* 10px */
+  color: #6b7280; /* gray-500 */
 }
 
-.pagination-wrapper {
-  margin-top: 32px;
-  text-align: center;
-  display: flex;
-  justify-content: center;
+.footer-right {
+  font-size: 0.625rem; /* 10px */
+  color: #9ca3af; /* gray-400 */
 }
 
 .empty-state {
   padding: 60px 0;
+}
+
+.pagination-wrapper {
+  margin-top: 2rem;
+  text-align: center;
+  display: flex;
+  justify-content: center;
 }
 </style>

@@ -53,6 +53,14 @@
             <!-- 按钮组 -->
             <div class="action-group">
               <button 
+                class="btn-secondary"
+                :disabled="detail.status !== 1"
+                @click="handleAddToCart"
+              >
+                <ShoppingCartOutlined class="icon" />
+                加入购物车
+              </button>
+              <button 
                 class="btn-primary" 
                 :disabled="detail.status !== 1" 
                 @click="handleBuy"
@@ -109,10 +117,12 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getAdoptItemDetail, listAnimalCategories } from '@cloudfarming/core';
 import type { AdoptItemResp, AnimalCategoryResp } from '@cloudfarming/core';
+import { addToCart } from '@/api/cart';
 import { message } from 'ant-design-vue';
 import { 
   MessageOutlined,
-  CommentOutlined 
+  CommentOutlined,
+  ShoppingCartOutlined
 } from '@ant-design/icons-vue';
 
 const route = useRoute();
@@ -151,6 +161,11 @@ const fetchCategories = async () => {
 const getCategoryName = (code: string) => {
   const category = categories.value.find(c => c.code === code);
   return category ? category.name : code;
+};
+
+// TODO 暂时不支持认养项目加入购物车当中
+const handleAddToCart = async () => {
+  message.error('当前版本不支持加入购物车');
 };
 
 const handleBuy = () => {
