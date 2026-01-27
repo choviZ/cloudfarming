@@ -86,7 +86,7 @@
                     <div class="product-image-wrapper">
                       <img
                         :alt="product.title"
-                        :src="getFirstImage(product.image)"
+                        :src="getFirstImage(product.images || product.image)"
                         class="product-image"
                       />
                     </div>
@@ -161,7 +161,7 @@ const getFirstImage = (imageStr: string): string => {
   if (!imageStr) {
     return 'https://via.placeholder.com/200x200?text=No+Image';
   }
-  return imageStr.split(',')[0] || imageStr;
+  return imageStr.trim().split(',')[0].trim() || imageStr;
 };
 
 // 获取商品数据

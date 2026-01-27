@@ -32,7 +32,7 @@ public class SpuRespDTO {
     /**
      * 商品图片URL，多个图片用逗号分隔
      */
-    private String image;
+    private String images;
 
     /**
      * 商品状态：0-下架，1-上架，2-待审核

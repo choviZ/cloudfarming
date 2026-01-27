@@ -37,6 +37,9 @@ export interface SpuRespDTO {
   /** 商品图片 URL，多个图片用逗号分隔 */
   image: string;
 
+  /** 商品图片 URL (新版字段)，多个图片用逗号分隔 */
+  images: string;
+
   /** 商品状态：0-下架，1-上架，2-待审核 */
   status: number;
   
