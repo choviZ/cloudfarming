@@ -6,19 +6,18 @@
         <div class="bg-circle"></div>
         <div class="bg-gradient"></div>
       </div>
-      
+
       <!-- User Info -->
       <div class="user-info-section">
         <div class="avatar-wrapper">
           <img :src="userAvatar" alt="Avatar" class="avatar-img">
         </div>
         <h3 class="user-name">{{ userName }}</h3>
-        
+
         <!-- Address Section -->
-        <div class="address-box">
+        <div class="address-box" @click="router.push('/user/info/address')">
           <EnvironmentOutlined class="address-icon" />
-          <!-- TODO: Backend does not support address yet, using mock data -->
-          <span class="address-text">北京市朝阳区三环中路...</span>
+          <span class="address-text">{{ address }}</span>
           <RightOutlined class="address-arrow" />
         </div>
 
@@ -53,7 +52,8 @@
           平台公告
         </h4>
         <span class="notice-more">
-          更多 <RightOutlined class="more-icon" />
+          更多
+          <RightOutlined class="more-icon" />
         </span>
       </div>
       <ul class="notice-list">
@@ -76,14 +76,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/useUserStore';
 import { 
   EnvironmentOutlined, 
   RightOutlined 
 } from '@ant-design/icons-vue';
+import { getCurrentUserDefaultReceiveAddress } from '@cloudfarming/core/api/address/recieveAddress';
 
+const router = useRouter();
 const userStore = useUserStore();
+const address = ref('暂未设置默认收货地址');
 
 const userName = computed(() => {
   return userStore.loginUser?.username || '请登录';
@@ -93,6 +97,15 @@ const userAvatar = computed(() => {
   return userStore.loginUser?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Guest';
 });
 
+onMounted(async () => {
+  if (userStore.loginUser) {
+    const res = await getCurrentUserDefaultReceiveAddress();
+    if ((res.code == '0') && res.data) {
+      const { provinceName, cityName, districtName, detailAddress } = res.data;
+      address.value = `${provinceName}${cityName}${districtName}${detailAddress}`;
+    }
+  }
+});
 </script>
 
 <style scoped>
@@ -107,16 +120,18 @@ const userAvatar = computed(() => {
 .user-card-inner {
   background-color: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   position: relative;
-  /* height: 260px; */ /* Let content define height or fixed? Prototype had specific structure */
+  /* height: 260px; */
+  /* Let content define height or fixed? Prototype had specific structure */
 }
 
 /* Background Decoration */
 .card-bg {
   height: 96px;
-  background: linear-gradient(135deg, #15803d 0%, #14532d 100%); /* primary-700 to 900 */
+  background: linear-gradient(135deg, #15803d 0%, #14532d 100%);
+  /* primary-700 to 900 */
   position: relative;
   overflow: hidden;
 }
@@ -138,7 +153,7 @@ const userAvatar = computed(() => {
   left: 0;
   width: 100%;
   height: 50%;
-  background: linear-gradient(to top, rgba(0,0,0,0.1), transparent);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.1), transparent);
 }
 
 /* User Info Section */
@@ -174,23 +189,32 @@ const userAvatar = computed(() => {
 
 /* Address Box */
 .address-box {
+  margin-top: 12px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: #64748b;
-  margin-bottom: 20px;
   background-color: #f8fafc;
   padding: 6px 12px;
   border-radius: 8px;
   border: 1px solid #f1f5f9;
   margin-left: 16px;
   margin-right: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.address-box:hover {
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
 }
 
 .address-icon {
-  color: #22c55e; /* primary-500 */
+  color: #22c55e;
+  /* primary-500 */
 }
 
 .address-text {
@@ -226,7 +250,8 @@ const userAvatar = computed(() => {
 }
 
 .stat-item:hover .stat-value {
-  color: #15803d; /* primary-700 */
+  color: #15803d;
+  /* primary-700 */
 }
 
 .stat-label {
@@ -239,7 +264,7 @@ const userAvatar = computed(() => {
 .platform-notice {
   background-color: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
   padding: 20px;
   flex: 1;
   display: flex;
@@ -269,7 +294,8 @@ const userAvatar = computed(() => {
 .title-indicator {
   width: 4px;
   height: 16px;
-  background-color: #16a34a; /* primary-600 */
+  background-color: #16a34a;
+  /* primary-600 */
   border-radius: 9999px;
 }
 
