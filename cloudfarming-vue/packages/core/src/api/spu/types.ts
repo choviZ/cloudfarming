@@ -34,9 +34,6 @@ export interface SpuRespDTO {
   /** 商品分类 id */
   categoryId: string;
 
-  /** 商品图片 URL，多个图片用逗号分隔 */
-  image: string;
-
   /** 商品图片 URL (新版字段)，多个图片用逗号分隔 */
   images: string;
 
