@@ -1,44 +1,38 @@
 <template>
     <div class="address-selector">
-        <div class="header">
-            <span class="title">收货地址</span>
-            <a-button type="link" class="manage-btn" @click="goToManage">管理地址</a-button>
-        </div>
-
+        <!-- Loading State -->
         <div v-if="loading" class="loading-wrapper">
             <a-spin />
         </div>
 
-        <div v-else-if="addressList.length > 0" class="address-list">
-            <div v-for="addr in addressList" :key="addr.id" class="address-card"
-                :class="{ active: modelValue === addr.id }" @click="handleSelect(addr)">
-                <div class="card-content">
-                    <div class="location-row">
-                        <environment-outlined class="location-icon" />
-                        <span class="region">
-                            {{ addr.provinceName }} {{ addr.cityName }} {{ addr.districtName }}
-                        </span>
-                    </div>
-
-                    <div class="detail-address">
-                        {{ addr.detailAddress }}
-                    </div>
-
-                    <div class="user-info">
-                        <span class="name">{{ addr.receiverName }}</span>
-                        <span class="phone">{{ formatPhone(addr.receiverPhone) }}</span>
-                    </div>
-
-                    <div v-if="addr.isDefault === 1" class="default-tag">默认</div>
+        <!-- Selected Address View (Prototype Style) -->
+        <div v-else-if="selectedAddress" class="address-summary-card">
+            <div class="summary-content">
+                <div class="summary-header">
+                    <h2 class="section-title">
+                        <environment-filled class="title-icon" /> 收货地址
+                    </h2>
+                    <span class="switch-btn" @click.stop="goToManage">管理地址</span>
                 </div>
 
-                <!-- 选中状态下的右下角勾选图标 -->
-                <div v-if="modelValue === addr.id" class="check-mark">
-                    <check-outlined />
+                <div class="info-block">
+                    <div class="user-row">
+                        <span class="user-name">{{ selectedAddress.receiverName }}</span>
+                        <span class="user-phone">{{ formatPhone(selectedAddress.receiverPhone) }}</span>
+                        <span v-if="selectedAddress.isDefault === 1" class="default-badge">默认</span>
+                    </div>
+                    <p class="address-detail">
+                        {{ selectedAddress.provinceName }} {{ selectedAddress.cityName }} {{ selectedAddress.districtName }}
+                        <br>
+                        {{ selectedAddress.detailAddress }}
+                    </p>
                 </div>
             </div>
+            <!-- Airmail Border -->
+            <div class="airmail-border"></div>
         </div>
 
+        <!-- Empty State -->
         <div v-else class="empty-state">
             <a-empty description="暂无收货地址" />
             <a-button type="primary" @click="goToManage">去添加地址</a-button>
@@ -47,9 +41,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { EnvironmentOutlined, CheckOutlined } from '@ant-design/icons-vue';
+import { EnvironmentFilled } from '@ant-design/icons-vue';
 import { getCurrentUserReceiveAddresses } from '@cloudfarming/core/api/address';
 import type { ReceiveAddressResp } from '@cloudfarming/core/api/address';
 
@@ -67,6 +61,10 @@ const router = useRouter();
 const loading = ref(false);
 const addressList = ref<ReceiveAddressResp[]>([]);
 
+const selectedAddress = computed(() => {
+    return addressList.value.find(addr => addr.id === props.modelValue);
+});
+
 // 获取地址列表
 const fetchAddresses = async () => {
     loading.value = true;
@@ -79,22 +77,17 @@ const fetchAddresses = async () => {
             if (!props.modelValue && addressList.value.length > 0) {
                 const defaultAddr = addressList.value.find(a => a.isDefault === 1);
                 if (defaultAddr) {
-                    handleSelect(defaultAddr);
+                    emit('update:modelValue', defaultAddr.id);
+                    emit('change', defaultAddr);
                 } else {
-                    // 没有默认地址则选中第一个
-                    handleSelect(addressList.value[0]!);
+                    emit('update:modelValue', addressList.value[0]!.id);
+                    emit('change', addressList.value[0]!);
                 }
             }
         }
     } finally {
         loading.value = false;
     }
-};
-
-// 选择地址
-const handleSelect = (addr: ReceiveAddressResp) => {
-    emit('update:modelValue', addr.id);
-    emit('change', addr);
 };
 
 // 格式化手机号
@@ -116,27 +109,6 @@ onMounted(() => {
 <style scoped>
 .address-selector {
     width: 100%;
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-}
-
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-}
-
-.manage-btn {
-    padding: 0;
-    height: auto;
 }
 
 .loading-wrapper {
@@ -144,139 +116,110 @@ onMounted(() => {
     padding: 20px 0;
 }
 
-.address-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-
-.address-card {
-    position: relative;
-    width: 280px;
-    border: 1px solid #e8e8e8;
-    border-radius: 8px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all 0.3s;
+/* --- Summary Card Style (Prototype Match) --- */
+.address-summary-card {
     background: #fff;
-}
-
-.address-card:hover {
-    border-color: #ffda44;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.address-card.active {
-    border-color: #ffda44;
-    background-color: #fffbf0;
-    /* 极淡的黄色背景 */
-}
-
-.card-content {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.location-row {
-    display: flex;
-    align-items: flex-start;
-    color: #666;
-    font-size: 13px;
-    line-height: 1.4;
-}
-
-.location-icon {
-    margin-top: 3px;
-    margin-right: 6px;
-    font-size: 14px;
-}
-
-.region {
-    flex: 1;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border: 1px solid #f3f4f6;
     overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    position: relative;
+    transition: all 0.2s;
 }
 
-.detail-address {
-    font-size: 16px;
-    font-weight: 600;
-    color: #111;
-    margin: 4px 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.address-summary-card:hover {
+    border-color: #6ee7b7; /* brand-300 */
 }
 
-.user-info {
-    font-size: 14px;
-    color: #666;
+.summary-content {
+    padding: 24px;
 }
 
-.name {
-    margin-right: 12px;
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
 }
 
-.default-tag {
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: #ccc;
-    color: #fff;
-    font-size: 12px;
-    padding: 2px 6px;
-    border-bottom-left-radius: 8px;
-    border-top-right-radius: 8px;
-    /* 跟随卡片圆角 */
-}
-
-.address-card.active .default-tag {
-    background: #ffda44;
-    color: #111;
-}
-
-.check-mark {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 0 24px 24px;
-    border-color: transparent transparent #ffda44 transparent;
-    color: #111;
-}
-
-.check-mark .anticon {
-    position: absolute;
-    right: 0;
-    /* 这里的定位需要根据三角形微调 */
-    bottom: -24px;
-    font-size: 12px;
-    transform: translate(-2px, -2px);
-    /* 微调位置 */
-}
-
-/* 修正 check-mark 的图标定位，因为 border 创建的三角形内部定位比较麻烦，
-   不如直接用一个绝对定位的 div 包含图标 */
-.check-mark {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 28px;
-    height: 22px;
-    background: #ffda44;
-    border-top-left-radius: 12px;
-    border-bottom-right-radius: 8px;
-    /* 跟随卡片圆角 */
+.section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827; /* gray-900 */
     display: flex;
     align-items: center;
-    justify-content: center;
-    border-width: 0;
-    /* 重置上面的三角形样式 */
+    gap: 8px;
+    margin: 0;
+}
+
+.title-icon {
+    color: #10b981; /* brand-500 */
+    font-size: 20px;
+}
+
+.switch-btn {
+    font-size: 14px;
+    color: #059669; /* brand-600 */
+    cursor: pointer;
+}
+
+.switch-btn:hover {
+    text-decoration: underline;
+}
+
+.info-block {
+    padding-left: 28px; /* Align with text start of title */
+}
+
+.user-row {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.user-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.user-phone {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.default-badge {
+    background-color: #ecfdf5; /* brand-50 */
+    color: #059669; /* brand-600 */
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #a7f3d0; /* brand-200 */
+}
+
+.address-detail {
+    font-size: 14px;
+    color: #4b5563; /* gray-600 */
+    line-height: 1.6;
+    margin: 0;
+}
+
+.airmail-border {
+    height: 4px;
+    width: 100%;
+    background: repeating-linear-gradient(
+        -45deg,
+        #ef4444 0,
+        #ef4444 12px,
+        transparent 12px,
+        transparent 25px,
+        #3b82f6 25px,
+        #3b82f6 37px,
+        transparent 37px,
+        transparent 50px
+    );
 }
 
 .empty-state {
