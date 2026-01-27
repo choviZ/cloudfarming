@@ -107,8 +107,6 @@ onMounted(() => {
 <style scoped>
 .pay-container {
   width: 100%;
-  min-height: 100vh;
-  background-color: #f6f7f8;
   padding: 20px 0;
   display: flex;
   justify-content: center;
@@ -130,7 +128,7 @@ onMounted(() => {
   background: #fff;
   border-radius: 12px;
   padding: 40px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .order-info {
@@ -188,7 +186,7 @@ onMounted(() => {
 }
 
 .method-item:hover, .method-item.active {
-  border-color: #ffda44;
+  border-color: #10b981;
   background-color: #fffdf0;
 }
 
@@ -220,15 +218,15 @@ onMounted(() => {
 
 .pay-btn {
   width: 200px;
-  background-color: #ffda44;
-  border-color: #ffda44;
-  color: #333;
+  background-color: #10b981;
+  border-color: #10b981;
+  color: #fff;
   font-weight: 600;
 }
 
 .pay-btn:hover {
-  background-color: #ffcd00;
-  border-color: #ffcd00;
-  color: #333;
+  background-color: #047857;
+  border-color: #047857;
+  color: #fff;
 }
 </style>

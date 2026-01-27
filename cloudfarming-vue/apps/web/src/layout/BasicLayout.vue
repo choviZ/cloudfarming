@@ -5,7 +5,7 @@
       <global-header />
     </a-layout-header>
     <!-- 中间内容区域 -->
-    <a-layout-content class="layout-content">
+    <a-layout-content class="layout-content" :class="{ 'gray-bg': isGrayLayout }">
       <div class="content-wrapper">
         <router-view />
       </div>
@@ -26,6 +26,7 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const isCartPage = computed(() => route.path.startsWith('/cart'))
+const isGrayLayout = computed(() => route.meta.grayLayout)
 </script>
 
 <style scoped>
@@ -48,6 +49,10 @@ const isCartPage = computed(() => route.path.startsWith('/cart'))
   background-color: white;
   display: flex;
   justify-content: center;
+}
+
+.layout-content.gray-bg {
+  background-color: #f6f7f8;
 }
 
 .content-wrapper {

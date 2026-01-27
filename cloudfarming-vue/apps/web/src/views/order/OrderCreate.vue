@@ -14,34 +14,36 @@
             />
           </div>
 
-          <!-- 认养项目信息 -->
+          <!-- 订单商品信息 -->
           <div class="section-card item-section">
             <div class="section-header">
-              <span class="title">认养项目信息</span>
+              <span class="title">商品信息</span>
             </div>
             
             <a-spin :spinning="loading">
-              <div v-if="detail" class="item-card">
+              <div v-if="displayItem" class="item-card">
                 <div class="item-image">
-                  <img :src="detail.coverImage" :alt="detail.title" />
+                  <img :src="displayItem.image" :alt="displayItem.title" />
                 </div>
                 <div class="item-info">
-                  <h3 class="item-title">{{ detail.title }}</h3>
-                  <div class="item-tags">
-                    <span class="tag">认养周期 {{ detail.adoptDays }}天</span>
-                    <span class="tag">预计收益 {{ detail.expectedYield || '以实际收获为准' }}</span>
+                  <h3 class="item-title">{{ displayItem.title }}</h3>
+                  <div class="item-tags" v-if="displayItem.tags && displayItem.tags.length">
+                    <span v-for="(tag, index) in displayItem.tags" :key="index" class="tag">
+                      {{ tag }}
+                    </span>
                   </div>
                   <div class="item-price-row">
                     <div class="price-box">
                       <span class="currency">¥</span>
-                      <span class="amount">{{ detail.price }}</span>
+                      <span class="amount">{{ displayItem.price }}</span>
                     </div>
                     <div class="quantity-box">
-                      <span>x 1</span>
+                      <span>x {{ displayItem.quantity }}</span>
                     </div>
                   </div>
                 </div>
               </div>
+              <a-empty v-else description="商品信息加载失败" />
             </a-spin>
           </div>
         </div>
@@ -51,8 +53,8 @@
           <div class="checkout-card">
             <div class="price-detail">
               <div class="detail-row">
-                <span>认养金额</span>
-                <span class="value">¥{{ detail ? detail.price : 0 }}</span>
+                <span>商品金额</span>
+                <span class="value">¥{{ totalPrice }}</span>
               </div>
               <div class="detail-row">
                 <span>运费</span>
@@ -63,7 +65,7 @@
                 <span>合计</span>
                 <span class="total-price">
                   <span class="currency">¥</span>
-                  {{ detail ? detail.price : 0 }}
+                  {{ totalPrice }}
                 </span>
               </div>
             </div>
@@ -80,7 +82,7 @@
                 提交订单
               </a-button>
               <div class="agreement-text">
-                提交订单即表示同意《云农场认养协议》
+                提交订单即表示同意《云农场用户协议》
               </div>
             </div>
           </div>
@@ -91,35 +93,118 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import AddressSelector from '../../components/address/AddressSelector.vue';
-import { getAdoptItemDetail, createAdoptOrder } from '@cloudfarming/core/api/adopt';
+import { getAdoptItemDetail } from '@cloudfarming/core/api/adopt';
+import { getSpuDetail } from '@cloudfarming/core/api/spu';
+import { createOrder } from '@cloudfarming/core/api/order/order.ts';
 import type { ReceiveAddressResp } from '@cloudfarming/core/api/address';
-import type { AdoptItemResp } from '@cloudfarming/core/api/adopt'
+import { ORDER_TYPE } from '@cloudfarming/core/api/order/types.ts';
+
+interface DisplayItem {
+  id: string; // 商品ID或认养项目ID
+  skuId?: string; // 如果是商品，则有SKU ID
+  title: string;
+  image: string;
+  price: number;
+  quantity: number;
+  tags: string[];
+}
 
 const route = useRoute();
 const router = useRouter();
 
 const loading = ref(false);
 const submitting = ref(false);
-const detail = ref<AdoptItemResp | null>(null);
 const selectedAddressId = ref('');
 const selectedAddress = ref<ReceiveAddressResp | null>(null);
 
-const fetchDetail = async (id: string) => {
+// 统一展示数据
+const displayItem = ref<DisplayItem | null>(null);
+
+// 从路由参数获取订单信息
+const orderType = computed(() => {
+  const type = route.query.type as string;
+  return type === 'product' ? ORDER_TYPE.GOODS : ORDER_TYPE.ADOPT;
+});
+
+const quantity = computed(() => {
+  const q = route.query.quantity;
+  return q ? Number(q) : 1;
+});
+
+const totalPrice = computed(() => {
+  if (!displayItem.value) return '0.00';
+  return (displayItem.value.price * displayItem.value.quantity).toFixed(2);
+});
+
+const fetchDetail = async () => {
   loading.value = true;
   try {
-    const res = await getAdoptItemDetail(id);
-    if (res.code === '0' && res.data) {
-      detail.value = res.data;
+    if (orderType.value === ORDER_TYPE.ADOPT) {
+      // 认养项目
+      const id = (route.params.id as string) || (route.query.id as string);
+      if (!id) throw new Error('缺少参数: id');
+      
+      const res = await getAdoptItemDetail(id);
+      if (res.code === '0' && res.data) {
+        const data = res.data;
+        displayItem.value = {
+          id: data.id,
+          title: data.title,
+          image: data.coverImage,
+          price: data.price,
+          quantity: quantity.value,
+          tags: [
+            `认养周期 ${data.adoptDays}天`,
+            `预计收益 ${data.expectedYield || '以实际收获为准'}`
+          ]
+        };
+      } else {
+        message.error(res.message || '获取项目详情失败');
+      }
     } else {
-      message.error(res.message || '获取项目详情失败');
+      // 农产品
+      const spuId = route.query.spuId as string;
+      const skuId = route.query.skuId as string;
+      
+      if (!spuId || !skuId) throw new Error('缺少参数: spuId 或 skuId');
+      
+      const res = await getSpuDetail(Number(spuId));
+      if (res.code === '0' && res.data) {
+        const spu = res.data;
+        // 查找选中的 SKU
+        const sku = spu.skuList.find(s => s.id === skuId);
+        
+        if (sku) {
+          // 格式化销售属性
+          const specs = Object.values(sku.saleAttrs || {}).join(' ');
+          
+          displayItem.value = {
+            id: String(spu.id),
+            skuId: sku.id,
+            title: spu.title,
+            image: sku.spuImage || spu.images.split(',')[0], // 优先用SKU图片，否则用SPU主图
+            price: sku.price,
+            quantity: quantity.value,
+            tags: specs ? [specs] : []
+          };
+        } else {
+          message.error('未找到指定的商品规格');
+        }
+      } else {
+        message.error(res.message || '获取商品详情失败');
+      }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    message.error('系统繁忙，请稍后重试');
+    message.error(error.message || '系统繁忙，请稍后重试');
+    // 如果获取失败，返回上一页或首页
+    setTimeout(() => {
+      // router.back();
+    }, 2000);
   } finally {
     loading.value = false;
   }
@@ -135,45 +220,60 @@ const handleSubmit = async () => {
     return;
   }
   
-  if (!detail.value) return;
+  if (!displayItem.value) return;
 
   submitting.value = true;
   try {
-    const res = await createAdoptOrder({
-      adoptItemId: detail.value.id,
-      receiveId: selectedAddressId.value
+    let bizData;
+    
+    if (orderType.value === ORDER_TYPE.ADOPT) {
+      bizData = {
+        adoptItemId: displayItem.value.id,
+        quantity: displayItem.value.quantity,
+        receiveId: selectedAddressId.value
+      };
+    } else {
+      // 商品订单
+      bizData = {
+        items: [{
+          skuId: displayItem.value.skuId!,
+          quantity: displayItem.value.quantity
+        }],
+        receiveId: selectedAddressId.value,
+        remark: ''
+      };
+    }
+
+    const res = await createOrder({
+      orderType: orderType.value,
+      bizData: bizData as any // 类型断言，因为 createOrder 定义使用了联合类型
     });
 
-    if (res.code === '0' && res.data) {
+    if (res.code == '0' && res.data) {
       message.success('订单创建成功！即将跳转支付...');
+      const { payOrderNo, payAmount } = res.data;
+      if (!payOrderNo) {
+        message.error('订单创建异常：返回数据缺少订单号');
+        return;
+      }
       // 跳转到支付页面，携带 orderId 和 amount
       router.push({
         path: '/pay',
         query: {
-          orderId: res.data.id,
-          amount: res.data.price
+          orderId: payOrderNo,
+          amount: payAmount
         }
       });
-      console.log('Order created:', res.data);
     } else {
       message.error(res.message || '创建订单失败');
     }
-  } catch (error) {
-    console.error(error);
-    message.error('创建订单异常');
   } finally {
     submitting.value = false;
   }
 };
 
 onMounted(() => {
-  const id = route.params.id as string;
-  if (id) {
-    fetchDetail(id);
-  } else {
-    message.error('参数错误');
-    router.push('/adopt/list');
-  }
+  fetchDetail();
 });
 </script>
 
@@ -181,7 +281,6 @@ onMounted(() => {
 .order-create-container {
   width: 100%;
   min-height: 100vh;
-  background-color: #f6f7f8;
   padding: 20px 0;
   display: flex;
   justify-content: center;
@@ -367,18 +466,18 @@ onMounted(() => {
 }
 
 .submit-btn {
-  background: #ffda44;
-  border-color: #ffda44;
-  color: #111;
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
   font-weight: 600;
   height: 44px;
   font-size: 16px;
 }
 
 .submit-btn:hover {
-  background: #ffcd11;
-  border-color: #ffcd11;
-  color: #111;
+  background: #047857;
+  border-color: #047857;
+  color: #fff;
 }
 
 .agreement-text {

@@ -228,7 +228,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { addToCart as addToCartApi } from '@/api/cart'
 import { getSpuDetail } from '@cloudfarming/core/api/spu'
@@ -250,6 +250,7 @@ import {
 
 // Route & Data
 const route = useRoute()
+const router = useRouter()
 const spuId = route.params.id as string
 
 const loading = ref(false)
@@ -362,7 +363,17 @@ const buyNow = () => {
     message.warning('请先选择规格');
     return;
   }
-  message.success('跳转结算页...')
+  
+  // 跳转到订单创建页面，携带商品信息
+  router.push({
+    path: '/order/create',
+    query: {
+      type: 'product',
+      spuId: spuId,
+      skuId: String(currentSku.value.id),
+      quantity: quantity.value
+    }
+  });
 }
 
 const toggleFavorite = () => {

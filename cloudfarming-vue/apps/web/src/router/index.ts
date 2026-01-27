@@ -35,12 +35,18 @@ const router = createRouter({
         {
           path: 'adopt/order/create/:id',
           name: 'adoptOrderCreate',
-          component: () => import('../views/adopt/AdoptOrderCreate.vue')
+          component: () => import('../views/order/OrderCreate.vue')
+        },
+        {
+          path: 'order/create',
+          name: 'orderCreate',
+          component: () => import('../views/order/OrderCreate.vue')
         },
         {
           path: 'pay',
           name: 'pay',
-          component: () => import('../views/pay/Pay.vue')
+          component: () => import('../views/pay/Pay.vue'),
+          meta: { grayLayout: true }
         },
         {
           path: '/product/:id',
