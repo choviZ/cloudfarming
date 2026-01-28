@@ -47,6 +47,11 @@ public class PayOrderDO extends BaseDO implements Serializable {
     private Integer payStatus;
 
     /**
+     * 业务状态
+     */
+    private Integer bizStatus;
+
+    /**
      * 支付方式：alipay
      */
     private Integer payChannel;
