@@ -1,23 +1,34 @@
 package com.vv.cloudfarming.order.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.PayOrderDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
+import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.PayOrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.order.service.PayService;
 import com.vv.cloudfarming.order.strategy.OrderCreateStrategy;
 import com.vv.cloudfarming.order.strategy.OrderStrategyFactory;
+import com.vv.cloudfarming.order.utils.ProductUtil;
+import com.vv.cloudfarming.shop.dao.entity.Shop;
+import com.vv.cloudfarming.shop.dao.mapper.ShopMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -31,6 +42,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
 
     private final OrderStrategyFactory strategyFactory;
     private final PayService payService;
+    private final ShopMapper shopMapper;
+    private final ProductUtil productUtil;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -67,6 +80,31 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         response.setPayOrderNo(payOrderNo);
         response.setExpireTime(payOrder.getExpireTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
         return response;
+    }
+
+    @Override
+    public IPage<OrderPageRespDTO> listOrder(OrderPageReqDTO requestParam) {
+        Long id = requestParam.getId();
+        Integer orderStatus = requestParam.getOrderStatus();
+        Long userId = requestParam.getUserId();
+
+        LambdaQueryWrapper<OrderDO> wrapper = Wrappers.lambdaQuery(OrderDO.class)
+                .eq(ObjectUtil.isNotNull(id), OrderDO::getId, id)
+                .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
+                .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId);
+        IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
+        // 转换
+        return orderPage.convert(each -> {
+            Shop shop = shopMapper.selectById(each.getShopId());
+            ArrayList<ProductSummaryDTO> summaryList = new ArrayList<>();
+            productUtil.buildProductSummary(each.getId(),each.getOrderType(),summaryList);
+            return OrderPageRespDTO.builder()
+                    .id(each.getId())
+                    .shopName(shop.getShopName())
+                    .items(summaryList)
+                    .totalPrice(each.getTotalAmount())
+                    .build();
+        });
     }
 
 

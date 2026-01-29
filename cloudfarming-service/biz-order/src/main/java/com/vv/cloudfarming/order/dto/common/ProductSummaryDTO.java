@@ -1,18 +1,20 @@
-package com.vv.cloudfarming.order.dto.resp;
+package com.vv.cloudfarming.order.dto.common;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 /**
- * 支付单关联的商品信息
+ * 订单关联的商品信息
  */
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class PayOrderItemRespDTO {
+public class ProductSummaryDTO {
 
     /**
      * 商品名称
@@ -28,6 +30,11 @@ public class PayOrderItemRespDTO {
      * 封面图片
      */
     private String coverImage;
+
+    /**
+     * 价格
+     */
+    private BigDecimal price;
 
     /**
      * 下单数量

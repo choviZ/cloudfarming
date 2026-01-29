@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.order.dto.resp;
 
+import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -50,6 +51,6 @@ public class PayOrderRespDTO {
     /**
      * 关联的商品信息
      */
-    private List<PayOrderItemRespDTO> items;
+    private List<ProductSummaryDTO> items;
 }
 
