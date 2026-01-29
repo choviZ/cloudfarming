@@ -9,9 +9,8 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
-        <module>cloudfarming-web</module>
-        <module>cloudfarming-service</module>
-        <module>cloudfarming-framework</module>
+        <module>services</module>
+        <module>frameworks</module>
     </modules>
 
     <properties>

@@ -1,0 +1,26 @@
+package com.vv.cloudfarming;
+
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+/**
+ * 云养殖平台聚合服务应用启动器
+ */
+@SpringBootApplication(scanBasePackages = {
+        "com.vv.cloudfarming.user",
+        "com.vv.cloudfarming.product",
+        "com.vv.cloudfarming.order",
+})
+@MapperScan({
+        "com.vv.cloudfarming.user.dao.mapper",
+        "com.vv.cloudfarming.product.dao.mapper",
+        "com.vv.cloudfarming.order.dao.mapper",
+})
+@EnableScheduling
+public class CloudFarmingApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(CloudFarmingApplication.class, args);
+    }
+}
