@@ -12,6 +12,7 @@ import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.shop.dao.entity.AdoptItemDO;
 import com.vv.cloudfarming.shop.dao.mapper.AdoptItemMapper;
+import com.vv.cloudfarming.shop.dao.mapper.ShopMapper;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemCreateReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemPageReqDTO;
 import com.vv.cloudfarming.shop.dto.req.AdoptItemReviewReqDTO;
@@ -30,19 +31,25 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItemDO> implements AdoptItemService {
 
+    private final ShopMapper shopMapper;
+
     @Override
-    public Long createAdoptItem(Long userId, AdoptItemCreateReqDTO reqDTO) {
-        Integer totalCount = reqDTO.getTotalCount();
+    public Long createAdoptItem(Long userId, AdoptItemCreateReqDTO requestParam) {
+        Long shopId = shopMapper.getIdByFarmerId(userId);
+        if (shopId == null){
+            throw new ServiceException("店铺不存在");
+        }
+        Integer totalCount = requestParam.getTotalCount();
         // 构建认养项目实体
         AdoptItemDO adoptItem = AdoptItemDO.builder()
-                .farmerId(userId)
-                .title(reqDTO.getTitle())
-                .animalCategory(reqDTO.getAnimalCategory())
-                .adoptDays(reqDTO.getAdoptDays())
-                .price(reqDTO.getPrice())
-                .expectedYield(reqDTO.getExpectedYield())
-                .description(reqDTO.getDescription())
-                .coverImage(reqDTO.getCoverImage())
+                .shopId(shopId)
+                .title(requestParam.getTitle())
+                .animalCategory(requestParam.getAnimalCategory())
+                .adoptDays(requestParam.getAdoptDays())
+                .price(requestParam.getPrice())
+                .expectedYield(requestParam.getExpectedYield())
+                .description(requestParam.getDescription())
+                .coverImage(requestParam.getCoverImage())
                 .reviewStatus(ReviewStatusEnum.PENDING.getStatus()) // 创建后默认待审核
                 .status(ShelfStatusEnum.OFFLINE.getCode())            // 创建后默认未上架
                 .totalCount(totalCount)
@@ -64,7 +71,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 校验用户权限
-        if (!adoptItem.getFarmerId().equals(userId)) {
+        if (!adoptItem.getShopId().equals(userId)) {
             throw new ClientException("没有权限修改该认养项目");
         }
 
@@ -98,7 +105,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 校验用户权限
-        if (!adoptItem.getFarmerId().equals(userId)) {
+        if (!adoptItem.getShopId().equals(userId)) {
             throw new ClientException("没有权限操作该认养项目");
         }
 
@@ -125,7 +132,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 校验用户权限
-        if (!adoptItem.getFarmerId().equals(userId)) {
+        if (!adoptItem.getShopId().equals(userId)) {
             throw new ClientException("没有权限删除该认养项目");
         }
 
@@ -154,7 +161,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         if (userId == null) {
             isOwner = false;
         } else {
-            isOwner = userId == null ? false : adoptItem.getFarmerId().equals(userId);
+            isOwner = userId == null ? false : adoptItem.getShopId().equals(userId);
         }
         if (!isOwner && !ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
             throw new ClientException("认养项目不存在");
@@ -182,7 +189,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
                 .like(StrUtil.isNotBlank(title), AdoptItemDO::getTitle, title) // 标题
                 .eq(ObjectUtil.isNotNull(reviewStatus), AdoptItemDO::getReviewStatus, reviewStatus) // 审核状态
                 .eq(ObjectUtil.isNotNull(status), AdoptItemDO::getStatus, status) // 上架状态
-                .eq(ObjectUtil.isNotNull(userId),AdoptItemDO::getFarmerId, requestParam.getUserId()) // 用户id
+                .eq(ObjectUtil.isNotNull(userId),AdoptItemDO::getShopId, requestParam.getUserId()) // 用户id
                 .orderByDesc(AdoptItemDO::getCreateTime)
         ;
         // 分页查询
@@ -191,7 +198,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         return pageResult.convert(adoptItem -> {
             AdoptItemRespDTO respDTO = BeanUtil.toBean(adoptItem, AdoptItemRespDTO.class);
             // 仅发布者本人可查看审核说明
-            if (userId != null && userId.equals(adoptItem.getFarmerId())) {
+            if (userId != null && userId.equals(adoptItem.getShopId())) {
                 respDTO.setReviewText(adoptItem.getReviewText());
             }
             return respDTO;

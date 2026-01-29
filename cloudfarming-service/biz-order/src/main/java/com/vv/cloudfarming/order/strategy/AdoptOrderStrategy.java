@@ -5,13 +5,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.vv.cloudfarming.common.enums.ReviewStatusEnum;
 import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
-import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.order.constant.OrderTypeConstant;
 import com.vv.cloudfarming.order.enums.OrderStatusEnum;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailAdoptDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
-import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.model.AdoptOrderCreate;
 import com.vv.cloudfarming.shop.dao.entity.AdoptInstanceDO;
@@ -41,7 +39,6 @@ public class AdoptOrderStrategy implements OrderCreateStrategy {
     private final AdoptInstanceService adoptInstanceService;
     private final ReceiveAddressService receiveAddressService;
     private final OrderMapper orderMapper;
-    private final OrderDetailSkuMapper orderDetailSkuMapper;
     private final OrderDetailAdoptMapper orderDetailAdoptMapper;
 
     @Override
@@ -64,7 +61,7 @@ public class AdoptOrderStrategy implements OrderCreateStrategy {
                 .orderNo(generateOrderNo(userId))
                 .payOrderNo(payOrderNo)
                 .userId(userId)
-                .shopId(item.getFarmerId()) // 认养项目的发布者作为店铺
+                .shopId(item.getShopId())
                 .orderType(OrderTypeConstant.ADOPT)
                 .totalAmount(totalAmount)
                 .actualPayAmount(totalAmount)
@@ -116,7 +113,7 @@ public class AdoptOrderStrategy implements OrderCreateStrategy {
             !ShelfStatusEnum.ONLINE.getCode().equals(item.getStatus())) {
             throw new ClientException("项目未上架");
         }
-        if (item.getFarmerId().equals(userId)) {
+        if (item.getShopId().equals(userId)) {
             throw new ClientException("不能认养自己的项目");
         }
     }
@@ -135,7 +132,7 @@ public class AdoptOrderStrategy implements OrderCreateStrategy {
         for (int i = 0; i < quantity; i++) {
             instances.add(AdoptInstanceDO.builder()
                     .itemId(item.getId())
-                    .farmerId(item.getFarmerId())
+                    .farmerId(item.getShopId())
                     .ownerUserId(userId)
                     .ownerOrderId(orderId)
                     .status(LivestockStatusEnum.AVAILABLE.getCode()) // 待支付状态? 这里暂用 AVAILABLE
