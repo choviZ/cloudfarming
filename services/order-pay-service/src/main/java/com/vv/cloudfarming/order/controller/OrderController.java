@@ -9,6 +9,7 @@ import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.service.OrderService;
+import com.vv.cloudfarming.starter.idempotent.NoDuplicateSubmit;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,6 +24,7 @@ public class OrderController {
     private final OrderService orderService;
 
     @Operation(summary = "创建订单")
+    @NoDuplicateSubmit(message = "请勿重复提交订单")
     @PostMapping("/v1/order")
     public Result<OrderCreateRespDTO> createOrder(@RequestBody @Valid OrderCreateReqDTO requestParam) {
         long userId = StpUtil.getLoginIdAsLong();

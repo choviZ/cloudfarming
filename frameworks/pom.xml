@@ -16,6 +16,7 @@
         <module>cloudfarming-storage-spring-boot-starter</module>
         <module>database-spring-boot-starter</module>
         <module>web-springboot-starter</module>
+        <module>idempotent-spring-boot-starter</module>
     </modules>
 
     <properties>
