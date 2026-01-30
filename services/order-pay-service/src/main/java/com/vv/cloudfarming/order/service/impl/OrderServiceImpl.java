@@ -20,6 +20,7 @@ import com.vv.cloudfarming.order.service.PayService;
 import com.vv.cloudfarming.order.strategy.OrderCreateStrategy;
 import com.vv.cloudfarming.order.strategy.OrderStrategyFactory;
 import com.vv.cloudfarming.order.utils.ProductUtil;
+import com.vv.cloudfarming.order.utils.RedisIdWorker;
 import com.vv.cloudfarming.product.dao.entity.Shop;
 import com.vv.cloudfarming.product.dao.mapper.ShopMapper;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 订单服务实现类 (Refactored)
@@ -44,6 +44,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private final PayService payService;
     private final ShopMapper shopMapper;
     private final ProductUtil productUtil;
+    private final RedisIdWorker redisIdWorker;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -107,13 +108,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         });
     }
 
-
     private String generatePayOrderNo(Long userId) {
-        long timestamp = System.currentTimeMillis() / 1000;
-        String timePart = String.format("%08d", timestamp % 100000000);
+        Long id = redisIdWorker.generateId("paySN");
         String userIdPart = String.format("%06d", userId % 1000000);
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        String randomPart = String.format("%04d", random.nextInt(10000));
-        return "P" + timePart + userIdPart + randomPart;
+        return id + userIdPart;
     }
 }
