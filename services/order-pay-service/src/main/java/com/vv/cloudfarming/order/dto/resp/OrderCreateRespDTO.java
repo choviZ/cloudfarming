@@ -1,6 +1,9 @@
 package com.vv.cloudfarming.order.dto.resp;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
@@ -8,6 +11,9 @@ import java.math.BigDecimal;
  * 创建订单响应对象
  */
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class OrderCreateRespDTO {
 
     // 需要支付的金额

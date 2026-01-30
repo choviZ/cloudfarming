@@ -1,4 +1,4 @@
-package com.vv.cloudfarming.order.dto;
+package com.vv.cloudfarming.order.dto.common;
 
 import lombok.Data;
 

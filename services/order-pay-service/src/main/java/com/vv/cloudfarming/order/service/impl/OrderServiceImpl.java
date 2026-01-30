@@ -17,8 +17,8 @@ import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.order.service.PayService;
-import com.vv.cloudfarming.order.strategy.OrderCreateStrategy;
-import com.vv.cloudfarming.order.strategy.OrderStrategyFactory;
+import com.vv.cloudfarming.order.strategy.AbstractOrderCreateTemplate;
+import com.vv.cloudfarming.order.strategy.OrderTemplateFactory;
 import com.vv.cloudfarming.order.utils.ProductUtil;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
 import com.vv.cloudfarming.product.dao.entity.Shop;
@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,7 +41,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implements OrderService {
 
-    private final OrderStrategyFactory strategyFactory;
+    private final OrderTemplateFactory templateFactory;
     private final PayService payService;
     private final ShopMapper shopMapper;
     private final ProductUtil productUtil;
@@ -48,16 +49,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public OrderCreateRespDTO createOrder(Long userId, OrderCreateReqDTO reqDTO) {
-        // 1. 获取对应的创建策略
-        OrderCreateStrategy strategy = strategyFactory.getStrategy(reqDTO.getOrderType());
+    public OrderCreateRespDTO createOrder(Long userId, OrderCreateReqDTO requestParam) {
+        // 1. 根据订单类型获取对应的模板
+        AbstractOrderCreateTemplate<?, ?> template = templateFactory.getTemplate(requestParam.getOrderType());
 
         // 2. 生成全局唯一的支付单号
         String payOrderNo = generatePayOrderNo(userId);
         
-        // 3. 执行策略，生成业务订单列表
-        List<OrderDO> orders = strategy.createOrders(userId, payOrderNo, reqDTO.getBizData());
-        if (orders == null || orders.isEmpty()) {
+        // 3. 执行模板方法，生成业务订单列表
+        List<OrderDO> orders = template.createOrder(userId, payOrderNo, requestParam);
+        if (orders.isEmpty()) {
             throw new ServiceException("订单创建失败：未生成有效订单");
         }
         
@@ -69,17 +70,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             }
         }
 
-        PayOrderCreateReqDTO payOrderCreateReq = new PayOrderCreateReqDTO();
-        payOrderCreateReq.setBuyerId(userId);
-        payOrderCreateReq.setPayOrderNo(payOrderNo);
-        payOrderCreateReq.setTotalAmount(totalAmount);
+        PayOrderCreateReqDTO payOrderCreateReq = PayOrderCreateReqDTO.builder()
+                .buyerId(userId)
+                .payOrderNo(payOrderNo)
+                .totalAmount(totalAmount)
+                .build();
         PayOrderDO payOrder = payService.createPayOrder(payOrderCreateReq);
 
         // 5. 构建响应
-        OrderCreateRespDTO response = new OrderCreateRespDTO();
-        response.setPayAmount(totalAmount);
-        response.setPayOrderNo(payOrderNo);
-        response.setExpireTime(payOrder.getExpireTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
+        OrderCreateRespDTO response = OrderCreateRespDTO.builder()
+                .payAmount(totalAmount)
+                .payOrderNo(payOrderNo)
+                .expireTime(payOrder.getExpireTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                .build();
         return response;
     }
 
@@ -109,8 +112,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     }
 
     private String generatePayOrderNo(Long userId) {
-        Long id = redisIdWorker.generateId("paySN");
-        String userIdPart = String.format("%06d", userId % 1000000);
-        return id + userIdPart;
+        return redisIdWorker.generateId("paySN").toString();
     }
 }

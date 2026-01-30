@@ -1,8 +1,10 @@
 package com.vv.cloudfarming.order.dto.req;
 
-import cn.hutool.json.JSONObject;
+import com.vv.cloudfarming.order.dto.common.ItemDTO;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * 创建订单请求参数
@@ -17,8 +19,13 @@ public class OrderCreateReqDTO {
     private Integer orderType;
 
     /**
-     * 业务数据
+     * 收获地址id
      */
     @NotNull
-    JSONObject bizData;
+    private Long receiveId;
+
+    /**
+     * 下单的商品
+     */
+    private List<ItemDTO> items;
 }
