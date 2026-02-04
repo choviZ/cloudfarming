@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
+import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.product.dao.entity.*;
@@ -17,11 +18,12 @@ import com.vv.cloudfarming.product.dto.domain.SkuItemDTO;
 import com.vv.cloudfarming.product.dto.req.SkuCreateReqDTO;
 import com.vv.cloudfarming.product.dto.resp.SkuRespDTO;
 import com.vv.cloudfarming.product.dto.domain.SpuPriceSummaryDTO;
+import com.vv.cloudfarming.product.enums.ProductTypeEnum;
 import com.vv.cloudfarming.product.service.AttributeService;
 import com.vv.cloudfarming.product.service.SkuService;
+import com.vv.cloudfarming.product.service.StockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -39,6 +41,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
     private final AttributeService attributeService;
     private final SkuAttrValueMapper skuAttrValueMapper;
     private final SpuMapper spuMapper;
+    private final StockService stockService;
     private final StringRedisTemplate stringRedisTemplate;
 
     private static final String STOCK_CACHE_KEY_PREFIX = "cloudfarming:stock:sku:";
@@ -84,7 +87,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
                         .attrValue(attrValue)
                         .build();
                 int inserted = skuAttrValueMapper.insert(skuAttrValueDO);
-                if (!SqlHelper.retBool(inserted)){
+                if (!SqlHelper.retBool(inserted)) {
                     throw new ServiceException("sku属性持久化失败");
                 }
             });
@@ -112,7 +115,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
         List<SkuRespDTO> result = skuList.stream()
                 .map(this::convertToRespDTO)
                 .collect(Collectors.toList());
-        
+
         // 批量填充库存
         result.forEach(this::fillRealTimeStock);
         return result;
@@ -139,7 +142,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
         if (CollUtil.isEmpty(spuIds)) {
             return Collections.emptyList();
         }
-        
+
         // 查询这些 SPU 下的所有 SKU（仅需 id, spuId, price）
         List<SkuDO> skuList = this.list(new LambdaQueryWrapper<SkuDO>()
                 .in(SkuDO::getSpuId, spuIds)
@@ -177,8 +180,32 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
         return summaries;
     }
 
+    @Override
+    public void updateSkuStatus(Long id, Integer status) {
+        ShelfStatusEnum newStatus = ShelfStatusEnum.of(status);
+        if (newStatus == null) {
+            throw new ClientException("无效的商品状态");
+        }
+        SkuDO sku = baseMapper.selectById(id);
+        if (sku == null) {
+            throw new ClientException("商品不存在");
+        }
+        if (Objects.equals(sku.getStatus(), sku)) {
+            return;
+        }
+        sku.setStatus(status);
+        if (baseMapper.updateById(sku) <= 0) {
+            throw new ServiceException("更新商品状态失败");
+        }
+        // 设置的状态为上线，则尝试初始化库存缓存
+        if (ShelfStatusEnum.ONLINE == newStatus) {
+            stockService.initStock(sku.getId(), sku.getStock(), ProductTypeEnum.AGRICULTURAL_PRODUCTS.getCode());
+        }
+    }
+
     /**
      * 转换成响应DTO
+     *
      * @param skuDO sku对象
      * @return 响应DTO
      */

@@ -19,7 +19,7 @@ import java.util.List;
 public interface SpuService extends IService<SpuDO> {
 
     /**
-     * 创建或修改SPU
+     * 创建SPU
      * @param requestParam 请求参数
      */
     Long saveSpu(SpuCreateOrUpdateReqDTO requestParam);

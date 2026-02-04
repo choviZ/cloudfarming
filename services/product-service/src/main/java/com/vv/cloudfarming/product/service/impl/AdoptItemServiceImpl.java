@@ -18,9 +18,12 @@ import com.vv.cloudfarming.product.dto.req.AdoptItemPageReqDTO;
 import com.vv.cloudfarming.product.dto.req.AdoptItemReviewReqDTO;
 import com.vv.cloudfarming.product.dto.req.AdoptItemUpdateReqDTO;
 import com.vv.cloudfarming.product.dto.resp.AdoptItemRespDTO;
+import com.vv.cloudfarming.product.enums.ProductTypeEnum;
 import com.vv.cloudfarming.product.service.AdoptItemService;
+import com.vv.cloudfarming.product.service.StockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 /**
@@ -32,11 +35,12 @@ import org.springframework.stereotype.Service;
 public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItemDO> implements AdoptItemService {
 
     private final ShopMapper shopMapper;
+    private final StockService stockService;
 
     @Override
     public Long createAdoptItem(Long userId, AdoptItemCreateReqDTO requestParam) {
         Long shopId = shopMapper.getIdByFarmerId(userId);
-        if (shopId == null){
+        if (shopId == null) {
             throw new ServiceException("店铺不存在");
         }
         Integer totalCount = requestParam.getTotalCount();
@@ -121,6 +125,10 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         if (!this.updateById(adoptItem)) {
             throw new ServiceException("更新认养项目状态失败");
         }
+        // 设置状态为上架时，初始化库存缓存
+        if (ShelfStatusEnum.ONLINE.getCode().equals(status)) {
+            stockService.initStock(adoptItemId, adoptItem.getAvailableCount(), ProductTypeEnum.ADOPT.getCode());
+        }
     }
 
     @Override
@@ -189,7 +197,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
                 .like(StrUtil.isNotBlank(title), AdoptItemDO::getTitle, title) // 标题
                 .eq(ObjectUtil.isNotNull(reviewStatus), AdoptItemDO::getReviewStatus, reviewStatus) // 审核状态
                 .eq(ObjectUtil.isNotNull(status), AdoptItemDO::getStatus, status) // 上架状态
-                .eq(ObjectUtil.isNotNull(userId),AdoptItemDO::getShopId, requestParam.getUserId()) // 用户id
+                .eq(ObjectUtil.isNotNull(userId), AdoptItemDO::getShopId, requestParam.getUserId()) // 用户id
                 .orderByDesc(AdoptItemDO::getCreateTime)
         ;
         // 分页查询

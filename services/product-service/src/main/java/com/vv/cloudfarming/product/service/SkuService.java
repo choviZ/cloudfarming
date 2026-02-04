@@ -49,4 +49,9 @@ public interface SkuService extends IService<SkuDO> {
      * @return 价格摘要列表
      */
     List<SpuPriceSummaryDTO> listPriceSummaryBySpuIds(List<Long> spuIds);
+
+    /**
+     * 修改上下架状态
+     */
+    void updateSkuStatus(Long id, Integer status);
 }

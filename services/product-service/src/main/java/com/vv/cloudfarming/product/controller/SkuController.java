@@ -9,9 +9,7 @@ import com.vv.cloudfarming.product.service.SkuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "商品SKU控制层")
 @RestController
@@ -25,6 +23,14 @@ public class SkuController {
     @PostMapping("/v1/sku")
     public Result<Void> createSku(@RequestBody SkuCreateReqDTO requestParam){
         skuService.createSku(requestParam);
+        return Results.success();
+    }
+
+    @Operation(summary = "更新SKU状态")
+    @GetMapping("/v1/sku/status")
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    public Result<Void> updateSkuStatus(@RequestParam Long id,@RequestParam Integer status){
+        skuService.updateSkuStatus(id, status);
         return Results.success();
     }
 }

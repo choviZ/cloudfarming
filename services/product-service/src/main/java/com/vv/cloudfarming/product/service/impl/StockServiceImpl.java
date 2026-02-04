@@ -3,6 +3,7 @@ package com.vv.cloudfarming.product.service.impl;
 import cn.hutool.core.lang.Singleton;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
+import com.vv.cloudfarming.product.constant.StockKeyConstant;
 import com.vv.cloudfarming.product.enums.ProductTypeEnum;
 import com.vv.cloudfarming.product.service.StockService;
 import lombok.RequiredArgsConstructor;
@@ -16,39 +17,43 @@ import org.springframework.stereotype.Service;
 import java.util.Arrays;
 import java.util.Objects;
 
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class StockServiceImpl implements StockService {
 
-    private static final String STOCK_AVAILABLE_CACHE_KEY = "cloudfarming:stock:available:%s:%s";
-    private static final String STOCK_LOCK_CACHE_KEY = "cloudfarming:stock:lock:%s:%s";
     private final StringRedisTemplate stringRedisTemplate;
     private static final String STOCK_INIT_LUA_PATH = "lua/stock_init.lua";
 
-
-    public void initStock(Long id, int totalStock, int bizType) {
+    @Override
+    public Long initStock(Long id, int totalStock, int bizType) {
         // 获取 LUA 脚本，并保存到 Hutool 的单例管理容器，下次直接获取不需要加载
-        DefaultRedisScript<Integer> buildLuaScript = Singleton.get(STOCK_INIT_LUA_PATH, () -> {
-            DefaultRedisScript<Integer> redisScript = new DefaultRedisScript<>();
+        DefaultRedisScript<Long> buildLuaScript = Singleton.get(STOCK_INIT_LUA_PATH, () -> {
+            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
             redisScript.setScriptSource(new ResourceScriptSource(new ClassPathResource(STOCK_INIT_LUA_PATH)));
-            redisScript.setResultType(Integer.class);
+            redisScript.setResultType(Long.class);
             return redisScript;
         });
         ProductTypeEnum type = ProductTypeEnum.of(bizType);
         if (type == null) {
             throw new ClientException("不支持的业务类型");
         }
-        String availableKey = String.format(STOCK_AVAILABLE_CACHE_KEY, type.getName(), id);
-        String lockKey = String.format(STOCK_LOCK_CACHE_KEY, type.getName(), id);
-        Integer stockInitResult = stringRedisTemplate.execute(
+        String availableKey = String.format(StockKeyConstant.STOCK_AVAILABLE_CACHE_KEY, type.getName(), id);
+        String lockKey = String.format(StockKeyConstant.STOCK_LOCK_CACHE_KEY, type.getName(), id);
+        Long stockInitResult = stringRedisTemplate.execute(
                 buildLuaScript,
                 Arrays.asList(availableKey, lockKey),
-                totalStock
+                String.valueOf(totalStock)
         );
         if (stockInitResult == -1){
             throw new ClientException("参数非法");
+        } else if (stockInitResult == 1) {
+            log.info("库存初始化成功，availableKey：{}，lockKey：{}", availableKey, lockKey);
+        }else if (stockInitResult == 0){
+            log.info("库存初始化已存在，availableKey：{}，lockKey：{}", availableKey, lockKey);
         }
+        return stockInitResult;
     }
 
     @Override
@@ -60,8 +65,8 @@ public class StockServiceImpl implements StockService {
         if (type == null) {
             throw new ClientException("不支持的业务类型");
         }
-        String availableKey = String.format(STOCK_AVAILABLE_CACHE_KEY, type.getName(), id);
-        String lockKey = String.format(STOCK_LOCK_CACHE_KEY, type.getName(), id);
+        String availableKey = String.format(StockKeyConstant.STOCK_AVAILABLE_CACHE_KEY, type.getName(), id);
+        String lockKey = String.format(StockKeyConstant.STOCK_LOCK_CACHE_KEY, type.getName(), id);
 
         String lockScript =
                 "local availableKey = KEYS[1] " +
@@ -104,8 +109,8 @@ public class StockServiceImpl implements StockService {
         if (type == null) {
             throw new ClientException("不支持的业务类型");
         }
-        String availableKey = String.format(STOCK_AVAILABLE_CACHE_KEY, type.getName(), id);
-        String lockKey = String.format(STOCK_LOCK_CACHE_KEY, type.getName(), id);
+        String availableKey = String.format(StockKeyConstant.STOCK_AVAILABLE_CACHE_KEY, type.getName(), id);
+        String lockKey = String.format(StockKeyConstant.STOCK_LOCK_CACHE_KEY, type.getName(), id);
 
         String unlockScript =
                 "local availableKey = KEYS[1] " +

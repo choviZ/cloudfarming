@@ -18,4 +18,13 @@ public enum ShelfStatusEnum {
         this.code = code;
         this.desc = desc;
     }
+
+    public static ShelfStatusEnum of(Integer code) {
+        for (ShelfStatusEnum status : values()) {
+            if (status.code.equals(code)) {
+                return status;
+            }
+        }
+        return null;
+    }
 }
