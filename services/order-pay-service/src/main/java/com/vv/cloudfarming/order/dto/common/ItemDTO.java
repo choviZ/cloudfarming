@@ -7,7 +7,7 @@ public class ItemDTO {
     /**
      * 商品类型（农产品 / 养殖项目）
      */
-    private String bizType;
+    private Integer bizType;
 
     /**
      * skuId / 养殖项目id

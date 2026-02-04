@@ -6,6 +6,7 @@ import com.vv.cloudfarming.order.dto.common.ItemDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.enums.OrderStatusEnum;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
+import com.vv.cloudfarming.product.service.StockService;
 import com.vv.cloudfarming.user.dto.resp.ReceiveAddressRespDTO;
 import com.vv.cloudfarming.user.service.ReceiveAddressService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public abstract class AbstractOrderCreateTemplate<P, D> {
     protected final ReceiveAddressService addressService;
     protected final OrderMapper orderMapper;
     protected final RedisIdWorker redisIdWorker;
+    protected final StockService stockService;
 
     /**
      * 模板方法 - 定义订单创建骨架流程
@@ -46,7 +48,7 @@ public abstract class AbstractOrderCreateTemplate<P, D> {
         ctx.setProductMap(fetchProductInfo(ctx));
 
         // 4. 扣减库存（抽象方法，子类实现）
-        lockStock(ctx);
+        ctx.getItems().forEach(each -> stockService.lock(each.getBizId(),each.getQuantity(),each.getBizType()));
 
         // 5. 按店铺分组
         Map<Long, List<ItemDTO>> shopItemsMap = ctx.getItems().stream()
@@ -105,11 +107,6 @@ public abstract class AbstractOrderCreateTemplate<P, D> {
      * 获取商品所属店铺ID（用于分组）
      */
     protected abstract Long getShopId(ItemDTO item, OrderCreateContext<P, D> ctx);
-
-    /**
-     * 扣减库存
-     */
-    protected abstract void lockStock(OrderCreateContext<P, D> ctx);
 
     /**
      * 计算当前店铺订单总金额

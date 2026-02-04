@@ -1,6 +1,5 @@
 package com.vv.cloudfarming.order.strategy;
 
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.vv.cloudfarming.common.enums.ReviewStatusEnum;
 import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
@@ -15,6 +14,7 @@ import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
 import com.vv.cloudfarming.product.dao.entity.AdoptItemDO;
 import com.vv.cloudfarming.product.dao.mapper.AdoptItemMapper;
+import com.vv.cloudfarming.product.service.StockService;
 import com.vv.cloudfarming.user.service.ReceiveAddressService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -37,9 +37,10 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemDO,
     public AdoptOrderTemplate(ReceiveAddressService addressService,
                               OrderMapper orderMapper,
                               RedisIdWorker redisIdWorker,
+                              StockService stockService,
                               AdoptItemMapper adoptItemMapper,
                               OrderDetailAdoptMapper orderDetailAdoptMapper) {
-        super(addressService, orderMapper, redisIdWorker);
+        super(addressService, orderMapper, redisIdWorker, stockService);
         this.adoptItemMapper = adoptItemMapper;
         this.orderDetailAdoptMapper = orderDetailAdoptMapper;
     }
@@ -97,22 +98,6 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemDO,
             throw new ClientException("认养项目不存在或缺少店铺信息: " + item.getBizId());
         }
         return adoptItem.getShopId();
-    }
-
-    @Override
-    protected void lockStock(OrderCreateContext<AdoptItemDO, OrderDetailAdoptDO> ctx) {
-        // 扣减认养项目可用数量
-        for (ItemDTO item : ctx.getItems()) {
-            LambdaUpdateWrapper<AdoptItemDO> wrapper = new LambdaUpdateWrapper<>();
-            wrapper.eq(AdoptItemDO::getId, item.getBizId())
-                    .ge(AdoptItemDO::getAvailableCount, item.getQuantity())
-                    .setSql("available_count = available_count - " + item.getQuantity());
-            int updated = adoptItemMapper.update(null, wrapper);
-            if (updated != 1) {
-                AdoptItemDO adoptItem = ctx.getProduct(item.getBizId());
-                throw new ClientException("认养项目库存不足: " + (adoptItem != null ? adoptItem.getTitle() : item.getBizId()));
-            }
-        }
     }
 
     @Override

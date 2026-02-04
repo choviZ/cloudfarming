@@ -49,22 +49,4 @@ public interface SkuService extends IService<SkuDO> {
      * @return 价格摘要列表
      */
     List<SpuPriceSummaryDTO> listPriceSummaryBySpuIds(List<Long> spuIds);
-
-    /**
-     * 锁定库存（扣减库存）
-     *
-     * @param skuId SKU ID
-     * @param count 数量
-     * @return 是否成功
-     */
-    boolean lockStock(Long skuId, Integer count);
-
-    /**
-     * 解锁库存（回滚库存）
-     *
-     * @param skuId SKU ID
-     * @param count 数量
-     * @return 是否成功
-     */
-    boolean unlockStock(Long skuId, Integer count);
 }

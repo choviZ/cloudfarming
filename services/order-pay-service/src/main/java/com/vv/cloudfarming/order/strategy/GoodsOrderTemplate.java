@@ -13,6 +13,7 @@ import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
 import com.vv.cloudfarming.product.dto.resp.SkuRespDTO;
 import com.vv.cloudfarming.product.service.SkuService;
+import com.vv.cloudfarming.product.service.StockService;
 import com.vv.cloudfarming.user.service.ReceiveAddressService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -36,9 +37,10 @@ public class GoodsOrderTemplate extends AbstractOrderCreateTemplate<SkuRespDTO, 
     public GoodsOrderTemplate(ReceiveAddressService addressService,
                               OrderMapper orderMapper,
                               RedisIdWorker redisIdWorker,
+                              StockService stockService,
                               SkuService skuService,
                               OrderDetailSkuMapper orderDetailSkuMapper) {
-        super(addressService, orderMapper, redisIdWorker);
+        super(addressService, orderMapper, redisIdWorker,stockService);
         this.skuService = skuService;
         this.orderDetailSkuMapper = orderDetailSkuMapper;
     }
@@ -86,18 +88,6 @@ public class GoodsOrderTemplate extends AbstractOrderCreateTemplate<SkuRespDTO, 
             throw new ClientException("商品不存在或缺少店铺信息: " + item.getBizId());
         }
         return sku.getShopId();
-    }
-
-    @Override
-    protected void lockStock(OrderCreateContext<SkuRespDTO, OrderDetailSkuDO> ctx) {
-        // 扣减SKU库存（简化实现，生产环境建议使用分布式锁或Lua脚本）
-        for (ItemDTO item : ctx.getItems()) {
-            boolean success = skuService.lockStock(item.getBizId(), item.getQuantity());
-            if (!success) {
-                SkuRespDTO sku = ctx.getProduct(item.getBizId());
-                throw new ClientException("商品库存不足: " + (sku != null ? sku.getSpuTitle() : item.getBizId()));
-            }
-        }
     }
 
     @Override

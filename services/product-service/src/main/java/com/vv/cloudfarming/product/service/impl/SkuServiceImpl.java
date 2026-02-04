@@ -177,50 +177,6 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
         return summaries;
     }
 
-    @Override
-    public boolean lockStock(Long skuId, Integer count) {
-        String key = STOCK_CACHE_KEY_PREFIX + skuId;
-        String script = "if (redis.call('exists', KEYS[1]) == 1) then " +
-                "    local stock = tonumber(redis.call('get', KEYS[1])); " +
-                "    local num = tonumber(ARGV[1]); " +
-                "    if (stock >= num) then " +
-                "        return redis.call('decrby', KEYS[1], num); " +
-                "    end; " +
-                "    return -1; " +
-                "end; " +
-                "return -2;";
-        
-        DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(script, Long.class);
-        Long result = stringRedisTemplate.execute(redisScript, Collections.singletonList(key), String.valueOf(count));
-        
-        if (result == -2) {
-            // 缓存不存在，尝试从数据库加载并设置缓存
-            SkuDO sku = this.getById(skuId);
-            if (sku != null && sku.getStatus() == 1) {
-                stringRedisTemplate.opsForValue().set(key, sku.getStock().toString());
-                // 再次尝试扣减
-                return lockStock(skuId, count);
-            }
-            throw new ClientException("商品未上架或库存异常");
-        }
-        if (result == -1) {
-            throw new ClientException("库存不足");
-        }
-        return result >= 0;
-    }
-
-    @Override
-    public boolean unlockStock(Long skuId, Integer count) {
-        String key = STOCK_CACHE_KEY_PREFIX + skuId;
-        // 如果key存在，则增加；如果不存在，说明可能已下架，此时只更新数据库即可（异步或定时任务）
-        // 这里简化处理：只操作Redis。如果Redis key不存在，说明无需回滚缓存（下次上架会重置）
-        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(key))) {
-            stringRedisTemplate.opsForValue().increment(key, count);
-        }
-        // TODO: 最好发送消息队列异步更新数据库库存，保持最终一致性
-        return true;
-    }
-
     /**
      * 转换成响应DTO
      * @param skuDO sku对象
