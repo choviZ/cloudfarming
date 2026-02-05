@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /**
  * 认养牲畜表 DO
@@ -39,7 +40,7 @@ public class AdoptInstanceDO extends BaseDO implements Serializable {
     private String image;
 
     /**
-     * 可认养 / 已认养 / 已履约完成
+     * 状态
      */
     private Integer status;
 
@@ -57,4 +58,14 @@ public class AdoptInstanceDO extends BaseDO implements Serializable {
      * 绑定订单id
      */
     private Long ownerOrderId;
+
+    /**
+     * 死亡时间
+     */
+    private Date deathTime;
+
+    /**
+     * 死亡原因
+     */
+    private String deathReason;
 }
