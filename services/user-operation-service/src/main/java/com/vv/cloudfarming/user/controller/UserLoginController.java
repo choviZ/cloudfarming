@@ -22,25 +22,25 @@ public class UserLoginController {
     private final UserService userService;
 
     @Operation(summary = "登录")
-    @PostMapping("/v1/user/login")
+    @PostMapping("/api/user/login")
     public Result<UserRespDTO> userLogin(@RequestBody UserLoginReqDTO requestParam) {
         return Results.success(userService.userLogin(requestParam));
     }
 
     @Operation(summary = "注册")
-    @PostMapping("/v1/user/register")
+    @PostMapping("/api/user/register")
     public Result<Boolean> userRegister(@RequestBody UserRegisterReqDTO requestParam) {
         return Results.success(userService.userRegister(requestParam));
     }
 
     @Operation(summary = "获取登录用户信息")
-    @GetMapping("/v1/user")
+    @GetMapping("/api/user/get")
     public Result<UserRespDTO> getUser() {
         return Results.success(userService.getLoginUser());
     }
 
     @Operation(summary = "退出登录")
-    @GetMapping("/v1/user/logout")
+    @PostMapping("/api/user/logout")
     public Result<Boolean> userLogout() {
         userService.userLogout();
         return Results.success(true);

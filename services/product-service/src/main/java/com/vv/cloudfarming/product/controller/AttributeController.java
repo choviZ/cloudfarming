@@ -25,7 +25,7 @@ public class AttributeController {
 
     @Operation(summary = "创建属性")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @PostMapping("/v1/attribute")
+    @PostMapping("/api/attribute/v1/create")
     public Result<Void> createAttribute(@RequestBody AttributeCreateReqDTO requestParam) {
         attributeService.createAttribute(requestParam);
         return Results.success();
@@ -33,39 +33,39 @@ public class AttributeController {
 
     @Operation(summary = "更新属性")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @PutMapping("/v1/attribute")
+    @PostMapping("/api/attribute/v1/update")
     public Result<Boolean> updateAttribute(@RequestBody AttributeUpdateReqDTO requestParam) {
         return Results.success(attributeService.updateAttribute(requestParam));
     }
 
     @Operation(summary = "删除属性")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @DeleteMapping("/v1/attribute")
+    @PostMapping("/api/attribute/v1/delete")
     public Result<Boolean> deleteAttribute(@RequestParam @NotNull Long id) {
         return Results.success(attributeService.deleteAttribute(id));
     }
 
     @Operation(summary = "批量删除属性")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @DeleteMapping("/v1/attribute/batch")
+    @PostMapping("/api/attribute/v1/delete/batch")
     public Result<Boolean> batchDeleteAttributes(@RequestBody List<Long> ids) {
         return Results.success(attributeService.batchDeleteAttributes(ids));
     }
 
     @Operation(summary = "根据ID查询属性详情")
-    @GetMapping("/v1/attribute")
+    @GetMapping("/api/attribute/v1/get")
     public Result<AttributeRespDTO> getAttributeById(@RequestParam @NotNull Long id) {
         return Results.success(attributeService.getAttributeById(id));
     }
 
     @Operation(summary = "根据分类ID查询属性列表")
-    @GetMapping("/v1/attribute/by-category")
+    @GetMapping("/api/attribute/v1/get/by-category")
     public Result<List<AttributeRespDTO>> getAttributesByCategoryId(@RequestParam @NotNull Long categoryId) {
         return Results.success(attributeService.getAttributesByCategoryId(categoryId));
     }
 
     @Operation(summary = "根据分类ID和属性类型查询属性列表")
-    @GetMapping("/v1/attribute/by-category-and-type")
+    @GetMapping("/api/attribute/v1/get/by-category-and-type")
     public Result<List<AttributeRespDTO>> getAttributesByCategoryIdAndType(
             @RequestParam @NotNull Long categoryId,
             @RequestParam @NotNull Integer attrType) {

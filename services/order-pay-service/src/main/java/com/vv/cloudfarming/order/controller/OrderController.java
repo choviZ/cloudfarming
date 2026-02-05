@@ -25,14 +25,14 @@ public class OrderController {
 
     @Operation(summary = "创建订单")
     @NoDuplicateSubmit(message = "请勿重复提交订单")
-    @PostMapping("/v1/order")
+    @PostMapping("/api/order/v1/create")
     public Result<OrderCreateRespDTO> createOrder(@RequestBody @Valid OrderCreateReqDTO requestParam) {
         long userId = StpUtil.getLoginIdAsLong();
         return Results.success(orderService.createOrder(userId, requestParam));
     }
 
     @Operation(summary = "查询订单列表")
-    @PostMapping("/v1/order/list")
+    @PostMapping("/api/order/v1/list")
     public Result<IPage<OrderPageRespDTO>> listOrder(@RequestBody OrderPageReqDTO requestParam) {
         return Results.success(orderService.listOrder(requestParam));
     }

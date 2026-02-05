@@ -7,13 +7,11 @@ import com.vv.cloudfarming.product.service.AnimalCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/v1/adopt/animal-category")
 @Tag(name = "动物分类控制层")
 public class AnimalCategoryController {
 
@@ -24,7 +22,7 @@ public class AnimalCategoryController {
     }
 
     @Operation(summary = "查询动物分类列表")
-    @GetMapping("/list")
+    @GetMapping("/api/adopt/animal-category/list")
     public Result<List<AnimalCategoryRespDTO>> listAnimalCategories() {
         return Results.success(animalCategoryService.listAnimalCategories());
     }

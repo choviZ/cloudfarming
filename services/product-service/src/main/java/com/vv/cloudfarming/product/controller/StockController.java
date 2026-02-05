@@ -15,13 +15,13 @@ public class StockController {
 
     private final StockService stockService;
 
-    @GetMapping("/stock/lock")
+    @PostMapping("/api/stock/lock")
     public Result<Void> lock(@RequestParam @NotNull Long id, @RequestParam @NotNull int quantity, @RequestParam @NotNull int bizType){
         stockService.lock(id, quantity, bizType);
         return Results.success();
     }
 
-    @GetMapping("/stock/unlock")
+    @PostMapping("/api/stock/unlock")
     public Result<Void> unlock(@RequestParam @NotNull Long id, @RequestParam @NotNull int quantity, @RequestParam @NotNull int bizType){
         stockService.unlock(id, quantity, bizType);
         return Results.success();

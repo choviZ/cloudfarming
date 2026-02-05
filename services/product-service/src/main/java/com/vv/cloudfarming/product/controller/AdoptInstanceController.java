@@ -21,7 +21,7 @@ public class AdoptInstanceController {
     private final AdoptInstanceService adoptInstanceService;
 
     @Operation(summary = "查询我的养殖实例列表")
-    @PostMapping("/v1/adopt/instance/my")
+    @PostMapping("/api/adopt/instance/v1/my")
     public Result<IPage<AdoptInstanceRespDTO>> queryMyInstance(@RequestBody AdoptInstancePageReqDTO requestParam) {
         return Results.success(adoptInstanceService.queryMyAdoptInstances(requestParam));
     }

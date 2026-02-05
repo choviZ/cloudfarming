@@ -31,7 +31,7 @@ public class CategoryController {
      */
     @Operation(summary = "创建商品分类")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @PostMapping("/v1/category")
+    @PostMapping("/api/category/create")
     public Result<Void> createCategory(@RequestBody CategoryCreateReqDTO requestParam) {
         categoryService.createCategory(requestParam);
         return Results.success();
@@ -42,7 +42,7 @@ public class CategoryController {
      */
     @Operation(summary = "更新商品分类")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @PutMapping("/v1/category")
+    @PostMapping("/api/category/update")
     public Result<Boolean> updateCategory(@RequestBody CategoryUpdateReqDTO requestParam) {
         return Results.success(categoryService.updateCategory(requestParam));
     }
@@ -52,7 +52,7 @@ public class CategoryController {
      */
     @Operation(summary = "删除商品分类")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @DeleteMapping("/v1/category")
+    @GetMapping("/api/category/delete")
     public Result<Boolean> deleteCategory(@RequestParam @NotNull Long id) {
         return Results.success(categoryService.deleteCategory(id));
     }
@@ -61,7 +61,7 @@ public class CategoryController {
      * 根据ID查询分类详情
      */
     @Operation(summary = "根据ID查询分类详情")
-    @GetMapping("/v1/category")
+    @GetMapping("/api/category/get")
     public Result<CategoryRespDTO> getCategoryById(@RequestParam @NotNull Long id) {
         return Results.success(categoryService.getCategoryById(id));
     }
@@ -70,7 +70,7 @@ public class CategoryController {
      * 获取分类树（支持多级分类）
      */
     @Operation(summary = "获取分类树")
-    @GetMapping("/v1/category/tree")
+    @GetMapping("/api/category/tree")
     public Result<List<CategoryRespDTO>> getCategoryTree() {
         return Results.success(categoryService.getCategoryTree());
     }
@@ -79,7 +79,7 @@ public class CategoryController {
      * 获取所有顶级分类
      */
     @Operation(summary = "获取所有顶级分类")
-    @GetMapping("/v1/category/top-level")
+    @GetMapping("/api/category/top-level")
     public Result<List<CategoryRespDTO>> getTopLevelCategories() {
         return Results.success(categoryService.getTopLevelCategories());
     }
@@ -88,7 +88,7 @@ public class CategoryController {
      * 根据父级ID查询子分类
      */
     @Operation(summary = "根据父级ID查询子分类")
-    @GetMapping("/v1/category/children")
+    @GetMapping("/api/category/children")
     public Result<List<CategoryRespDTO>> getChildrenByParentId(@RequestParam @NotNull Long parentId) {
         return Results.success(categoryService.getChildrenByParentId(parentId));
     }

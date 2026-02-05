@@ -19,7 +19,7 @@ public class AdoptLogController {
     private final AdoptLogService adoptLogService;
 
     @Operation(summary = "上传养殖日志")
-    @PostMapping("/v1/adopt/log")
+    @PostMapping("/api/adopt/log/v1/create")
     public Result<Void> createAdoptLog(@RequestBody AdoptLogCreateReqDTO requestParam) {
         adoptLogService.createAdoptLog(requestParam);
         return Results.success();

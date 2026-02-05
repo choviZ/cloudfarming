@@ -29,7 +29,7 @@ public class FarmerController {
 
     @Operation(summary = "农户入驻申请")
     @SaCheckLogin
-    @PostMapping("/v1/farmer")
+    @PostMapping("/api/farmer/apply")
     public Result<Void> submitApply(@RequestBody FarmerApplyReqDO requestParam) {
         farmerService.submitApply(requestParam);
         return Results.success();
@@ -37,14 +37,14 @@ public class FarmerController {
 
     @Operation(summary = "获取审核状态")
     @SaCheckLogin
-    @GetMapping("/v1/farmer/status")
+    @GetMapping("/api/farmer/status")
     public Result<FarmerReviewRespDTO> getReviewStatus(){
        return Results.success(farmerService.getReviewStatus());
     }
 
     @Operation(summary = "修改审核状态")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @PostMapping("/admin/v1/review-status")
+    @PostMapping("/api/farmer/review-status")
     public Result<Void> updateReviewState(@RequestBody UpdateReviewStatusReqDTO requestParam){
         farmerService.updateReviewState(requestParam);
         return Results.success();

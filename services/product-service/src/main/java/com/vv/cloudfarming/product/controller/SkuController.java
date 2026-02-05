@@ -23,14 +23,14 @@ public class SkuController {
 
     @Operation(summary = "创建SKU")
     @SaCheckRole(UserRoleConstant.FARMER_DESC)
-    @PostMapping("/v1/sku")
+    @PostMapping("/api/sku/create")
     public Result<Void> createSku(@RequestBody SkuCreateReqDTO requestParam){
         skuService.createSku(requestParam);
         return Results.success();
     }
 
     @Operation(summary = "更新SKU状态")
-    @GetMapping("/v1/sku/status")
+    @PostMapping("/api/sku/status")
     @SaCheckRole(UserRoleConstant.FARMER_DESC)
     public Result<Void> updateSkuStatus(@RequestParam Long id,@RequestParam Integer status){
         skuService.updateSkuStatus(id, status);
@@ -38,7 +38,7 @@ public class SkuController {
     }
 
     @Operation(summary = "根据id集合获取sku详情列表")
-    @PostMapping("/v1/sku/list")
+    @PostMapping("/api/sku/list")
     public Result<List<SkuRespDTO>> listSkuDetailsByIds(@RequestBody List<Long> ids){
         return Results.success(skuService.listSkuDetailsByIds(ids));
     }

@@ -25,7 +25,7 @@ public class ShopController {
 
     @Operation(summary = "根据id查询店铺信息")
     @SaCheckLogin
-    @GetMapping("/v1/shop")
+    @GetMapping("/api/shop/get")
     public Result<ShopRespDTO> getShopInfoById(@RequestParam @NotNull Long shopId) {
         return Results.success(shopService.getShopInfo(shopId));
     }
@@ -34,7 +34,7 @@ public class ShopController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
-    @PutMapping("/v1/shop")
+    @PostMapping("/api/shop/update")
     public Result<Void> updateShop(@Validated @RequestBody ShopUpdateReqDTO requestParam) {
         shopService.updateShop(requestParam);
         return Results.success();

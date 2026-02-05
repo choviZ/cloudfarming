@@ -21,7 +21,7 @@ public class PayOrderController {
     private final PayService payService;
 
     @Operation(summary = "分页查询支付单")
-    @PostMapping("/v1/order/pay/list")
+    @PostMapping("/api/pay/list")
     public Result<IPage<PayOrderRespDTO>> listPayOrder(@RequestBody PayOrderPageReqDTO requestParam) {
         IPage<PayOrderRespDTO> result = payService.listPayOrder(requestParam);
         return Results.success(result);

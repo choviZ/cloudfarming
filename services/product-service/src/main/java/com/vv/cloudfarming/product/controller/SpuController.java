@@ -34,8 +34,8 @@ public class SpuController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
-    @PostMapping("/v1/spu/save-or-update")
-    public Result<Long> saveOrUpdateSpu(@Validated @RequestBody SpuCreateOrUpdateReqDTO requestParam) {
+    @PostMapping("/api/spu/create")
+    public Result<Long> createSpu(@Validated @RequestBody SpuCreateOrUpdateReqDTO requestParam) {
         Long spuId = spuService.saveSpu(requestParam);
         return Results.success(spuId);
     }
@@ -44,21 +44,21 @@ public class SpuController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
-    @DeleteMapping("/v1/spu/{id}")
-    public Result<Void> deleteSpuById(@PathVariable("id") Long id) {
+    @PostMapping("/api/spu/delete")
+    public Result<Void> deleteSpuById(@RequestParam("id") Long id) {
         spuService.deleteSpuById(id);
         return Results.success();
     }
 
     @Operation(summary = "根据id获取单个SPU详情")
-    @GetMapping("/v1/spu/{id}")
-    public Result<SpuDetailRespDTO> getSpuById(@PathVariable("id") Long id) {
+    @GetMapping("/api/spu/get")
+    public Result<SpuDetailRespDTO> getSpuById(@RequestParam("id") Long id) {
         SpuDetailRespDTO spu = spuService.getSpuDetail(id);
         return Results.success(spu);
     }
 
     @Operation(summary = "分页查询SPU列表")
-    @PostMapping("/v1/spu/page")
+    @PostMapping("/api/spu/page")
     public Result<IPage<SpuRespDTO>> listSpuByPage(@RequestBody SpuPageQueryReqDTO queryParam) {
         IPage<SpuRespDTO> pageResult = spuService.listSpuByPage(queryParam);
         return Results.success(pageResult);
@@ -68,7 +68,7 @@ public class SpuController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
-    @PutMapping("/v1/spu/status")
+    @PostMapping("/api/spu/status")
     public Result<Void> updateSpuStatus(@RequestParam("id") Long id, @RequestParam("status") Integer status) {
         spuService.updateSpuStatus(id, status);
         return Results.success();
@@ -80,7 +80,7 @@ public class SpuController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
-    @PostMapping("/v1/spu/attr")
+    @PostMapping("/api/spu/attr/create")
     public Result<Void> createSpuAttrValue(@Validated @RequestBody SpuAttrValueCreateReqDTO requestParam) {
         spuService.createSpuAttrValue(requestParam);
         return Results.success();
@@ -90,7 +90,7 @@ public class SpuController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
-    @PostMapping("/v1/spu/attr/batch")
+    @PostMapping("/api/spu/attr/create/batch")
     public Result<Void> batchCreateSpuAttrValues(@Validated @RequestBody List<SpuAttrValueCreateReqDTO> requestParams) {
         spuService.batchCreateSpuAttrValues(requestParams);
         return Results.success();
@@ -100,7 +100,7 @@ public class SpuController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
-    @PutMapping("/v1/spu/attr")
+    @PostMapping("/api/spu/attr/update")
     public Result<Boolean> updateSpuAttrValue(@Validated @RequestBody SpuAttrValueUpdateReqDTO requestParam) {
         return Results.success(spuService.updateSpuAttrValue(requestParam));
     }
@@ -109,8 +109,8 @@ public class SpuController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
-    @DeleteMapping("/v1/spu/attr")
-    public Result<Boolean> deleteSpuAttrValue(@PathVariable("id") Long id) {
+    @PostMapping("/api/spu/attr/delete")
+    public Result<Boolean> deleteSpuAttrValue(@RequestParam("id") Long id) {
         return Results.success(spuService.deleteSpuAttrValue(id));
     }
 
@@ -118,7 +118,7 @@ public class SpuController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
-    @DeleteMapping("/v1/spu/attr/batch")
+    @PostMapping("/api/spu/attr/delete/batch")
     public Result<Boolean> batchDeleteSpuAttrValues(@RequestBody List<Long> ids) {
         return Results.success(spuService.batchDeleteSpuAttrValues(ids));
     }
@@ -127,14 +127,14 @@ public class SpuController {
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
-    @DeleteMapping("/v1/spu/attr/all")
+    @PostMapping("/api/spu/attr/delete/all")
     public Result<Boolean> deleteSpuAttrValuesBySpuId(@RequestParam("spuId") Long spuId) {
         return Results.success(spuService.deleteSpuAttrValuesBySpuId(spuId));
     }
 
     @Operation(summary = "根据ID查询SPU属性值")
-    @GetMapping("/v1/spu/attr")
-    public Result<SpuAttrValueRespDTO> getSpuAttrValueById(@PathVariable("id") Long id) {
+    @GetMapping("/api/spu/attr/get")
+    public Result<SpuAttrValueRespDTO> getSpuAttrValueById(@RequestParam("id") Long id) {
         return Results.success(spuService.getSpuAttrValueById(id));
     }
 
@@ -145,7 +145,7 @@ public class SpuController {
     }
 
     @Operation(summary = "根据SPU ID和属性ID查询属性值")
-    @GetMapping("/v1/spu/attr/id")
+    @GetMapping("/api/spu/attr/id")
     public Result<SpuAttrValueRespDTO> getSpuAttrValueBySpuIdAndAttrId(
             @RequestParam("spuId") Long spuId,
             @RequestParam("attrId") Long attrId) {
