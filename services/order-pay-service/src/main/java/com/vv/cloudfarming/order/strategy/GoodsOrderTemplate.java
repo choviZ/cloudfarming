@@ -10,11 +10,11 @@ import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dto.common.ItemDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
+import com.vv.cloudfarming.order.remote.SkuRemoteService;
+import com.vv.cloudfarming.order.remote.StockRemoteService;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
 import com.vv.cloudfarming.product.dto.resp.SkuRespDTO;
-import com.vv.cloudfarming.product.service.SkuService;
-import com.vv.cloudfarming.product.service.StockService;
-import com.vv.cloudfarming.user.service.ReceiveAddressService;
+import com.vv.cloudfarming.order.remote.ReceiveAddressRemoteService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -31,14 +31,14 @@ import java.util.stream.Collectors;
 @Component
 public class GoodsOrderTemplate extends AbstractOrderCreateTemplate<SkuRespDTO, OrderDetailSkuDO> {
 
-    private final SkuService skuService;
+    private final SkuRemoteService skuService;
     private final OrderDetailSkuMapper orderDetailSkuMapper;
 
-    public GoodsOrderTemplate(ReceiveAddressService addressService,
+    public GoodsOrderTemplate(ReceiveAddressRemoteService addressService,
                               OrderMapper orderMapper,
                               RedisIdWorker redisIdWorker,
-                              StockService stockService,
-                              SkuService skuService,
+                              StockRemoteService stockService,
+                              SkuRemoteService skuService,
                               OrderDetailSkuMapper orderDetailSkuMapper) {
         super(addressService, orderMapper, redisIdWorker,stockService);
         this.skuService = skuService;
@@ -72,7 +72,7 @@ public class GoodsOrderTemplate extends AbstractOrderCreateTemplate<SkuRespDTO, 
                 .map(ItemDTO::getBizId)
                 .collect(Collectors.toList());
 
-        List<SkuRespDTO> skus = skuService.listSkuDetailsByIds(skuIds);
+        List<SkuRespDTO> skus = skuService.listSkuDetailsByIds(skuIds).getData();
         if (skus.size() != skuIds.size()) {
             throw new ClientException("部分商品不存在或已下架");
         }

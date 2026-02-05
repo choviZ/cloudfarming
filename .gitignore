@@ -43,3 +43,4 @@ build/
 .trae/*
 .claude/*
 application-local.yml
+application-local.yaml

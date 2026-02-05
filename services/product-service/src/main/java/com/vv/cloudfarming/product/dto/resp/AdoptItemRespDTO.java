@@ -17,9 +17,9 @@ public class AdoptItemRespDTO {
     private Long id;
 
     /**
-     * 发布者用户ID
+     * 店铺ID
      */
-    private Long userId;
+    private Long shopId;
 
     /**
      * 认养标题

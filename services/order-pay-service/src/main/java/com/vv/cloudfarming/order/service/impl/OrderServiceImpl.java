@@ -15,14 +15,14 @@ import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.PayOrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
+import com.vv.cloudfarming.order.remote.ShopRemoteService;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.order.service.PayService;
 import com.vv.cloudfarming.order.strategy.AbstractOrderCreateTemplate;
 import com.vv.cloudfarming.order.strategy.OrderTemplateFactory;
 import com.vv.cloudfarming.order.utils.ProductUtil;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
-import com.vv.cloudfarming.product.dao.entity.Shop;
-import com.vv.cloudfarming.product.dao.mapper.ShopMapper;
+import com.vv.cloudfarming.product.dto.resp.ShopRespDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,7 +43,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
 
     private final OrderTemplateFactory templateFactory;
     private final PayService payService;
-    private final ShopMapper shopMapper;
+    private final ShopRemoteService shopRemoteService;
     private final ProductUtil productUtil;
     private final RedisIdWorker redisIdWorker;
 
@@ -99,7 +99,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
         // 转换
         return orderPage.convert(each -> {
-            Shop shop = shopMapper.selectById(each.getShopId());
+            ShopRespDTO shop = shopRemoteService.getShopById(each.getShopId()).getData();
             ArrayList<ProductSummaryDTO> summaryList = new ArrayList<>();
             productUtil.buildProductSummary(each.getId(),each.getOrderType(),summaryList);
             return OrderPageRespDTO.builder()

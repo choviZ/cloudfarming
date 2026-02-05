@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.product.enums;
 
+import com.vv.cloudfarming.common.exception.ClientException;
 import lombok.Getter;
 
 /**
@@ -43,13 +44,13 @@ public enum AdoptOrderStatusEnum {
      */
     public static AdoptOrderStatusEnum getByCode(Integer code) {
         if (code == null) {
-            throw new com.vv.cloudfarming.common.exception.ClientException("认养订单状态码不能为null");
+            throw new ClientException("认养订单状态码不能为null");
         }
         for (AdoptOrderStatusEnum status : values()) {
             if (status.getCode().equals(code)) {
                 return status;
             }
         }
-        throw new com.vv.cloudfarming.common.exception.ClientException("不存在的认养订单状态码：" + code);
+        throw new ClientException("不存在的认养订单状态码：" + code);
     }
 }

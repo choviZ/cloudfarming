@@ -2,6 +2,7 @@ package com.vv.cloudfarming.product.controller;
 
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
@@ -16,6 +17,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Tag(name = "认养项目控制层")
 @RestController
@@ -73,6 +77,17 @@ public class AdoptItemController {
     public Result<AdoptItemRespDTO> getAdoptItemDetail(@PathVariable Long adoptItemId) {
         Long userId = StpUtil.getLoginIdAsLong();
         return Results.success(adoptItemService.getAdoptItemDetail(userId, adoptItemId));
+    }
+
+    @PostMapping("/v1/adopt-item/batch")
+    public Result<List<AdoptItemRespDTO>> batchAdoptItemByIds(@RequestBody List<Long> ids){
+        if (ids == null || ids.isEmpty()) {
+            return Results.success(new java.util.ArrayList<>());
+        }
+        List<AdoptItemRespDTO> result = adoptItemService.getBaseMapper().selectBatchIds(ids).stream()
+                .map(each -> BeanUtil.toBean(each, AdoptItemRespDTO.class))
+                .collect(Collectors.toList());
+        return Results.success(result);
     }
 
     @Operation(summary = "分页查询认养项目")

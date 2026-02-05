@@ -5,10 +5,10 @@ import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dto.common.ItemDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.enums.OrderStatusEnum;
+import com.vv.cloudfarming.order.remote.StockRemoteService;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
-import com.vv.cloudfarming.product.service.StockService;
 import com.vv.cloudfarming.user.dto.resp.ReceiveAddressRespDTO;
-import com.vv.cloudfarming.user.service.ReceiveAddressService;
+import com.vv.cloudfarming.order.remote.ReceiveAddressRemoteService;
 import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
@@ -26,10 +26,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public abstract class AbstractOrderCreateTemplate<P, D> {
 
-    protected final ReceiveAddressService addressService;
+    protected final ReceiveAddressRemoteService addressService;
     protected final OrderMapper orderMapper;
     protected final RedisIdWorker redisIdWorker;
-    protected final StockService stockService;
+    protected final StockRemoteService stockService;
 
     /**
      * 模板方法 - 定义订单创建骨架流程
@@ -42,7 +42,7 @@ public abstract class AbstractOrderCreateTemplate<P, D> {
         validateRequest(ctx);
 
         // 2. 查询收货地址
-        ctx.setAddress(addressService.getReceiveAddressById(req.getReceiveId()));
+        ctx.setAddress(addressService.getReceiveAddressById(req.getReceiveId()).getData());
 
         // 3. 批量查询商品信息（抽象方法，子类实现）
         ctx.setProductMap(fetchProductInfo(ctx));

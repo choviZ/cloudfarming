@@ -7,7 +7,7 @@ import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.product.dto.req.ShopUpdateReqDTO;
-import com.vv.cloudfarming.product.dto.resp.ShopInfoRespDTO;
+import com.vv.cloudfarming.product.dto.resp.ShopRespDTO;
 import com.vv.cloudfarming.product.service.ShopService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,7 +26,7 @@ public class ShopController {
     @Operation(summary = "根据id查询店铺信息")
     @SaCheckLogin
     @GetMapping("/v1/shop")
-    public Result<ShopInfoRespDTO> getShopInfoById(@RequestParam @NotNull Long shopId) {
+    public Result<ShopRespDTO> getShopInfoById(@RequestParam @NotNull Long shopId) {
         return Results.success(shopService.getShopInfo(shopId));
     }
 

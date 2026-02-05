@@ -1,0 +1,63 @@
+server:
+  port: 8083
+
+spring:
+  profiles:
+    active: local
+  application:
+    name: cloudfarming-order-pay
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/cloud_breeding
+    username: root
+    password: root
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      timeout: 10s
+      lettuce:
+        pool:
+          # 连接池最大连接数
+          max-active: 200
+          # 连接池最大阻塞等待时间（使用负值表示没有限制）
+          max-wait: -1ms
+          # 连接池中的最大空闲连接
+          max-idle: 10
+          # 连接池中的最小空闲连接
+          min-idle: 0
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.vv.cloudfarming.order.controller
+
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: delFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: false
+  is-share: false
+  token-style: uuid
+  is-log: false
+logging:
+  pattern:
+    dateformat: yyyy-MM-dd HH:mm:ss.SSS

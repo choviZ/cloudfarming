@@ -11,11 +11,11 @@ import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dto.common.ItemDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
+import com.vv.cloudfarming.order.remote.AdoptItemRemoteService;
+import com.vv.cloudfarming.order.remote.ReceiveAddressRemoteService;
+import com.vv.cloudfarming.order.remote.StockRemoteService;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
-import com.vv.cloudfarming.product.dao.entity.AdoptItemDO;
-import com.vv.cloudfarming.product.dao.mapper.AdoptItemMapper;
-import com.vv.cloudfarming.product.service.StockService;
-import com.vv.cloudfarming.user.service.ReceiveAddressService;
+import com.vv.cloudfarming.product.dto.resp.AdoptItemRespDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -29,19 +29,19 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemDO, OrderDetailAdoptDO> {
+public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemRespDTO, OrderDetailAdoptDO> {
 
-    private final AdoptItemMapper adoptItemMapper;
+    private final AdoptItemRemoteService adoptItemService;
     private final OrderDetailAdoptMapper orderDetailAdoptMapper;
 
-    public AdoptOrderTemplate(ReceiveAddressService addressService,
+    public AdoptOrderTemplate(ReceiveAddressRemoteService addressService,
                               OrderMapper orderMapper,
                               RedisIdWorker redisIdWorker,
-                              StockService stockService,
-                              AdoptItemMapper adoptItemMapper,
+                              StockRemoteService stockService,
+                              AdoptItemRemoteService adoptItemRemoteService,
                               OrderDetailAdoptMapper orderDetailAdoptMapper) {
         super(addressService, orderMapper, redisIdWorker, stockService);
-        this.adoptItemMapper = adoptItemMapper;
+        this.adoptItemService = adoptItemRemoteService;
         this.orderDetailAdoptMapper = orderDetailAdoptMapper;
     }
 
@@ -51,7 +51,7 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemDO,
     }
 
     @Override
-    protected void validateRequest(OrderCreateContext<AdoptItemDO, OrderDetailAdoptDO> ctx) {
+    protected void validateRequest(OrderCreateContext<AdoptItemRespDTO, OrderDetailAdoptDO> ctx) {
         OrderCreateReqDTO req = ctx.getRequest();
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new ClientException("认养项目列表不能为空");
@@ -67,18 +67,18 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemDO,
     }
 
     @Override
-    protected Map<Long, AdoptItemDO> fetchProductInfo(OrderCreateContext<AdoptItemDO, OrderDetailAdoptDO> ctx) {
+    protected Map<Long, AdoptItemRespDTO> fetchProductInfo(OrderCreateContext<AdoptItemRespDTO, OrderDetailAdoptDO> ctx) {
         List<Long> itemIds = ctx.getItems().stream()
                 .map(ItemDTO::getBizId)
                 .collect(Collectors.toList());
 
-        List<AdoptItemDO> adoptItems = adoptItemMapper.selectBatchIds(itemIds);
+        List<AdoptItemRespDTO> adoptItems = adoptItemService.batchAdoptItemByIds(itemIds).getData();
         if (adoptItems.size() != itemIds.size()) {
             throw new ClientException("部分认养项目不存在");
         }
 
         // 校验项目状态
-        for (AdoptItemDO adoptItem : adoptItems) {
+        for (AdoptItemRespDTO adoptItem : adoptItems) {
             if (!ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
                 throw new ClientException("认养项目未通过审核: " + adoptItem.getTitle());
             }
@@ -86,14 +86,13 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemDO,
                 throw new ClientException("认养项目未上架: " + adoptItem.getTitle());
             }
         }
-
         return adoptItems.stream()
-                .collect(Collectors.toMap(AdoptItemDO::getId, item -> item));
+                .collect(Collectors.toMap(AdoptItemRespDTO::getId, item -> item));
     }
 
     @Override
-    protected Long getShopId(ItemDTO item, OrderCreateContext<AdoptItemDO, OrderDetailAdoptDO> ctx) {
-        AdoptItemDO adoptItem = ctx.getProduct(item.getBizId());
+    protected Long getShopId(ItemDTO item, OrderCreateContext<AdoptItemRespDTO, OrderDetailAdoptDO> ctx) {
+        AdoptItemRespDTO adoptItem = ctx.getProduct(item.getBizId());
         if (adoptItem == null || adoptItem.getShopId() == null) {
             throw new ClientException("认养项目不存在或缺少店铺信息: " + item.getBizId());
         }
@@ -101,10 +100,10 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemDO,
     }
 
     @Override
-    protected BigDecimal calculateTotalAmount(OrderCreateContext<AdoptItemDO, OrderDetailAdoptDO> ctx) {
+    protected BigDecimal calculateTotalAmount(OrderCreateContext<AdoptItemRespDTO, OrderDetailAdoptDO> ctx) {
         BigDecimal total = BigDecimal.ZERO;
         for (ItemDTO item : ctx.getCurrentShopItems()) {
-            AdoptItemDO adoptItem = ctx.getProduct(item.getBizId());
+            AdoptItemRespDTO adoptItem = ctx.getProduct(item.getBizId());
             BigDecimal itemAmount = adoptItem.getPrice().multiply(new BigDecimal(item.getQuantity()));
             total = total.add(itemAmount);
         }
@@ -112,10 +111,10 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemDO,
     }
 
     @Override
-    protected List<OrderDetailAdoptDO> buildOrderDetails(OrderCreateContext<AdoptItemDO, OrderDetailAdoptDO> ctx) {
+    protected List<OrderDetailAdoptDO> buildOrderDetails(OrderCreateContext<AdoptItemRespDTO, OrderDetailAdoptDO> ctx) {
         OrderDO order = ctx.getCurrentOrder();
         return ctx.getCurrentShopItems().stream().map(item -> {
-            AdoptItemDO adoptItem = ctx.getProduct(item.getBizId());
+            AdoptItemRespDTO adoptItem = ctx.getProduct(item.getBizId());
             BigDecimal itemAmount = adoptItem.getPrice().multiply(new BigDecimal(item.getQuantity()));
 
             // 计算认养周期
@@ -139,7 +138,7 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemDO,
     }
 
     @Override
-    protected void saveOrderDetails(OrderCreateContext<AdoptItemDO, OrderDetailAdoptDO> ctx) {
+    protected void saveOrderDetails(OrderCreateContext<AdoptItemRespDTO, OrderDetailAdoptDO> ctx) {
         Db.saveBatch(ctx.getAllDetails());
     }
 }

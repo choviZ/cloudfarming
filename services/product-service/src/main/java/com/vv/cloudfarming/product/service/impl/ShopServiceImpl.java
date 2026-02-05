@@ -12,7 +12,7 @@ import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.product.dao.entity.Shop;
 import com.vv.cloudfarming.product.dao.mapper.ShopMapper;
 import com.vv.cloudfarming.product.dto.req.ShopUpdateReqDTO;
-import com.vv.cloudfarming.product.dto.resp.ShopInfoRespDTO;
+import com.vv.cloudfarming.product.dto.resp.ShopRespDTO;
 import com.vv.cloudfarming.product.service.ShopService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,12 +25,12 @@ import org.springframework.stereotype.Service;
 public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements ShopService {
 
     @Override
-    public ShopInfoRespDTO getShopInfo(Long shopId) {
+    public ShopRespDTO getShopInfo(Long shopId) {
         if (shopId == null || shopId <= 0) {
             throw new ClientException("店铺编号不合法");
         }
         Shop shop = baseMapper.selectById(shopId);
-        return BeanUtil.toBean(shop,ShopInfoRespDTO.class);
+        return BeanUtil.toBean(shop, ShopRespDTO.class);
     }
 
     @Override

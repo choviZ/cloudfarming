@@ -9,9 +9,9 @@ import com.vv.cloudfarming.product.dao.entity.AdoptInstanceDO;
 import com.vv.cloudfarming.product.dao.mapper.AdoptInstanceMapper;
 import com.vv.cloudfarming.product.dto.req.AdoptInstancePageReqDTO;
 import com.vv.cloudfarming.product.dto.resp.AdoptInstanceRespDTO;
+import com.vv.cloudfarming.product.remote.UserRemoteService;
 import com.vv.cloudfarming.product.service.AdoptInstanceService;
 import com.vv.cloudfarming.user.dto.resp.UserRespDTO;
-import com.vv.cloudfarming.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,12 +19,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AdoptInstanceServiceImpl extends ServiceImpl<AdoptInstanceMapper, AdoptInstanceDO> implements AdoptInstanceService {
 
-    private final UserService userService;
+    private final UserRemoteService userService;
 
     @Override
     public IPage<AdoptInstanceRespDTO> queryMyAdoptInstances(AdoptInstancePageReqDTO reqDTO) {
         long userId = StpUtil.getLoginIdAsLong();
-        UserRespDTO userRespDTO = userService.getLoginUser();
+        UserRespDTO userRespDTO = userService.getUser().getData();
         Integer userType = userRespDTO.getUserType();
         LambdaQueryWrapper<AdoptInstanceDO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AdoptInstanceDO::getDelFlag, 0);

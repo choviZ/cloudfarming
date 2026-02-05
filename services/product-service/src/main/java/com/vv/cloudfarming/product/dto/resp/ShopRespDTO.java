@@ -10,7 +10,7 @@ import java.io.Serializable;
  * 店铺信息
  */
 @Data
-public class ShopInfoRespDTO extends BaseDO implements Serializable {
+public class ShopRespDTO extends BaseDO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
