@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 库存远程调用服务
  */
-@FeignClient(value = "cloudfarming-product", contextId = "skuRemoteService")
+@FeignClient(value = "cloudfarming-product", contextId = "skuRemoteService",url = "${aggregation.remote-url:}")
 public interface SkuRemoteService {
 
     @PostMapping("/v1/sku/list")

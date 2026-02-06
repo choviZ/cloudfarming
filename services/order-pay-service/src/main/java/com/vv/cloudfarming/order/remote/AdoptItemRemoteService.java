@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 认养项目远程调用服务
  */
-@FeignClient(value = "cloudfarming-product", contextId = "adoptItemRemoteService")
+@FeignClient(value = "cloudfarming-product", contextId = "adoptItemRemoteService", url = "${aggregation.remote-url:}")
 public interface AdoptItemRemoteService {
 
     @PostMapping("/v1/adopt-item/batch")

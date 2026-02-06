@@ -1,6 +1,8 @@
 server:
   port: 8080
 spring:
+  application:
+    name: cloudfarming-aggregation
   profiles:
     active: local
   datasource:
@@ -11,7 +13,6 @@ spring:
   data:
     # redis配置
     redis:
-      database: 1
       host: 127.0.0.1
       port: 6379
       # password:
@@ -63,3 +64,6 @@ sa-token:
 logging:
   pattern:
     dateformat: yyyy-MM-dd HH:mm:ss.SSS
+
+aggregation:
+  remote-url: http://127.0.0.1:${server.port}

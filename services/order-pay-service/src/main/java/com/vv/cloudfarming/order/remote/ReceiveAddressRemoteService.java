@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 /**
  * 收获地址信息远程服务
  */
-@FeignClient(value = "cloudfarming-user-operation", contextId = "receiveAddressRemoteService")
+@FeignClient(value = "cloudfarming-user-operation", contextId = "receiveAddressRemoteService", url = "${aggregation.remote-url:}")
 public interface ReceiveAddressRemoteService {
 
     @GetMapping("/v1/user/receive-address/{id}")

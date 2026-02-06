@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 /**
  * 库存远程调用服务
  */
-@FeignClient(value = "cloudfarming-product", contextId = "stockRemoteService")
+@FeignClient(value = "cloudfarming-product", contextId = "stockRemoteService",url = "${aggregation.remote-url:}")
 public interface StockRemoteService {
 
     @GetMapping("/stock/lock")

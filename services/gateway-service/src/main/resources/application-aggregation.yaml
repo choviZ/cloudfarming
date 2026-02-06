@@ -1,0 +1,16 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: order-service
+          uri: lb://cloudfarming-aggregation
+          predicates:
+            - Path=/api/order/**,/api/pay/**,/api/alipay/**
+        - id: product-service
+          uri: lb://cloudfarming-aggregation
+          predicates:
+            - Path=/api/adopt/**,/api/attribute/**,/api/cart/**,/api/category/**,/api/shop/**,/api/spu/**,/api/sku/**,/api/skock/**
+        - id: user-service
+          uri: lb://cloudfarming-aggregation
+          predicates:
+            - Path=/api/farmer/**,/api/user/**,/api/advert/**,/api/receive-address/**

@@ -5,7 +5,7 @@ import com.vv.cloudfarming.user.dto.resp.UserRespDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 
-@FeignClient(name = "cloudfarming-user-operation")
+@FeignClient(name = "cloudfarming-user-operation",url = "${aggregation.remote-url:}")
 public interface UserRemoteService {
 
     @GetMapping("/v1/user")

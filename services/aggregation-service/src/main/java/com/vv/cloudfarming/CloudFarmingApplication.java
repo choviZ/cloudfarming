@@ -3,6 +3,7 @@ package com.vv.cloudfarming;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
@@ -18,6 +19,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "com.vv.cloudfarming.product.dao.mapper",
         "com.vv.cloudfarming.order.dao.mapper",
 })
+@EnableDiscoveryClient
 @EnableScheduling
 public class CloudFarmingApplication {
     public static void main(String[] args) {
