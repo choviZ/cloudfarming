@@ -34,7 +34,7 @@ public class UserLoginController {
     }
 
     @Operation(summary = "获取登录用户信息")
-    @GetMapping("/api/user/get")
+    @GetMapping("/api/user/get/login")
     public Result<UserRespDTO> getUser() {
         return Results.success(userService.getLoginUser());
     }
