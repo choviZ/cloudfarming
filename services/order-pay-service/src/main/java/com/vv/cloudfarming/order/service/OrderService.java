@@ -1,12 +1,11 @@
 package com.vv.cloudfarming.order.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
+import com.vv.cloudfarming.order.dto.resp.*;
+
+import java.util.List;
 
 /**
  * 订单服务接口
@@ -27,4 +26,16 @@ public interface OrderService {
      * 分页查询订单，仅全面的订单信息（管理员使用）
      */
     IPage<OrderPageRespDTO> listOrders(OrderPageReqDTO requestParam);
+
+    /**
+     * 获取认养订单详情
+     * @param orderNo 订单号
+     */
+    List<AdoptOrderDetailRespDTO> getAdoptOrderDetail(String orderNo);
+
+    /**
+     * 获取普通商品订单详情
+     * @param orderNo 订单号
+     */
+    List<SkuOrderDetailRespDTO> getSkuOrderDetail(String orderNo);
 }

@@ -8,16 +8,17 @@ import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
+import com.vv.cloudfarming.order.dto.resp.*;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.starter.idempotent.NoDuplicateSubmit;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "订单控制层")
 @RestController
@@ -45,5 +46,17 @@ public class OrderController {
     @PostMapping("/api/order/v1/list/admin")
     public Result<IPage<OrderPageRespDTO>> listOrders(@RequestBody OrderPageReqDTO requestParam) {
         return Results.success(orderService.listOrders(requestParam));
+    }
+
+    @Operation(summary = "查询订单详情（委托养殖）")
+    @GetMapping("/api/order/v1/detail/adopt")
+    public Result<List<AdoptOrderDetailRespDTO>> getAdoptOrderDetail(@RequestParam @NotNull String orderNo){
+        return Results.success(orderService.getAdoptOrderDetail(orderNo));
+    }
+
+    @Operation(summary = "查询订单详情（普通商品）")
+    @GetMapping("/api/order/v1/detail/sku")
+    public Result<List<SkuOrderDetailRespDTO>> getSkuOrderDetail(@RequestParam @NotNull String orderNo){
+        return Results.success(orderService.getSkuOrderDetail(orderNo));
     }
 }

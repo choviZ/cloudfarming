@@ -8,15 +8,17 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
+import com.vv.cloudfarming.order.dao.entity.OrderDetailAdoptDO;
+import com.vv.cloudfarming.order.dao.entity.OrderDetailSkuDO;
 import com.vv.cloudfarming.order.dao.entity.PayOrderDO;
+import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
+import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.PayOrderCreateReqDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
-import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
+import com.vv.cloudfarming.order.dto.resp.*;
 import com.vv.cloudfarming.order.remote.ShopRemoteService;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.order.service.PayService;
@@ -48,6 +50,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private final ShopRemoteService shopRemoteService;
     private final ProductUtil productUtil;
     private final RedisIdWorker redisIdWorker;
+    private final OrderDetailAdoptMapper orderDetailAdoptMapper;
+    private final OrderDetailSkuMapper orderDetailSkuMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -131,6 +135,26 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         return orderPage.convert(each -> {
             return BeanUtil.toBean(each, OrderPageRespDTO.class);
         });
+    }
+
+    @Override
+    public List<AdoptOrderDetailRespDTO> getAdoptOrderDetail(String orderNo) {
+        LambdaQueryWrapper<OrderDetailAdoptDO> wrapper = Wrappers.lambdaQuery(OrderDetailAdoptDO.class)
+                .eq(OrderDetailAdoptDO::getOrderNo, orderNo);
+        List<OrderDetailAdoptDO> orderDetails = orderDetailAdoptMapper.selectList(wrapper);
+        return orderDetails.stream().map(each -> {
+            return BeanUtil.toBean(each, AdoptOrderDetailRespDTO.class);
+        }).toList();
+    }
+
+    @Override
+    public List<SkuOrderDetailRespDTO> getSkuOrderDetail(String orderNo) {
+        LambdaQueryWrapper<OrderDetailSkuDO> wrapper = Wrappers.lambdaQuery(OrderDetailSkuDO.class)
+                .eq(OrderDetailSkuDO::getOrderNo, orderNo);
+        List<OrderDetailSkuDO> orderDetailSkus = orderDetailSkuMapper.selectList(wrapper);
+        return orderDetailSkus.stream().map(each -> {
+            return BeanUtil.toBean(each, SkuOrderDetailRespDTO.class);
+        }).toList();
     }
 
     private String generatePayOrderNo(Long userId) {
