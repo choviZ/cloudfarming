@@ -124,7 +124,7 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemRes
             Date endDate = calendar.getTime();
 
             return OrderDetailAdoptDO.builder()
-                    .orderId(order.getId())
+                    .orderNo(order.getOrderNo())
                     .adoptItemId(adoptItem.getId())
                     .itemName(adoptItem.getTitle())
                     .itemImage(adoptItem.getCoverImage())

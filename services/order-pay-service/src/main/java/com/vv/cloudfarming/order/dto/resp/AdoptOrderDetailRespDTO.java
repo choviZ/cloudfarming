@@ -9,17 +9,17 @@ import java.util.Date;
  * 认养订单响应DTO
  */
 @Data
-public class AdoptOrderRespDTO {
+public class AdoptOrderDetailRespDTO {
 
     /**
-     * 订单ID
+     * ID
      */
     private Long id;
 
     /**
-     * 买家用户ID
+     * 订单号
      */
-    private Long buyerId;
+    private String orderNo;
 
     /**
      * 认养项目ID
@@ -27,9 +27,29 @@ public class AdoptOrderRespDTO {
     private Long adoptItemId;
 
     /**
-     * 认养价格（下单时快照）
+     * 认养项目名称
+     */
+    private String itemName;
+
+    /**
+     * 认养项目图片
+     */
+    private String itemImage;
+
+    /**
+     * 项目单价
      */
     private BigDecimal price;
+
+    /**
+     * 数量
+     */
+    private int quantity;
+
+    /**
+     * 总价
+     */
+    private BigDecimal totalAmount;
 
     /**
      * 认养开始日期

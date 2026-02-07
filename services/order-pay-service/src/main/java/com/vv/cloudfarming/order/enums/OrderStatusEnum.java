@@ -9,12 +9,13 @@ import lombok.Getter;
 @Getter
 public enum OrderStatusEnum {
 
-    PENDING_PAYMENT(0, "未支付"),
-    PENDING_SHIPMENT(1, "已支付（待发货）"),
-    SHIPPED(2, "待收货"),
-    COMPLETED(3, "已完成（确认收货）"),
-    CANCEL(4, "已关闭（取消/退款）"),
-    AFTER_SALE(5, "售后中");
+    PENDING_PAYMENT(0, "待付款"),
+    PENDING_SHIPMENT(1, "待发货"),
+    SHIPPED(2, "已发货"),
+    COMPLETED(3, "已完成"),
+    CANCEL(4, "已关闭"),
+    AFTER_SALE(5, "售后中"),
+    BREEDING(6,"养殖中");
 
     private final int code;
     private final String desc;

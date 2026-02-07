@@ -13,10 +13,8 @@ import java.util.Date;
 
 /**
  * 认养订单明细表 DO
- * <p>
  * 仅当 order_type = 2 (认养订单) 时，会有对应的记录。
  * 存储认养项目的具体信息及扩展业务数据。
- * </p>
  */
 @Data
 @Builder
@@ -34,9 +32,9 @@ public class OrderDetailAdoptDO extends BaseDO implements Serializable {
     private Long id;
 
     /**
-     * 关联的订单ID (t_order.id)
+     * 订单号
      */
-    private Long orderId;
+    private String orderNo;
 
     /**
      * 认养项目ID

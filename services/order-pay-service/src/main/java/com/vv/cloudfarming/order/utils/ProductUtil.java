@@ -30,7 +30,7 @@ public class ProductUtil {
         // 查询关联的认养项目
         if (orderType.equals(OrderTypeConstant.ADOPT)) {
             LambdaQueryWrapper<OrderDetailAdoptDO> adoptWrapper = Wrappers.lambdaQuery(OrderDetailAdoptDO.class)
-                    .eq(OrderDetailAdoptDO::getOrderId, orderId);
+                    .eq(OrderDetailAdoptDO::getOrderNo, orderId);
             List<OrderDetailAdoptDO> orderDetailAdopts = orderDetailAdoptMapper.selectList(adoptWrapper);
             for (OrderDetailAdoptDO detailAdopt : orderDetailAdopts) {
                 ProductSummaryDTO payOrderItemResp = ProductSummaryDTO.builder()
