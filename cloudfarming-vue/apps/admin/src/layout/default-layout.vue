@@ -34,7 +34,7 @@
 <script lang="ts" setup>
 import type { MenuProps } from 'ant-design-vue';
 import { ref, h } from 'vue'
-import { UserOutlined, AppstoreOutlined, TagsOutlined, ShopOutlined } from '@ant-design/icons-vue'
+import {UserOutlined, AppstoreOutlined, TagsOutlined, ShopOutlined, FileTextOutlined} from '@ant-design/icons-vue'
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -63,6 +63,12 @@ const items = ref<MenuProps['items']>([
     title: '商品管理',
     key: 'admin/product',
     icon: () => h(ShopOutlined),
+  },
+  {
+    label: '订单管理',
+    title: '订单管理',
+    key: 'admin/order',
+    icon: () => h(FileTextOutlined),
   }
 ])
 
