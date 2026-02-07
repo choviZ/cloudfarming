@@ -110,6 +110,14 @@
                     show-quick-jumper @change="handlePageChange" />
             </div>
         </a-card>
+
+        <!-- 订单详情模态框 -->
+        <OrderDetailModal
+            v-model:open="detailModalVisible"
+            :order-type="currentOrderType"
+            :order-no="currentOrderNo"
+            @close="handleDetailClose"
+        />
     </div>
 </template>
 
@@ -119,6 +127,7 @@ import { SearchOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { listOrders } from '@/api/order'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
+import OrderDetailModal from './components/OrderDetailModal.vue'
 
 // 搜索数据
 const searchForm = reactive({
@@ -137,6 +146,11 @@ const pagination = reactive({
     size: 10,
     total: 0
 })
+
+// 订单详情模态框状态
+const detailModalVisible = ref(false)
+const currentOrderType = ref(0)
+const currentOrderNo = ref('')
 
 // 表格列
 const columns = [
@@ -221,20 +235,26 @@ const columns = [
 const fetchData = async () => {
     loading.value = true
     try {
+        // 构建请求参数
         const params = {
             current: pagination.current,
-            size: pagination.size,
-            ...searchForm
+            size: pagination.size
         }
+        // 只添加有值的搜索条件（过滤空字符串）
+        Object.keys(searchForm).forEach(key => {
+            const value = searchForm[key]
+            if (value !== '' && value !== undefined) {
+                params[key] = value
+            }
+        })
+
         const res = await listOrders(params)
         if (res.code == 0) {
             orderList.value = res.data.records || []
-            pagination.total = res.data.total || 0
+            pagination.total = Number(res.data.total) || 0
         } else {
             message.error(res.message || '获取订单列表失败')
         }
-    } catch (error) {
-        console.error('Fetch order list error:', error)
     } finally {
         loading.value = false
     }
@@ -263,9 +283,21 @@ const handlePageChange = (page, pageSize) => {
     fetchData()
 }
 
-// TODO: 查看订单详情
+/**
+ * 打开订单详情模态框
+ */
 const handleDetail = (record) => {
-    message.info(`查看订单详情: ${record.orderNo}`)
+    currentOrderType.value = record.orderType
+    currentOrderNo.value = record.orderNo
+    detailModalVisible.value = true
+}
+
+/**
+ * 关闭订单详情模态框
+ */
+const handleDetailClose = () => {
+    detailModalVisible.value = false
+    currentOrderNo.value = ''
 }
 
 // Helpers
