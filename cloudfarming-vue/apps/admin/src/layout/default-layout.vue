@@ -18,7 +18,7 @@
       <a-layout>
         <!-- 侧边栏-菜单项 -->
         <a-layout-sider class="sider">
-          <a-menu v-model:selectedKeys="selectedKeys1" mode="inline" :style="{ lineHeight: '64px' }" :items="items" @click="handleClick"/>
+          <a-menu v-model:selectedKeys="selectedKeys" mode="inline" :style="{ lineHeight: '64px' }" :items="items" @click="handleClick"/>
         </a-layout-sider>
         <!-- 内容区域 -->
         <a-layout-content class="layout-content">
@@ -33,12 +33,24 @@
 
 <script lang="ts" setup>
 import type { MenuProps } from 'ant-design-vue';
-import { ref, h } from 'vue'
+import { ref, h, watch } from 'vue'
 import {UserOutlined, AppstoreOutlined, TagsOutlined, ShopOutlined, FileTextOutlined} from '@ant-design/icons-vue'
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 
 const router = useRouter();
-const selectedKeys1 = ref<string[]>(['admin/user']);
+const route = useRoute();
+const selectedKeys = ref<string[]>([]);
+
+// 监听路由变化，更新选中菜单
+watch(
+  () => route.path,
+  (path) => {
+    // 移除开头的斜杠，匹配菜单key
+    const key = path.replace(/^\//, '');
+    selectedKeys.value = [key];
+  },
+  { immediate: true }
+);
 const items = ref<MenuProps['items']>([
   {
     label: '用户管理',
