@@ -125,19 +125,4 @@ public class WebAutoConfiguration implements WebMvcConfigurer, ApplicationRunner
     public void run(ApplicationArguments args) throws Exception {
         log.info("API Document: http://127.0.0.1:{}{}/doc.html", serverPort, contextPath);
     }
-
-    /**
-     * feign远程调用丢失上下文的解决方案，新增拦截器
-     */
-    @Bean
-    public RequestInterceptor requestInterceptor() {
-        return (RequestTemplate requestTemplate) -> {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes != null) {
-                HttpServletRequest request = attributes.getRequest();
-                String cookie = request.getHeader("Cookie");
-                requestTemplate.header("Cookie", cookie);
-            }
-        };
-    }
 }
