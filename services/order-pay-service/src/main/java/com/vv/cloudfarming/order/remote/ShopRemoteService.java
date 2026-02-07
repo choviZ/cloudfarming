@@ -7,9 +7,12 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(value = "cloudfarming-product", contextId = "shopRemoteService", url = "${aggregation.remote-url:}")
+@FeignClient(
+        value = "cloudfarming-product",
+        contextId = "shopRemoteService",
+        url = "${aggregation.remote-url:}")
 public interface ShopRemoteService {
 
-    @GetMapping("/v1/shop")
+    @GetMapping("/api/shop/get")
     Result<ShopRespDTO> getShopById(@RequestParam("shopId") @NotNull Long shopId);
 }
