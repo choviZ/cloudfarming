@@ -6,9 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.vv.cloudfarming.web.GlobalExceptionHandler;
+import feign.RequestInterceptor;
+import feign.RequestTemplate;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -19,6 +22,8 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -119,5 +124,20 @@ public class WebAutoConfiguration implements WebMvcConfigurer, ApplicationRunner
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("API Document: http://127.0.0.1:{}{}/doc.html", serverPort, contextPath);
+    }
+
+    /**
+     * feign远程调用丢失上下文的解决方案，新增拦截器
+     */
+    @Bean
+    public RequestInterceptor requestInterceptor() {
+        return (RequestTemplate requestTemplate) -> {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                String cookie = request.getHeader("Cookie");
+                requestTemplate.header("Cookie", cookie);
+            }
+        };
     }
 }

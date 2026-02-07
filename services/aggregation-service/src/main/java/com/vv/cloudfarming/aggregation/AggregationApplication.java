@@ -1,4 +1,4 @@
-package com.vv.cloudfarming;
+package com.vv.cloudfarming.aggregation;
 
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "com.vv.cloudfarming.user",
         "com.vv.cloudfarming.product",
         "com.vv.cloudfarming.order",
+        "com.vv.cloudfarming.aggregation"
 })
 @MapperScan({
         "com.vv.cloudfarming.user.dao.mapper",
@@ -21,8 +22,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 })
 @EnableDiscoveryClient
 @EnableScheduling
-public class CloudFarmingApplication {
+public class AggregationApplication {
     public static void main(String[] args) {
-        SpringApplication.run(CloudFarmingApplication.class, args);
+        SpringApplication.run(AggregationApplication.class, args);
     }
 }
