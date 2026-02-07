@@ -1,13 +1,16 @@
 package com.vv.cloudfarming.order.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.starter.idempotent.NoDuplicateSubmit;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,7 +36,14 @@ public class OrderController {
 
     @Operation(summary = "查询订单列表")
     @PostMapping("/api/order/v1/list")
-    public Result<IPage<OrderPageRespDTO>> listOrder(@RequestBody OrderPageReqDTO requestParam) {
-        return Results.success(orderService.listOrder(requestParam));
+    public Result<IPage<OrderPageWithProductInfoRespDTO>> listOrder(@RequestBody OrderPageReqDTO requestParam) {
+        return Results.success(orderService.listOrderWithProductInfo(requestParam));
+    }
+
+    @Operation(summary = "查询订单列表（管理员用）")
+    @SaCheckRole(UserRoleConstant.ADMIN_DESC)
+    @PostMapping("/api/order/v1/list/admin")
+    public Result<IPage<OrderPageRespDTO>> listOrders(@RequestBody OrderPageReqDTO requestParam) {
+        return Results.success(orderService.listOrders(requestParam));
     }
 }

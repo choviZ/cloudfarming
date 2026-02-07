@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.order.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -15,6 +16,7 @@ import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.PayOrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
 import com.vv.cloudfarming.order.remote.ShopRemoteService;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.order.service.PayService;
@@ -87,7 +89,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     }
 
     @Override
-    public IPage<OrderPageRespDTO> listOrder(OrderPageReqDTO requestParam) {
+    public IPage<OrderPageWithProductInfoRespDTO> listOrderWithProductInfo(OrderPageReqDTO requestParam) {
         Long id = requestParam.getId();
         Integer orderStatus = requestParam.getOrderStatus();
         Long userId = requestParam.getUserId();
@@ -102,12 +104,32 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             ShopRespDTO shop = shopRemoteService.getShopById(each.getShopId()).getData();
             ArrayList<ProductSummaryDTO> summaryList = new ArrayList<>();
             productUtil.buildProductSummary(each.getId(),each.getOrderType(),summaryList);
-            return OrderPageRespDTO.builder()
+            return OrderPageWithProductInfoRespDTO.builder()
                     .id(each.getId())
                     .shopName(shop.getShopName())
                     .items(summaryList)
                     .totalPrice(each.getTotalAmount())
                     .build();
+        });
+    }
+
+    @Override
+    public IPage<OrderPageRespDTO> listOrders(OrderPageReqDTO requestParam) {
+        Long id = requestParam.getId();
+        String payOrderNo = requestParam.getOrderNo();
+        Integer orderStatus = requestParam.getOrderStatus();
+        Long userId = requestParam.getUserId();
+        Long shopId = requestParam.getShopId();
+
+        LambdaQueryWrapper<OrderDO> wrapper = Wrappers.lambdaQuery(OrderDO.class)
+                .eq(ObjectUtil.isNotNull(id), OrderDO::getId, id)
+                .eq(ObjectUtil.isNotNull(payOrderNo), OrderDO::getPayOrderNo, payOrderNo)
+                .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
+                .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId)
+                .eq(ObjectUtil.isNotNull(shopId), OrderDO::getShopId, shopId);
+        IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
+        return orderPage.convert(each -> {
+            return BeanUtil.toBean(each, OrderPageRespDTO.class);
         });
     }
 
