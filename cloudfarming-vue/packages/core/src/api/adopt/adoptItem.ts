@@ -13,7 +13,7 @@ import type { IPage } from '../common'
  */
 export function createAdoptItem(data: AdoptItemCreateReq) :Promise<Result<string>>{
     return request.post(
-        '/v1/adopt-item',
+        '/api/adopt/item/v1/create',
         data
     )
 }
@@ -23,7 +23,7 @@ export function createAdoptItem(data: AdoptItemCreateReq) :Promise<Result<string
  */
 export function updateAdoptItem(data: AdoptItemUpdateReq) :Promise<Result<void>>{
     return request.put(
-        '/v1/adopt-item',
+        '/api/adopt/item/v1/update',
         data
     )
 }
@@ -33,7 +33,7 @@ export function updateAdoptItem(data: AdoptItemUpdateReq) :Promise<Result<void>>
  */
 export function onShelfAdoptItem(adoptItemId: string): Promise<Result<void>> {
     return request.put(
-        `/v1/adopt-item/${adoptItemId}/on-shelf`
+        `/api/adopt/item/v1/${adoptItemId}/on-shelf`
     )
 }
 
@@ -42,7 +42,7 @@ export function onShelfAdoptItem(adoptItemId: string): Promise<Result<void>> {
  */
 export function offShelfAdoptItem(adoptItemId: string): Promise<Result<void>> {
     return request.put(
-        `/v1/adopt-item/${adoptItemId}/off-shelf`
+        `/api/adopt/item/v1/${adoptItemId}/off-shelf`
     )
 }
 
@@ -51,7 +51,7 @@ export function offShelfAdoptItem(adoptItemId: string): Promise<Result<void>> {
  */
 export function deleteAdoptItem(adoptItemId: string): Promise<Result<void>> {
     return request.delete(
-        `/v1/adopt-item/${adoptItemId}`
+        `/api/adopt/item/v1/${adoptItemId}`
     )
 }
 
@@ -60,7 +60,7 @@ export function deleteAdoptItem(adoptItemId: string): Promise<Result<void>> {
  */
 export function getAdoptItemDetail(adoptItemId: string): Promise<Result<AdoptItemResp>> {
     return request.get(
-        `/v1/adopt-item/${adoptItemId}`
+        `/api/adopt/item/v1/${adoptItemId}`
     )
 }
 
@@ -69,7 +69,7 @@ export function getAdoptItemDetail(adoptItemId: string): Promise<Result<AdoptIte
  */
 export function pageAdoptItems(data: AdoptItemPageReq): Promise<Result<IPage<AdoptItemResp>>> {
     return request.post(
-        '/v1/adopt-item/page',
+        '/api/adopt/item/v1/page',
         data
     )
 }
@@ -79,7 +79,7 @@ export function pageAdoptItems(data: AdoptItemPageReq): Promise<Result<IPage<Ado
  */
 export function pageMyAdoptItems(data: AdoptItemPageReq) : Promise<Result<IPage<AdoptItemResp>>> {
     return request.post(
-        '/v1/adopt-item/my/page',
+        '/api/adopt/item/v1/my/page',
         data
     )
 }

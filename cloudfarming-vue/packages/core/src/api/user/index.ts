@@ -11,7 +11,7 @@ import type {
 
 // 用户注册
 export const userRegister = (data: UserRegisterReqDTO): Promise<Result<boolean>> => {
-  return request.post('/v1/user/register', data)
+  return request.post('/api/user/register', data)
 }
 
 // 用户登录
@@ -26,27 +26,27 @@ export const getUser = (): Promise<Result<UserRespDTO>> => {
 
 // 退出登录
 export const userLogout = (): Promise<Result<boolean>> => {
-  return request.get('/v1/user/logout')
+  return request.get('/api/user/logout')
 }
 
 // 根据id获取用户信息
 export const getUserById = (id: number): Promise<Result<UserRespDTO>> => {
-  return request.get(`/admin/v1/user/${id}`)
+  return request.get(`/api/user/get/${id}`)
 }
 
 // 创建用户
 export const createUser = (data: UserCreateReqDTO): Promise<Result<boolean>> => {
-  return request.post('/admin/v1/user', data)
+  return request.post('/api/user/create', data)
 }
 
 // 修改用户信息
 export const updateUser = (data: UserUpdateReqDTO): Promise<Result<boolean>> => {
-  return request.put('/admin/v1/user', data)
+  return request.put('/api/user/update', data)  
 }
 
 // 删除用户
 export const deleteUser = (id: string): Promise<Result<boolean>> => {
-  return request.delete(`/admin/v1/user/${id}`)
+  return request.delete(`/api/user/delete/${id}`)
 }
 
 // 分页查询用户列表

@@ -13,7 +13,7 @@ import type { Result } from '../common'
  */
 export function addReceiveAddress(data: ReceiveAddressAddReq): Promise<Result<boolean>> {
     return request.post(
-        '/v1/user/receive-address',
+        '/api/receive-address/add',
         data
     )
 }
@@ -23,7 +23,7 @@ export function addReceiveAddress(data: ReceiveAddressAddReq): Promise<Result<bo
  */
 export function updateReceiveAddress(data: ReceiveAddressUpdateReq): Promise<Result<boolean>> {
     return request.put(
-        '/v1/user/receive-address',
+        '/api/receive-address/update',
         data
     )
 }
@@ -32,8 +32,8 @@ export function updateReceiveAddress(data: ReceiveAddressUpdateReq): Promise<Res
  * 设置默认收货地址
  */
 export function setDefaultReceiveAddress(data: ReceiveAddressSetDefaultReq): Promise<Result<boolean>> {
-    return request.put(
-        '/v1/user/receive-address/default',
+    return request.post(
+        '/api/receive-address/default',
         data
     )
 }
@@ -42,8 +42,8 @@ export function setDefaultReceiveAddress(data: ReceiveAddressSetDefaultReq): Pro
  * 删除收货地址
  */
 export function deleteReceiveAddress(id: number): Promise<Result<boolean>> {
-    return request.delete(
-        `/v1/user/receive-address/${id}`
+    return request.post(
+        `/api/receive-address/delete/${id}`
     )
 }
 
@@ -51,9 +51,7 @@ export function deleteReceiveAddress(id: number): Promise<Result<boolean>> {
  * 根据ID获取收货地址详情
  */
 export function getReceiveAddressById(id: number): Promise<Result<ReceiveAddressResp>> {
-    return request.get(
-        `/v1/user/receive-address/${id}`
-    )
+    return request.get(`/api/receive-address/get`,{params:{id}})
 }
 
 /**
@@ -61,7 +59,7 @@ export function getReceiveAddressById(id: number): Promise<Result<ReceiveAddress
  */
 export function getCurrentUserReceiveAddresses(): Promise<Result<ReceiveAddressResp[]>> {
     return request.get(
-        '/v1/user/receive-address'
+        '/api/receive-address/list'
     )
 }
 
@@ -70,6 +68,6 @@ export function getCurrentUserReceiveAddresses(): Promise<Result<ReceiveAddressR
  */
 export function getCurrentUserDefaultReceiveAddress(): Promise<Result<ReceiveAddressResp>> {
     return request.get(
-        '/v1/user/receive-address/default'
+        '/api/receive-address/default'
     )
 }
