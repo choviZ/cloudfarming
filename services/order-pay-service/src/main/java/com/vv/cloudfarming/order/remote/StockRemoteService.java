@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(value = "cloudfarming-product", contextId = "stockRemoteService",url = "${aggregation.remote-url:}")
 public interface StockRemoteService {
 
-    @GetMapping("/stock/lock")
+    @GetMapping("/api/stock/lock")
     Result<Void> lock(@RequestParam("id") @NotNull Long id, @RequestParam("quantity") @NotNull int quantity, @RequestParam("bizType") @NotNull int bizType);
 
-    @GetMapping("/stock/unlock")
+    @GetMapping("/api/stock/unlock")
     Result<Void> unlock(@RequestParam("id") @NotNull Long id, @RequestParam("quantity") @NotNull int quantity, @RequestParam("bizType") @NotNull int bizType);
 }
 

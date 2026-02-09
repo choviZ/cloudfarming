@@ -14,6 +14,6 @@ import java.util.List;
 @FeignClient(value = "cloudfarming-product", contextId = "skuRemoteService",url = "${aggregation.remote-url:}")
 public interface SkuRemoteService {
 
-    @PostMapping("/v1/sku/list")
+    @PostMapping("/api/sku/list")
     Result<List<SkuRespDTO>> listSkuDetailsByIds(@RequestBody List<Long> ids);
 }

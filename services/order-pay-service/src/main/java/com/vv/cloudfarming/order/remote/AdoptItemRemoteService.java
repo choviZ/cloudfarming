@@ -14,6 +14,6 @@ import java.util.List;
 @FeignClient(value = "cloudfarming-product", contextId = "adoptItemRemoteService", url = "${aggregation.remote-url:}")
 public interface AdoptItemRemoteService {
 
-    @PostMapping("/v1/adopt-item/batch")
+    @PostMapping("/api/adopt/item/v1/batch")
     Result<List<AdoptItemRespDTO>> batchAdoptItemByIds(@RequestBody List<Long> ids);
 }
