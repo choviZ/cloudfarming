@@ -92,7 +92,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
@@ -100,18 +100,7 @@ import AddressSelector from '../../components/address/AddressSelector.vue';
 import { getAdoptItemDetail } from '@cloudfarming/core/api/adopt';
 import { getSpuDetail } from '@cloudfarming/core/api/spu';
 import { createOrder } from '@cloudfarming/core/api/order/order.ts';
-import type { ReceiveAddressResp } from '@cloudfarming/core/api/address';
 import { ORDER_TYPE } from '@cloudfarming/core/api/order/types.ts';
-
-interface DisplayItem {
-  id: string; // 商品ID或认养项目ID
-  skuId?: string; // 如果是商品，则有SKU ID
-  title: string;
-  image: string;
-  price: number;
-  quantity: number;
-  tags: string[];
-}
 
 const route = useRoute();
 const router = useRouter();
@@ -119,14 +108,14 @@ const router = useRouter();
 const loading = ref(false);
 const submitting = ref(false);
 const selectedAddressId = ref('');
-const selectedAddress = ref<ReceiveAddressResp | null>(null);
+const selectedAddress = ref(null);
 
 // 统一展示数据
-const displayItem = ref<DisplayItem | null>(null);
+const displayItem = ref(null);
 
 // 从路由参数获取订单信息
 const orderType = computed(() => {
-  const type = route.query.type as string;
+  const type = route.query.type;
   return type === 'product' ? ORDER_TYPE.GOODS : ORDER_TYPE.ADOPT;
 });
 
@@ -145,7 +134,7 @@ const fetchDetail = async () => {
   try {
     if (orderType.value === ORDER_TYPE.ADOPT) {
       // 认养项目
-      const id = (route.params.id as string) || (route.query.id as string);
+      const id = route.params.id || route.query.id;
       if (!id) throw new Error('缺少参数: id');
       
       const res = await getAdoptItemDetail(id);
@@ -153,6 +142,8 @@ const fetchDetail = async () => {
         const data = res.data;
         displayItem.value = {
           id: data.id,
+          bizId: data.id,
+          shopId: data.userId, // TODO
           title: data.title,
           image: data.coverImage,
           price: data.price,
@@ -167,8 +158,8 @@ const fetchDetail = async () => {
       }
     } else {
       // 农产品
-      const spuId = route.query.spuId as string;
-      const skuId = route.query.skuId as string;
+      const spuId = route.query.spuId;
+      const skuId = route.query.skuId;
       
       if (!spuId || !skuId) throw new Error('缺少参数: spuId 或 skuId');
       
@@ -185,6 +176,8 @@ const fetchDetail = async () => {
           displayItem.value = {
             id: String(spu.id),
             skuId: sku.id,
+            bizId: sku.id,
+            shopId: spu.shopId,
             title: spu.title,
             image: sku.spuImage || spu.images.split(',')[0], // 优先用SKU图片，否则用SPU主图
             price: sku.price,
@@ -198,19 +191,14 @@ const fetchDetail = async () => {
         message.error(res.message || '获取商品详情失败');
       }
     }
-  } catch (error: any) {
-    console.error(error);
+  } catch (error) {
     message.error(error.message || '系统繁忙，请稍后重试');
-    // 如果获取失败，返回上一页或首页
-    setTimeout(() => {
-      // router.back();
-    }, 2000);
   } finally {
     loading.value = false;
   }
 };
 
-const handleAddressChange = (addr: ReceiveAddressResp) => {
+const handleAddressChange = (addr) => {
   selectedAddress.value = addr;
 };
 
@@ -224,29 +212,17 @@ const handleSubmit = async () => {
 
   submitting.value = true;
   try {
-    let bizData;
-    
-    if (orderType.value === ORDER_TYPE.ADOPT) {
-      bizData = {
-        adoptItemId: displayItem.value.id,
-        quantity: displayItem.value.quantity,
-        receiveId: selectedAddressId.value
-      };
-    } else {
-      // 商品订单
-      bizData = {
-        items: [{
-          skuId: displayItem.value.skuId!,
-          quantity: displayItem.value.quantity
-        }],
-        receiveId: selectedAddressId.value,
-        remark: ''
-      };
-    }
+    const items = [{
+      bizType: orderType.value,
+      bizId: displayItem.value.bizId,
+      shopId: displayItem.value.shopId || 0,
+      quantity: displayItem.value.quantity
+    }];
 
     const res = await createOrder({
       orderType: orderType.value,
-      bizData: bizData as any // 类型断言，因为 createOrder 定义使用了联合类型
+      receiveId: selectedAddressId.value,
+      items: items
     });
 
     if (res.code == '0' && res.data) {
@@ -256,11 +232,10 @@ const handleSubmit = async () => {
         message.error('订单创建异常：返回数据缺少订单号');
         return;
       }
-      // 跳转到支付页面，携带 orderId 和 amount
       router.push({
         path: '/pay',
         query: {
-          orderId: payOrderNo,
+          payOrderNo: payOrderNo,
           amount: payAmount
         }
       });

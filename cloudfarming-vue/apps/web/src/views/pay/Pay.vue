@@ -6,8 +6,8 @@
       <div class="pay-card">
         <div class="order-info">
           <div class="info-item">
-            <span class="label">订单编号：</span>
-            <span class="value">{{ orderId }}</span>
+            <span class="label">支付单号：</span>
+            <span class="value">{{ payOrderNo }}</span>
           </div>
           <div class="info-item amount-item">
             <span class="label">应付金额：</span>
@@ -22,7 +22,7 @@
 
         <div class="payment-methods">
           <h3 class="section-title">选择支付方式</h3>
-          
+
           <a-radio-group v-model:value="paymentMethod" class="method-group">
             <div class="method-item" :class="{ active: paymentMethod === 'alipay' }" @click="paymentMethod = 'alipay'">
               <a-radio value="alipay">
@@ -37,13 +37,7 @@
         </div>
 
         <div class="action-area">
-          <a-button 
-            type="primary" 
-            size="large" 
-            class="pay-btn"
-            :loading="paying"
-            @click="handlePay"
-          >
+          <a-button type="primary" size="large" class="pay-btn" :loading="paying" @click="handlePay">
             立即支付 ¥{{ amount }}
           </a-button>
         </div>
@@ -52,7 +46,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
@@ -60,43 +54,32 @@ import { message } from 'ant-design-vue';
 const route = useRoute();
 const router = useRouter();
 
-const orderId = ref('');
+const payOrderNo = ref('');
 const amount = ref('0.00');
 const paymentMethod = ref('alipay');
 const paying = ref(false);
 
 const handlePay = async () => {
-  if (!orderId.value) {
+  if (!payOrderNo.value) {
     message.error('订单信息无效');
     return;
   }
 
   paying.value = true;
   try {
-    // TODO: 调用后端支付接口
-    // const res = await payOrder({ orderId: orderId.value, channel: paymentMethod.value });
-    
-    // 模拟支付过程
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    message.success('支付成功！');
-    // 跳转到订单列表或详情页
-    // router.push('/user/orders');
-    router.replace('/adopt/list'); // 暂时跳转到列表
-    
+    window.open('http://localhost:8000/api/alipay/pay?payOrderNo=' + payOrderNo.value);
   } catch (error) {
-    console.error(error);
-    message.error('支付发起失败');
+    message.error('支付请求失败'+error.message);
   } finally {
     paying.value = false;
   }
 };
 
 onMounted(() => {
-  const { orderId: id, amount: price } = route.query;
+  const { payOrderNo: id, amount: price } = route.query;
   if (id) {
-    orderId.value = id as string;
-    amount.value = price as string || '0.00';
+    payOrderNo.value = id;
+    amount.value = price || '0.00';
   } else {
     message.error('参数缺失');
     router.back();
@@ -128,7 +111,7 @@ onMounted(() => {
   background: #fff;
   border-radius: 12px;
   padding: 40px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .order-info {
@@ -185,7 +168,8 @@ onMounted(() => {
   transition: all 0.3s;
 }
 
-.method-item:hover, .method-item.active {
+.method-item:hover,
+.method-item.active {
   border-color: #10b981;
   background-color: #fffdf0;
 }
