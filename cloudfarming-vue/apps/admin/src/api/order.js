@@ -20,3 +20,12 @@ export const getAdoptOrderDetail = async (params) =>{
 export const getSkuOrderDetail = async (params) =>{
   return request.get('/api/order/v1/detail/sku', { params })
 }
+
+/**
+ * 创建订单
+ * @param {Object} data - OrderCreateReq
+ * @returns {Promise<Object>} Result<OrderCreateResp>
+ */
+export const createOrder = (data) => {
+  return request.post('/api/order/v1/create', data)
+}

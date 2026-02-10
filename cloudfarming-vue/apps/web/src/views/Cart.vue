@@ -147,11 +147,10 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message, Modal, Empty } from 'ant-design-vue'
-import type { CartItemRespDTO, CartRespDTO } from '@/types/cart'
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -164,12 +163,12 @@ import {
   selectAllCartItems,
   selectCartItem,
   updateCartItem
-} from '@/api/cart.ts'
+} from '@/api/cart.js'
 
 const router = useRouter()
 
 const loading = ref(false)
-const cartData = reactive<CartRespDTO>({
+const cartData = reactive({
   cartItems: [],
   totalQuantity: 0,
   totalAmount: '0',
@@ -230,7 +229,7 @@ const handleSelectAll = () => {
   selectAllCartItems(checked)
 }
 
-const handleItemSelect = async (item: CartItemRespDTO) => {
+const handleItemSelect = async (item) => {
   updateSelectAllState()
   updateTotalAmount()
   try {
@@ -240,7 +239,7 @@ const handleItemSelect = async (item: CartItemRespDTO) => {
   }
 }
 
-const handleQuantityChange = async (item: CartItemRespDTO, delta: number) => {
+const handleQuantityChange = async (item, delta) => {
   const newQuantity = item.quantity + delta
   if (newQuantity < 1) return
 
@@ -260,7 +259,7 @@ const handleQuantityChange = async (item: CartItemRespDTO, delta: number) => {
   }
 }
 
-const handleDelete = (item: CartItemRespDTO) => {
+const handleDelete = (item) => {
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除"${item.productName}"吗？`,

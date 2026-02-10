@@ -41,7 +41,7 @@ public class AttributeController {
     @Operation(summary = "删除属性")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
     @PostMapping("/api/attribute/v1/delete")
-    public Result<Boolean> deleteAttribute(@RequestParam @NotNull Long id) {
+    public Result<Boolean> deleteAttribute(@RequestBody @NotNull Long id) {
         return Results.success(attributeService.deleteAttribute(id));
     }
 

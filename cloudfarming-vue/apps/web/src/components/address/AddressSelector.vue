@@ -40,26 +40,22 @@
     </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { EnvironmentFilled } from '@ant-design/icons-vue';
-import { getCurrentUserReceiveAddresses } from '@cloudfarming/core/api/address';
-import type { ReceiveAddressResp } from '@cloudfarming/core/api/address';
+import { getCurrentUserReceiveAddresses } from '@/api/address';
 
 // 定义 Props 和 Emits
-const props = defineProps<{
-    modelValue?: string; // 当前选中的地址 ID
-}>();
+const props = defineProps({
+    modelValue: String // 当前选中的地址 ID
+});
 
-const emit = defineEmits<{
-    (e: 'update:modelValue', id: string): void;
-    (e: 'change', address: ReceiveAddressResp): void;
-}>();
+const emit = defineEmits(['update:modelValue', 'change']);
 
 const router = useRouter();
 const loading = ref(false);
-const addressList = ref<ReceiveAddressResp[]>([]);
+const addressList = ref([]);
 
 const selectedAddress = computed(() => {
     return addressList.value.find(addr => addr.id === props.modelValue);
@@ -80,8 +76,8 @@ const fetchAddresses = async () => {
                     emit('update:modelValue', defaultAddr.id);
                     emit('change', defaultAddr);
                 } else {
-                    emit('update:modelValue', addressList.value[0]!.id);
-                    emit('change', addressList.value[0]!);
+                    emit('update:modelValue', addressList.value[0].id);
+                    emit('change', addressList.value[0]);
                 }
             }
         }
@@ -91,7 +87,7 @@ const fetchAddresses = async () => {
 };
 
 // 格式化手机号
-const formatPhone = (phone: string) => {
+const formatPhone = (phone) => {
     if (!phone) return '';
     return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
 };

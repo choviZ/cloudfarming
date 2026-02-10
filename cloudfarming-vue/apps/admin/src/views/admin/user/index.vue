@@ -124,7 +124,7 @@
           v-model:current="pagination.current"
           v-model:page-size="pagination.size"
           :total="pagination.total"
-          :show-total="(total: any) => `共 ${total} 条`"
+          :show-total="(total) => `共 ${total} 条`"
           :show-size-changer="true"
           :show-quick-jumper="true"
           @change="handlePageChange"
@@ -197,7 +197,7 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { message } from 'ant-design-vue'
@@ -212,22 +212,15 @@ import {
   createUser,
   updateUser,
   deleteUser
-} from '@cloudfarming/core'
-import type {
-  UserRespDTO,
-  UserCreateReqDTO,
-  UserUpdateReqDTO,
-  UserPageQueryReqDTO
-} from '@cloudfarming/core'
-import type { FormInstance } from 'ant-design-vue'
+} from '@/api/user'
 
 const loading = ref(false)
 const modalVisible = ref(false)
 const modalLoading = ref(false)
 const isEdit = ref(false)
-const formRef = ref<FormInstance>()
+const formRef = ref()
 
-const userList = ref<UserRespDTO[]>([])
+const userList = ref([])
 
 const pagination = reactive({
   current: 1,
@@ -235,14 +228,14 @@ const pagination = reactive({
   total: 0
 })
 
-const searchForm = reactive<UserPageQueryReqDTO>({
+const searchForm = reactive({
   username: undefined,
   phone: undefined,
   userType: undefined,
   status: undefined
 })
 
-const formData = reactive<Partial<UserCreateReqDTO & UserUpdateReqDTO>>({
+const formData = reactive({
   username: '',
   password: '',
   phone: '',
@@ -316,7 +309,7 @@ const columns = [
     dataIndex: 'createTime',
     key: 'createTime',
     width: 180,
-    customRender: ({ text }: { text: string }) => {
+    customRender: ({ text }) => {
       return dayjs(text).format('YYYY-MM-DD HH:mm:ss')
     }
   },
@@ -325,7 +318,7 @@ const columns = [
     dataIndex: 'updateTime',
     key: 'updateTime',
     width: 180,
-    customRender: ({ text }: { text: string }) => {
+    customRender: ({ text }) => {
       return dayjs(text).format('YYYY-MM-DD HH:mm:ss')
     }
   },
@@ -337,8 +330,8 @@ const columns = [
   }
 ]
 // 用户类型文本映射
-const getUserTypeText = (type: number) => {
-  const typeMap: Record<number, string> = {
+const getUserTypeText = (type) => {
+  const typeMap = {
     0: '普通用户',
     1: '农户',
     2: '系统管理员'
@@ -346,8 +339,8 @@ const getUserTypeText = (type: number) => {
   return typeMap[type] || '未知'
 }
 // 用户类型显示颜色映射
-const getUserTypeColor = (type: number) => {
-  const colorMap: Record<number, string> = {
+const getUserTypeColor = (type) => {
+  const colorMap = {
     0: 'blue',
     1: 'green',
     2: 'orange'
@@ -357,7 +350,7 @@ const getUserTypeColor = (type: number) => {
 
 const fetchUserList = async () => {
   loading.value = true
-  const params: UserPageQueryReqDTO = {
+  const params = {
     current: pagination.current,
     size: pagination.size,
     username: searchForm.username || undefined,
@@ -389,7 +382,7 @@ const handleReset = () => {
   fetchUserList()
 }
 
-const handlePageChange = (page: number, pageSize: number) => {
+const handlePageChange = (page, pageSize) => {
   pagination.current = page
   pagination.size = pageSize
   fetchUserList()
@@ -401,7 +394,7 @@ const handleAdd = () => {
   resetForm(true)
 }
 
-const handleEdit = (record: UserRespDTO) => {
+const handleEdit = (record) => {
   isEdit.value = true
   modalVisible.value = true
   formData.id = record.id
@@ -422,8 +415,8 @@ const handleModalOk = async () => {
 
   modalLoading.value = true
   if (isEdit.value) {
-    const updateData: UserUpdateReqDTO = {
-      id: formData.id!,
+    const updateData = {
+      id: formData.id,
       username: formData.username,
       password: formData.password || undefined,
       phone: formData.phone,
@@ -441,13 +434,13 @@ const handleModalOk = async () => {
       message.error(res.message || '更新用户失败')
     }
   } else {
-    const createData: UserCreateReqDTO = {
-      username: formData.username!,
-      password: formData.password!,
-      phone: formData.phone!,
-      avatar: formData.avatar!,
-      userType: formData.userType!,
-      status: formData.status!
+    const createData = {
+      username: formData.username,
+      password: formData.password,
+      phone: formData.phone,
+      avatar: formData.avatar,
+      userType: formData.userType,
+      status: formData.status
     }
     const res = await createUser(createData)
     modalLoading.value = false
@@ -466,7 +459,7 @@ const handleModalCancel = () => {
   resetForm()
 }
 
-const handleDelete = async (id: string) => {
+const handleDelete = async (id) => {
   const res = await deleteUser(id)
   if (res.code === '0') {
     message.success('删除用户成功')
@@ -476,7 +469,7 @@ const handleDelete = async (id: string) => {
   }
 }
 
-const resetForm = (isAdd: boolean = false) => {
+const resetForm = (isAdd = false) => {
   if (isAdd) {
     formData.username = ''
     formData.password = ''

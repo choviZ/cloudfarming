@@ -10,31 +10,27 @@
   </a-space>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, ref } from 'vue'
-import type { SelectProps } from 'ant-design-vue'
-import type { AttributeRespDTO } from '@cloudfarming/core'
 
-const selectedAttrId = ref<string>('')
+const selectedAttrId = ref('')
 
 // 组件通信
-const props = defineProps<{
+const props = defineProps({
   // 所有属性
-  attributes: AttributeRespDTO[]
+  attributes: { type: Array, required: true },
   // 已选的属性
-  selectedAttrIds: string[]
+  selectedAttrIds: { type: Array, required: true },
   // 类型过滤
-  typeFilter?: number
-}>()
+  typeFilter: { type: Number, default: undefined }
+})
 
-const emit = defineEmits<{
-  (e: 'add', id: string, type: number): void
-}>()
+const emit = defineEmits(['add'])
 
 /**
  * 计算选择器可用的选项
  */
-const attrOptions = computed<SelectProps['options']>(() => {
+const attrOptions = computed(() => {
   const addedIds = new Set(props.selectedAttrIds)
   return props.attributes
     .filter(attr => {

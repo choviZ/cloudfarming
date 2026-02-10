@@ -31,15 +31,14 @@
   </div>
 </template>
 
-<script lang="ts" setup>
-import type { MenuProps } from 'ant-design-vue';
+<script setup>
 import { ref, h, watch } from 'vue'
 import {UserOutlined, AppstoreOutlined, TagsOutlined, ShopOutlined, FileTextOutlined} from '@ant-design/icons-vue'
 import { useRouter, useRoute } from 'vue-router';
 
 const router = useRouter();
 const route = useRoute();
-const selectedKeys = ref<string[]>([]);
+const selectedKeys = ref([]);
 
 // 监听路由变化，更新选中菜单
 watch(
@@ -51,7 +50,7 @@ watch(
   },
   { immediate: true }
 );
-const items = ref<MenuProps['items']>([
+const items = ref([
   {
     label: '用户管理',
     title: '用户管理',
@@ -84,7 +83,7 @@ const items = ref<MenuProps['items']>([
   }
 ])
 
-const handleClick = ({key} : {key: string}) => {
+const handleClick = ({key}) => {
   router.push(`/${key}`);
 }
 </script>

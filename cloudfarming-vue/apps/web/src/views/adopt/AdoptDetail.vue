@@ -112,11 +112,10 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getAdoptItemDetail, listAnimalCategories } from '@cloudfarming/core';
-import type { AdoptItemResp, AnimalCategoryResp } from '@cloudfarming/core';
+import { getAdoptItemDetail, listAnimalCategories } from '@/api/adopt';
 import { addToCart } from '@/api/cart';
 import { message } from 'ant-design-vue';
 import { 
@@ -128,10 +127,10 @@ import {
 const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
-const detail = ref<AdoptItemResp | null>(null);
-const categories = ref<AnimalCategoryResp[]>([]);
+const detail = ref(null);
+const categories = ref([]);
 
-const fetchDetail = async (id: string) => {
+const fetchDetail = async (id) => {
   loading.value = true;
   try {
     const res = await getAdoptItemDetail(id);
@@ -158,7 +157,7 @@ const fetchCategories = async () => {
   }
 };
 
-const getCategoryName = (code: string) => {
+const getCategoryName = (code) => {
   const category = categories.value.find(c => c.code === code);
   return category ? category.name : code;
 };

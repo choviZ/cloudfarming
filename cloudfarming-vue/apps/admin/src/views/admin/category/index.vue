@@ -78,7 +78,7 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref, reactive, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { message } from 'ant-design-vue'
@@ -91,19 +91,14 @@ import {
 import {
   getCategoryTree,
   deleteCategory
-} from '@cloudfarming/core'
-import type { CategoryRespDTO } from '@cloudfarming/core'
+} from '@/api/category'
 import CategoryModal from './components/CategoryModal.vue'
 
 const loading = ref(false)
-const categoryTree = ref<CategoryRespDTO[]>([])
+const categoryTree = ref([])
 
 // 模态框状态
-const modalState = reactive<{
-  open: boolean
-  mode: 'create' | 'create-child' | 'edit'
-  initialData: CategoryRespDTO | null
-}>({
+const modalState = reactive({
   open: false,
   mode: 'create',
   initialData: null
@@ -133,7 +128,7 @@ const columns = [
     dataIndex: 'createTime',
     key: 'createTime',
     width: '15%',
-    customRender: ({ text }: { text: string }) => {
+    customRender: ({ text }) => {
       return dayjs(text).format('YYYY-MM-DD HH:mm:ss')
     }
   },
@@ -142,7 +137,7 @@ const columns = [
     dataIndex: 'updateTime',
     key: 'updateTime',
     width: '15%',
-    customRender: ({ text }: { text: string }) => {
+    customRender: ({ text }) => {
       return dayjs(text).format('YYYY-MM-DD HH:mm:ss')
     }
   },
@@ -153,8 +148,8 @@ const columns = [
   }
 ]
 
-const getCategoryName = (id: string): string => {
-  const findCategory = (list: CategoryRespDTO[], targetId: string): CategoryRespDTO | null => {
+const getCategoryName = (id) => {
+  const findCategory = (list, targetId) => {
     for (const item of list) {
       if (item.id === targetId) return item
       if (item.children) {
@@ -168,7 +163,7 @@ const getCategoryName = (id: string): string => {
   return category?.name || ''
 }
 
-const getParentName = (parentId: string | null): string => {
+const getParentName = (parentId) => {
   if (!parentId) return ''
   return getCategoryName(parentId)
 }
@@ -195,19 +190,19 @@ const handleAdd = () => {
   modalState.open = true
 }
 
-const handleAddChild = (record: CategoryRespDTO) => {
+const handleAddChild = (record) => {
   modalState.mode = 'create-child'
   modalState.initialData = record
   modalState.open = true
 }
 
-const handleEdit = (record: CategoryRespDTO) => {
+const handleEdit = (record) => {
   modalState.mode = 'edit'
   modalState.initialData = record
   modalState.open = true
 }
 
-const handleDelete = async (id: string) => {
+const handleDelete = async (id) => {
   try {
     await deleteCategory(id)
     message.success('删除成功')

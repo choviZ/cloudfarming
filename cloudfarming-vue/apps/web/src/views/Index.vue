@@ -119,7 +119,7 @@
           :total="pagination.total"
           :show-size-changer="true"
           :page-size-options="['20', '40']"
-          :show-total="(total: number) => `共 ${total} 件商品`"
+          :show-total="(total) => `共 ${total} 件商品`"
           @change="handlePageChange"
           @show-size-change="handleSizeChange"
         />
@@ -128,13 +128,11 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { SearchOutlined, RightOutlined, ShoppingOutlined } from '@ant-design/icons-vue';
-import { listSpuByPage } from '@cloudfarming/core/api/spu';
-import type { SpuPageQueryReqDTO, SpuRespDTO } from '@cloudfarming/core/api/spu';
-import type { IPage } from '@cloudfarming/core/api/common';
+import { listSpuByPage } from '@/api/spu';
 import { message } from 'ant-design-vue';
 import AdoptFeaturedSection from '@/components/adopt/AdoptFeaturedSection.vue';
 import HomeCategory from '@/components/home/HomeCategory.vue';
@@ -145,7 +143,7 @@ import HomeUserCard from '@/components/home/HomeUserCard.vue';
 const router = useRouter();
 
 // 商品相关
-const productList = ref<SpuRespDTO[]>([]);
+const productList = ref([]);
 const productLoading = ref(false);
 const activeTag = ref('all');
 
@@ -157,7 +155,7 @@ const pagination = ref({
 });
 
 // 处理商品图片，只返回第一张
-const getFirstImage = (imageStr: string): string => {
+const getFirstImage = (imageStr) => {
   if (!imageStr) {
     return 'https://via.placeholder.com/200x200?text=No+Image';
   }
@@ -169,7 +167,7 @@ const fetchProducts = async () => {
   productLoading.value = true;
   try {
     // 构建查询参数
-    const queryParam: SpuPageQueryReqDTO = {
+    const queryParam = {
       current: pagination.value.current,
       size: pagination.value.size,
       status: 1, // 上架商品
@@ -177,7 +175,7 @@ const fetchProducts = async () => {
 
     const response = await listSpuByPage(queryParam);
     if (response.code === '0' && response.data) {
-      const pageData: IPage<SpuRespDTO> = response.data;
+      const pageData = response.data;
       productList.value = pageData.records;
       pagination.value.total = pageData.total;
     } else {
@@ -189,27 +187,27 @@ const fetchProducts = async () => {
 };
 
 // 标签点击事件
-const handleTagClick = (tagKey: string) => {
+const handleTagClick = (tagKey) => {
   activeTag.value = tagKey;
   pagination.value.current = 1;
   fetchProducts();
 };
 
 // 分页变化事件
-const handlePageChange = (page: number) => {
+const handlePageChange = (page) => {
   pagination.value.current = page;
   fetchProducts();
 };
 
 // 每页条数变化事件
-const handleSizeChange = (current: number, size: number) => {
+const handleSizeChange = (current, size) => {
   pagination.value.current = current;
   pagination.value.size = size;
   fetchProducts();
 };
 
 // 跳转到商品详情页
-const goToProductDetail = (productId: number) => {
+const goToProductDetail = (productId) => {
   router.push({
     name: 'productDetail',
     params: { id: productId.toString() }

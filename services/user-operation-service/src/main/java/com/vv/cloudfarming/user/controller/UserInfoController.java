@@ -51,7 +51,7 @@ public class UserInfoController {
     @Operation(summary = "根据id删除用户")
     @SaCheckLogin
     @PostMapping("/api/user/delete")
-    public Result<Boolean> deleteUser(@RequestParam("id") @NotNull Long id) {
+    public Result<Boolean> deleteUser(@RequestBody @NotNull Long id) {
         return Results.success(userService.deleteUserById(id));
     }
 

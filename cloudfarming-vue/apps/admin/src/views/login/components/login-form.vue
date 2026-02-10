@@ -60,7 +60,7 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
@@ -68,7 +68,7 @@ import { UserOutlined, LockOutlined } from '@ant-design/icons-vue'
 import { useStorage } from '@vueuse/core'
 import { useUserStore } from '@/store'
 import useLoading from '@/hooks/loading'
-import { userLogin, type UserLoginReqDTO } from '@cloudfarming/core'
+import { userLogin } from '@/api/user'
 
 const router = useRouter()
 const errorMessage = ref('')
@@ -83,13 +83,13 @@ const loginConfig = useStorage('login-config', {
 })
 
 // 用户信息
-const userInfo = reactive<UserLoginReqDTO>({
+const userInfo = reactive({
   username: '',
   password: ''
 })
 
 // 提交登录请求
-const handleSubmit = async (values: Record<string, any>) => {
+const handleSubmit = async (values) => {
   // 设置加载
   if (loading.value) return
   setLoading(true)
@@ -108,7 +108,7 @@ const handleSubmit = async (values: Record<string, any>) => {
     const { redirect, ...othersQuery } = router.currentRoute.value.query
     // 跳转至redirect指定的路由，若没有指定则跳转至首页
     await router.push({
-      path: (redirect as string) || '/',
+      path: redirect || '/',
       query: {
         ...othersQuery
       }

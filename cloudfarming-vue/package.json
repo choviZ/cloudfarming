@@ -16,7 +16,6 @@
     "build:admin": "turbo run build --filter=cloudfarming-admin",
     "build:web": "turbo run build --filter=cloudfarming-web",
     "lint": "turbo run lint",
-    "type-check": "turbo run type-check",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {

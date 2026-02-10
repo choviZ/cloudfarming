@@ -63,29 +63,17 @@
   </a-card>
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 
-/**
- * SKU表格行数据
- */
-export interface SkuRow {
-  key: string
-  attributes: Record<number, number>
-  attributeNames: string
-  price: number
-  stock: number
-  editable: boolean
-}
-
 // Props
-const props = defineProps<{
-  attributeNameMap?: Record<number, string>
-}>()
+const props = defineProps({
+  attributeNameMap: Object
+})
 
 // SKU列表
-const skuList = ref<SkuRow[]>([])
+const skuList = ref([])
 
 // 颜色数组用于属性列
 const attributeColors = ['blue', 'green', 'orange', 'purple', 'cyan', 'magenta']
@@ -94,16 +82,7 @@ const attributeColors = ['blue', 'green', 'orange', 'purple', 'cyan', 'magenta']
  * 计算表格列
  */
 const tableColumns = computed(() => {
-  const cols: Array<{
-    title: string
-    dataIndex: string
-    key: string
-    width: number
-    fixed?: 'left'
-    isAttribute?: boolean
-    attrId?: number
-    color?: string
-  }> = []
+  const cols = []
 
   // 添加属性列（动态）
   if (skuList.value.length > 0) {
@@ -116,7 +95,7 @@ const tableColumns = computed(() => {
         dataIndex: 'attributes',
         key: `attr-${attrId}`,
         width: 120,
-        fixed: index === 0 ? 'left' as const : undefined,
+        fixed: index === 0 ? 'left' : undefined,
         isAttribute: true,
         attrId,
         color: attributeColors[index % attributeColors.length]
@@ -146,7 +125,7 @@ const tableColumns = computed(() => {
 /**
  * 获取属性值显示文本
  */
-const getAttributeValue = (record: SkuRow, attrId: number): string => {
+const getAttributeValue = (record, attrId) => {
   const valueId = record.attributes[attrId]
   return props.attributeNameMap?.[valueId] || String(valueId)
 }
@@ -154,14 +133,14 @@ const getAttributeValue = (record: SkuRow, attrId: number): string => {
 /**
  * 格式化价格显示
  */
-const formatPrice = (price: number): string => {
+const formatPrice = (price) => {
   return price > 0 ? `¥${price.toFixed(2)}` : '点击设置价格'
 }
 
 /**
  * 处理价格变化
  */
-const handlePriceChange = (key: string, value: number | null) => {
+const handlePriceChange = (key, value) => {
   if (value !== null && value >= 0) {
     const sku = skuList.value.find(item => item.key === key)
     if (sku) {
@@ -173,7 +152,7 @@ const handlePriceChange = (key: string, value: number | null) => {
 /**
  * 处理库存变化
  */
-const handleStockChange = (key: string, value: number | null) => {
+const handleStockChange = (key, value) => {
   if (value !== null && value >= 0) {
     const sku = skuList.value.find(item => item.key === key)
     if (sku) {
@@ -185,7 +164,7 @@ const handleStockChange = (key: string, value: number | null) => {
 /**
  * 处理单元格失焦
  */
-const handleCellBlur = (record: SkuRow, field: 'price' | 'stock') => {
+const handleCellBlur = (record, field) => {
   // 验证数据
   if (field === 'price' && record.price <= 0) {
     message.warning(`${record.attributeNames} 的价格必须大于0`)
@@ -203,7 +182,7 @@ const handleCellBlur = (record: SkuRow, field: 'price' | 'stock') => {
 /**
  * 进入编辑模式
  */
-const handleEdit = (record: SkuRow) => {
+const handleEdit = (record) => {
   // 先关闭其他正在编辑的行
   skuList.value.forEach(item => {
     if (item.key !== record.key) {
@@ -217,14 +196,14 @@ const handleEdit = (record: SkuRow) => {
 /**
  * 设置SKU列表
  */
-const setSkuList = (list: SkuRow[]) => {
+const setSkuList = (list) => {
   skuList.value = list
 }
 
 /**
  * 验证所有SKU数据
  */
-const validateSkuData = (): { valid: boolean; error?: string } => {
+const validateSkuData = () => {
   for (const sku of skuList.value) {
     if (sku.price <= 0) {
       return { valid: false, error: `SKU [${sku.attributeNames}] 的价格必须大于0` }
@@ -255,14 +234,14 @@ const clearSkuList = () => {
 /**
  * 获取SKU列表数据
  */
-const getSkuList = (): SkuRow[] => {
+const getSkuList = () => {
   return skuList.value
 }
 
 /**
  * 根据销售属性生成SKU列表（保留兼容性）
  */
-const generateSkuList = (weight: string, diameter: string) => {
+const generateSkuList = (weight, diameter) => {
   if (!weight || !diameter) {
     skuList.value = []
     return
@@ -271,7 +250,7 @@ const generateSkuList = (weight: string, diameter: string) => {
   const weightOptions = ['3斤', '5斤']
   const diameterOptions = ['30mm', '50mm', '70mm']
 
-  const newSkuList: SkuRow[] = []
+  const newSkuList = []
   let keyIndex = 0
 
   for (const w of weightOptions) {

@@ -1,30 +1,22 @@
-<script setup lang="ts">
+<script setup>
 import { ref, watch } from 'vue';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue';
 import { message, Upload } from 'ant-design-vue';
-import type { UploadChangeParam, UploadProps } from 'ant-design-vue';
-import { upload, type UploadType } from '@cloudfarming/core';
+import { upload } from '@/api/common';
 
-interface Props {
-  value?: string;
-  bizCode: UploadType;
-  maxSize?: number; // MB
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  maxSize: 2,
+const props = defineProps({
+  value: { type: String, default: '' },
+  bizCode: { type: String, required: true },
+  maxSize: { type: Number, default: 2 } // MB
 });
 
-const emit = defineEmits<{
-  (e: 'update:value', value: string): void;
-  (e: 'change', value: string): void;
-}>();
+const emit = defineEmits(['update:value', 'change']);
 
-const fileList = ref<UploadProps['fileList']>([]);
-const loading = ref<boolean>(false);
-const previewVisible = ref<boolean>(false);
-const previewImage = ref<string>('');
-const previewTitle = ref<string>('');
+const fileList = ref([]);
+const loading = ref(false);
+const previewVisible = ref(false);
+const previewImage = ref('');
+const previewTitle = ref('');
 
 watch(
   () => props.value,
@@ -48,7 +40,7 @@ watch(
   { immediate: true }
 );
 
-const beforeUpload: UploadProps['beforeUpload'] = (file) => {
+const beforeUpload = (file) => {
   const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/gif' || file.type === 'image/webp';
   if (!isJpgOrPng) {
     message.error('You can only upload JPG/PNG/GIF/WEBP file!');
@@ -60,7 +52,7 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   return isJpgOrPng && isLt2M;
 };
 
-const customRequest = async (options: any) => {
+const customRequest = async (options) => {
   const { file, onSuccess, onError } = options;
   loading.value = true;
   try {
@@ -73,7 +65,7 @@ const customRequest = async (options: any) => {
        onError(new Error(result.message));
        message.error(result.message || 'Upload failed');
     }
-  } catch (err: any) {
+  } catch (err) {
     onError(err);
     message.error(err.message || 'Upload failed');
   } finally {
@@ -86,16 +78,16 @@ const handleCancel = () => {
   previewTitle.value = '';
 };
 
-const handlePreview = async (file: NonNullable<UploadProps['fileList']>[number]) => {
+const handlePreview = async (file) => {
   if (!file.url && !file.preview) {
-    file.preview = (await getBase64(file.originFileObj as File)) as string;
+    file.preview = await getBase64(file.originFileObj);
   }
   previewImage.value = file.url || file.preview || '';
   previewVisible.value = true;
   previewTitle.value = file.name || previewImage.value.substring(previewImage.value.lastIndexOf('/') + 1);
 };
 
-const handleChange: UploadProps['onChange'] = (info: UploadChangeParam) => {
+const handleChange = (info) => {
   fileList.value = info.fileList;
   
   if (info.file.status === 'removed') {
@@ -104,7 +96,7 @@ const handleChange: UploadProps['onChange'] = (info: UploadChangeParam) => {
   }
 };
 
-function getBase64(file: File) {
+function getBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);

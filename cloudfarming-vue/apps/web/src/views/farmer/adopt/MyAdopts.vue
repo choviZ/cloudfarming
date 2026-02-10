@@ -179,7 +179,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, reactive, onMounted, createVNode } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { InfoCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
@@ -190,21 +190,20 @@ import {
   onShelfAdoptItem, 
   offShelfAdoptItem, 
   deleteAdoptItem 
-} from '@cloudfarming/core'
-import type { AdoptItemResp, AdoptItemPageReq, AnimalCategoryResp } from '@cloudfarming/core'
+} from '@/api/adopt'
 
 const router = useRouter()
 
 // 状态定义
 const loading = ref(false)
-const dataSource = ref<AdoptItemResp[]>([])
-const categories = ref<AnimalCategoryResp[]>([])
+const dataSource = ref([])
+const categories = ref([])
 
 // 查询表单
 const searchForm = reactive({
-  animalCategory: undefined as string | undefined,
-  reviewStatus: undefined as number | undefined,
-  status: undefined as number | undefined,
+  animalCategory: undefined,
+  reviewStatus: undefined,
+  status: undefined,
   title: ''
 })
 
@@ -215,7 +214,7 @@ const pagination = reactive({
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条`
+  showTotal: (total) => `共 ${total} 条`
 })
 
 // 表格列定义
@@ -236,7 +235,7 @@ const columns = [
     title: '动物分类',
     dataIndex: 'animalCategory', // 实际展示时可能需要映射名称，但这里先展示 code，或者需要从 categories 匹配
     key: 'animalCategory',
-    customRender: ({ text }: { text: string }) => {
+    customRender: ({ text }) => {
       const cat = categories.value.find(c => c.code === text)
       return cat ? cat.name : text
     }
@@ -289,7 +288,7 @@ const fetchCategories = async () => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const req: AdoptItemPageReq = {
+    const req = {
       current: pagination.current,
       size: pagination.pageSize,
       animalCategory: searchForm.animalCategory,
@@ -329,14 +328,14 @@ const onReset = () => {
 }
 
 // 表格分页变化
-const handleTableChange = (pag: any) => {
+const handleTableChange = (pag) => {
   pagination.current = pag.current
   pagination.pageSize = pag.pageSize
   fetchData()
 }
 
 // 上架
-const handleOnShelf = async (record: AdoptItemResp) => {
+const handleOnShelf = async (record) => {
   try {
     const res = await onShelfAdoptItem(record.id)
     if (res.code === '0') {
@@ -351,7 +350,7 @@ const handleOnShelf = async (record: AdoptItemResp) => {
 }
 
 // 下架
-const handleOffShelf = async (record: AdoptItemResp) => {
+const handleOffShelf = async (record) => {
   try {
     const res = await offShelfAdoptItem(record.id)
     if (res.code === '0') {
@@ -366,7 +365,7 @@ const handleOffShelf = async (record: AdoptItemResp) => {
 }
 
 // 删除
-const handleDelete = async (record: AdoptItemResp) => {
+const handleDelete = async (record) => {
   try {
     const res = await deleteAdoptItem(record.id)
     if (res.code === '0') {
@@ -381,7 +380,7 @@ const handleDelete = async (record: AdoptItemResp) => {
 }
 
 // 编辑
-const handleEdit = (record: AdoptItemResp) => {
+const handleEdit = (record) => {
   // 如果是已上架状态，需要确认
   if (record.status === 1) {
     Modal.confirm({

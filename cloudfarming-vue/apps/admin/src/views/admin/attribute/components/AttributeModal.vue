@@ -31,23 +31,21 @@
   </a-modal>
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref, reactive, watch, computed } from 'vue';
-import type { FormInstance } from 'ant-design-vue';
 import { message } from 'ant-design-vue';
-import { createAttribute, updateAttribute } from '@cloudfarming/core/api/attribute';
-import type { AttributeRespDTO } from '@cloudfarming/core/api/attribute';
+import { createAttribute, updateAttribute } from '@/api/attribute';
 
-const props = defineProps<{
-  open: boolean;
-  editData?: AttributeRespDTO | null;
-  categoryId: string;
-}>();
+const props = defineProps({
+  open: { type: Boolean, required: true },
+  editData: { type: Object, default: null },
+  categoryId: { type: String, required: true }
+});
 
 const emit = defineEmits(['update:open', 'success']);
 
 const loading = ref(false);
-const formRef = ref<FormInstance>();
+const formRef = ref();
 
 const formState = reactive({
   name: '',

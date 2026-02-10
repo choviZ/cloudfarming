@@ -62,22 +62,21 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { InfoCircleOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
-import type { ReceiveAddressResp } from '@cloudfarming/core';
 import { 
   getCurrentUserReceiveAddresses, 
   deleteReceiveAddress, 
   setDefaultReceiveAddress 
-} from '@cloudfarming/core';
+} from '@/api/address';
 import AddressModal from './components/AddressModal.vue';
 
 const loading = ref(false);
-const list = ref<ReceiveAddressResp[]>([]);
+const list = ref([]);
 const modalVisible = ref(false);
-const currentEdit = ref<ReceiveAddressResp | null>(null);
+const currentEdit = ref(null);
 
 const columns = [
   {
@@ -134,12 +133,12 @@ const handleAdd = () => {
   modalVisible.value = true;
 };
 
-const handleEdit = (record: ReceiveAddressResp) => {
+const handleEdit = (record) => {
   currentEdit.value = record;
   modalVisible.value = true;
 };
 
-const handleDelete = async (id: number) => {
+const handleDelete = async (id) => {
   try {
     const res = await deleteReceiveAddress(id);
     if (res.code === '0') {
@@ -153,7 +152,7 @@ const handleDelete = async (id: number) => {
   }
 };
 
-const handleSetDefault = async (record: ReceiveAddressResp) => {
+const handleSetDefault = async (record) => {
   try {
     const res = await setDefaultReceiveAddress({ id: record.id });
     if (res.code === '0') {

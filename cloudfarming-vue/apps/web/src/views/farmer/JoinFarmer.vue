@@ -83,12 +83,11 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { onMounted, ref } from 'vue'
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue'
-import type { FarmerApplyReqDO, FarmerReviewRespDTO } from '@/types/farmer.ts'
-import { getFarmerReviewStatus, submitFarmerApply } from '@/api/farmer.ts'
-import { handleResp } from '@/utils/respUtil.ts'
+import { getFarmerReviewStatus, submitFarmerApply } from '@/api/farmer.js'
+import { handleResp } from '@/utils/respUtil.js'
 import ReviewState from '@/views/farmer/components/ReviewState.vue'
 
 const rules = {
@@ -105,7 +104,7 @@ const rules = {
 }
 
 
-const applyFarmerReq = ref<FarmerApplyReqDO>({
+const applyFarmerReq = ref({
   realName: '',
   idCard: '',
   houseAddress: '',
@@ -124,11 +123,11 @@ const submitApply = async () => {
   handleResp(res, '审核提交成功', '提交失败')
 }
 
-const imageUrl = ref<string>()
-const loading = ref<boolean>(false)
+const imageUrl = ref()
+const loading = ref(false)
 
 // 步骤条
-const current = ref<number>(0)
+const current = ref(0)
 const next = () => {
   current.value++
 }
@@ -146,7 +145,7 @@ const steps = [
 const items = steps.map(item => ({ key: item.title, title: item.title }))
 
 // 审核状态
-const reviewStatus = ref<FarmerReviewRespDTO>()
+const reviewStatus = ref()
 // 重新申请
 const reApply = () => {
   reviewStatus.value = undefined

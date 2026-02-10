@@ -66,23 +66,18 @@
   </a-modal>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, reactive, computed, watch } from 'vue';
-import type { Rule } from 'ant-design-vue/es/form';
-import type { ReceiveAddressAddReq, ReceiveAddressUpdateReq, ReceiveAddressResp } from '@cloudfarming/core';
-import { addReceiveAddress, updateReceiveAddress } from '@cloudfarming/core';
+import { addReceiveAddress, updateReceiveAddress } from '@/api/address';
 import { message } from 'ant-design-vue';
 import { regionData } from 'element-china-area-data';
 
-const props = defineProps<{
-  open: boolean;
-  editData?: ReceiveAddressResp | null;
-}>();
+const props = defineProps({
+  open: { type: Boolean, required: true },
+  editData: { type: Object, default: null },
+});
 
-const emit = defineEmits<{
-  (e: 'update:open', visible: boolean): void;
-  (e: 'success'): void;
-}>();
+const emit = defineEmits(['update:open', 'success']);
 
 const loading = ref(false);
 const formRef = ref();
@@ -92,16 +87,7 @@ const predefinedTags = ['家', '公司', '学校'];
 // 使用 element-china-area-data 的数据
 const areaOptions = regionData;
 
-interface FormState {
-  receiverName: string;
-  receiverPhone: string;
-  area: string[];
-  detailAddress: string;
-  isDefault: number;
-  remark: string;
-}
-
-const formState = reactive<FormState>({
+const formState = reactive({
   receiverName: '',
   receiverPhone: '',
   area: [],
@@ -112,7 +98,7 @@ const formState = reactive<FormState>({
 
 const isDefaultBool = computed({
   get: () => formState.isDefault === 1,
-  set: (val: boolean) => {
+  set: (val) => {
     formState.isDefault = val ? 1 : 0;
   },
 });
@@ -166,7 +152,7 @@ function resetForm() {
   customTagVisible.value = false;
 }
 
-const rules: Record<string, Rule[]> = {
+const rules = {
   receiverName: [{ required: true, message: '请输入收货人姓名', trigger: 'blur' }],
   receiverPhone: [
     { required: true, message: '请输入手机号码', trigger: 'blur' },
@@ -217,13 +203,13 @@ const handleSubmit = async () => {
 
     let res;
     if (isEdit.value && props.editData) {
-      const updateData: ReceiveAddressUpdateReq = {
+      const updateData = {
         id: props.editData.id,
         ...commonData,
       };
       res = await updateReceiveAddress(updateData);
     } else {
-      const addData: ReceiveAddressAddReq = {
+      const addData = {
         ...commonData,
       };
       res = await addReceiveAddress(addData);

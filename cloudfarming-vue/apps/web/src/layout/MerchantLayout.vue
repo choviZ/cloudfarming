@@ -75,7 +75,7 @@
   </a-layout>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 import {
   DashboardOutlined,
@@ -93,9 +93,9 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 // 控制侧边栏折叠
-const collapsed = ref<boolean>(false)
+const collapsed = ref(false)
 // 当前选中的菜单项
-const selectedKeys = ref<string[]>(['0'])
+const selectedKeys = ref(['0'])
 
 </script>
 

@@ -75,7 +75,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/useUserStore';
@@ -83,7 +83,7 @@ import {
   EnvironmentOutlined, 
   RightOutlined 
 } from '@ant-design/icons-vue';
-import { getCurrentUserDefaultReceiveAddress } from '@cloudfarming/core/api/address/recieveAddress';
+import { getCurrentUserDefaultReceiveAddress } from '@/api/address';
 
 const router = useRouter();
 const userStore = useUserStore();

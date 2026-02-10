@@ -2,7 +2,7 @@
   <router-view />
 </template>
 <script setup lang="ts">
-import { useUserStore } from '@/stores/useUserStore.ts'
+import { useUserStore } from '@/stores/useUserStore.js'
 import { onMounted } from 'vue'
 
 const userStore = useUserStore()

@@ -61,22 +61,17 @@
   </a-card>
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
-import type { UploadFile, UploadProps } from 'ant-design-vue'
-import type { FormInstance } from 'ant-design-vue'
-import { getCategoryTree } from '@cloudfarming/core'
-import type { CategoryRespDTO } from '@cloudfarming/core'
+import { getCategoryTree } from '@/api/category'
 
 // 定义组件的 emits
-const emit = defineEmits<{
-  categoryChange: [categoryId: string]
-}>()
+const emit = defineEmits(['categoryChange'])
 
 // 表单ref
-const formRef = ref<FormInstance>()
+const formRef = ref()
 
 // 加载状态
 const loading = ref(false)
@@ -89,10 +84,10 @@ const formData = reactive({
 })
 
 // 分类树数据
-const categoryTreeData = ref<Array<CategoryRespDTO & { disabled?: boolean }>>([])
+const categoryTreeData = ref([])
 
 // 上传文件列表
-const fileList = ref<UploadFile[]>([])
+const fileList = ref([])
 
 // 预览状态
 const previewVisible = ref(false)
@@ -110,7 +105,7 @@ const formRules = {
 /**
  * 处理分类树数据，标记非叶子节点为禁用状态
  */
-const processCategoryTree = (categories: CategoryRespDTO[]): Array<CategoryRespDTO & { disabled?: boolean }> => {
+const processCategoryTree = (categories) => {
   return categories.map(category => ({
     ...category,
     disabled: category.children && category.children.length > 0,
@@ -136,14 +131,14 @@ const loadCategoryTree = async () => {
 /**
  * 分类变化处理
  */
-const handleCategoryChange = (categoryId: string) => {
+const handleCategoryChange = (categoryId) => {
   emit('categoryChange', categoryId)
 }
 
 /**
  * 上传前校验
  */
-const handleBeforeUpload: UploadProps['beforeUpload'] = (file) => {
+const handleBeforeUpload = (file) => {
   const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
   if (!isJpgOrPng) {
     message.error('只能上传JPG/PNG格式的图片')
@@ -160,11 +155,11 @@ const handleBeforeUpload: UploadProps['beforeUpload'] = (file) => {
 /**
  * 自定义上传请求（模拟上传）
  */
-const handleCustomRequest: UploadProps['customRequest'] = ({ file, onSuccess }) => {
+const handleCustomRequest = ({ file, onSuccess }) => {
   // 这里模拟上传，实际应该调用上传API
   setTimeout(() => {
     // 模拟返回URL
-    const mockUrl = URL.createObjectURL(file as File)
+    const mockUrl = URL.createObjectURL(file)
     onSuccess?.({ url: mockUrl })
   }, 1000)
 }
@@ -172,7 +167,7 @@ const handleCustomRequest: UploadProps['customRequest'] = ({ file, onSuccess }) 
 /**
  * 预览图片
  */
-const handlePreview: UploadProps['onPreview'] = async (file) => {
+const handlePreview = async (file) => {
   previewUrl.value = file.url || (file.originFileObj && URL.createObjectURL(file.originFileObj)) || ''
   previewVisible.value = true
 }
@@ -180,20 +175,20 @@ const handlePreview: UploadProps['onPreview'] = async (file) => {
 /**
  * 预览可见性变化
  */
-const handleVisibleChange = (visible: boolean) => {
+const handleVisibleChange = (visible) => {
   previewVisible.value = visible
 }
 
 /**
  * 上传变化处理
  */
-const handleUploadChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
+const handleUploadChange = ({ fileList: newFileList }) => {
   fileList.value = newFileList
 
   // 提取所有已上传成功的图片URL，用逗号连接
   const imageUrls = newFileList
     .filter(file => file.status === 'done' && file.url)
-    .map(file => file.url as string)
+    .map(file => file.url)
     .join(',')
 
   formData.image = imageUrls
@@ -202,7 +197,7 @@ const handleUploadChange: UploadProps['onChange'] = ({ fileList: newFileList }) 
 /**
  * 字段失焦处理
  */
-const handleFieldBlur = async (field: keyof typeof formData) => {
+const handleFieldBlur = async (field) => {
   try {
     await formRef.value?.validateFields([field])
   } catch {
@@ -213,7 +208,7 @@ const handleFieldBlur = async (field: keyof typeof formData) => {
 /**
  * 验证整个表单
  */
-const validateForm = async (): Promise<boolean> => {
+const validateForm = async () => {
   try {
     await formRef.value?.validate()
     return true

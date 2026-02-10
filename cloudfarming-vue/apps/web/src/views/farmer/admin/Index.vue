@@ -27,7 +27,7 @@
       </a-form-item>
 
       <a-form-item label="商品主图">
-        <image-upload v-model:value="spuCover" :biz-code="UploadType.PRODUCT_SPU_COVER"/>
+        <image-upload v-model:value="spuCover" biz-code="PRODUCT_SPU_COVER"/>
       </a-form-item>
 
       <a-divider />
@@ -94,27 +94,22 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, ref } from 'vue'
 import CategorySelect from './components/CategorySelect.vue'
 import AttributeSelect from './components/AttributeSelect.vue'
 import DynamicAttribute from './components/DynamicAttributeList.vue'
 import SkuTable from './components/SkuTable.vue'
 import {
-  getAttributesByCategoryId,
-  type AttributeRespDTO,
+  getAttributesByCategoryId
+} from '@/api/attribute'
+import {
   createSpuAttrValue,
-  saveSpu,
-  createSku,
-  type SkuItemDTO,
-  type SaleAttrDTO,
-  UploadType
-} from '@cloudfarming/core'
-import type {
-  BaseAttributeItem,
-  SaleAttributeItem,
-  SKU
-} from '@/types'
+  saveSpu
+} from '@/api/spu'
+import {
+  createSku
+} from '@/api/sku'
 import ImageUpload from "@/components/Upload/ImageUpload.vue";
 import { message } from 'ant-design-vue'
 
@@ -126,7 +121,7 @@ const saving = ref(false)
 /**
  * 已选择的分类ID
  */
-const selectedCategoryId = ref<string>('')
+const selectedCategoryId = ref('')
 
 /**
  * 商品标题
@@ -141,23 +136,23 @@ const spuCover = ref('')
 /**
  * 当前分类下的所有可用属性列表
  */
-const attributeList = ref<AttributeRespDTO[]>([])
+const attributeList = ref([])
 
 /**
  * 已选择的基本属性列表（类型0）
  */
-const selectedBaseAttributes = ref<BaseAttributeItem[]>([])
+const selectedBaseAttributes = ref([])
 
 /**
  * 已选择的销售属性列表（类型1）
  */
-const selectedSaleAttributes = ref<SaleAttributeItem[]>([])
+const selectedSaleAttributes = ref([])
 
 /**
  * SKU列表 - 存储从SkuTable组件接收的所有SKU数据
  * 当用户修改库存或价格时，SkuTable会emit新的数据
  */
-const skuList = ref<SKU[]>([])
+const skuList = ref([])
 
 /**
  * 销售属性转换
@@ -179,7 +174,7 @@ const saleAttributesForTable = computed(() =>
  * 3. 清空已选择的属性和SKU数据
  * @param categoryId - 选中的分类ID
  */
-const handleCategoryChange = async (categoryId: string) => {
+const handleCategoryChange = async (categoryId) => {
   selectedCategoryId.value = categoryId
   await loadAttributes(categoryId)
   selectedBaseAttributes.value = []
@@ -191,7 +186,7 @@ const handleCategoryChange = async (categoryId: string) => {
  * 加载指定分类下的属性列表
  * @param categoryId - 分类ID
  */
-const loadAttributes = async (categoryId: string) => {
+const loadAttributes = async (categoryId) => {
   if (!categoryId) {
     attributeList.value = []
     return
@@ -205,7 +200,7 @@ const loadAttributes = async (categoryId: string) => {
  * 检查是否已存在，避免重复添加
  * @param id - 要添加的属性ID
  */
-const addBaseAttribute = (id: string) => {
+const addBaseAttribute = (id) => {
   if (selectedBaseAttributes.value.some(a => a.key === id)) return
   const attr = attributeList.value.find(a => String(a.id) === id)
   if (!attr) return
@@ -221,7 +216,7 @@ const addBaseAttribute = (id: string) => {
  * 检查是否已存在，避免重复添加
  * @param id - 要添加的属性ID
  */
-const addSaleAttribute = (id: string) => {
+const addSaleAttribute = (id) => {
   if (selectedSaleAttributes.value.some(a => a.key === id)) return
   const attr = attributeList.value.find(a => String(a.id) === id)
   if (!attr) return
@@ -237,7 +232,7 @@ const addSaleAttribute = (id: string) => {
  * @param id - 要移除的属性ID
  * @param type - 属性类型（0=基本属性，1=销售属性）
  */
-const removeAttribute = (id: string, type: number) => {
+const removeAttribute = (id, type) => {
   if (type === 0) {
     selectedBaseAttributes.value =
       selectedBaseAttributes.value.filter(a => a.key !== id)
@@ -252,7 +247,7 @@ const removeAttribute = (id: string, type: number) => {
  * 当用户在SKU表格中修改库存或价格时触发
  * @param skus - 最新的SKU列表
  */
-const handleSkuChange = (skus: SKU[]) => {
+const handleSkuChange = (skus) => {
   skuList.value = skus
 }
 
@@ -260,8 +255,8 @@ const handleSkuChange = (skus: SKU[]) => {
  * 更新商品标题
  * @param e - 输入事件
  */
-const updateSpuTitle = (e: Event) => {
-  const target = e.target as HTMLInputElement
+const updateSpuTitle = (e) => {
+  const target = e.target
   spuTitle.value = target.value
 }
 
@@ -321,8 +316,8 @@ const handleSave = async () => {
 
     // 第三步：创建SKU
     // 3.1 收集所有销售属性值（去重）
-    const allSaleAttrs: SaleAttrDTO[] = []
-    const attrValueMap: Record<string, boolean> = {}
+    const allSaleAttrs = []
+    const attrValueMap = {}
     skuList.value.forEach(sku => {
       sku.specs.forEach(spec => {
         const key = `${spec.attrId}_${spec.value}`
@@ -339,7 +334,7 @@ const handleSave = async () => {
     })
 
     // 3.2 构建SKU列表数据
-    const skuItemsToCreate: SkuItemDTO[] = skuList.value.map(sku => ({
+    const skuItemsToCreate = skuList.value.map(sku => ({
       price: sku.price,
       stock: sku.stock,
       image: '',

@@ -30,35 +30,23 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 // 组件通信
 import { ref } from 'vue'
 
-// 动态区域已添加的属性
-interface Attribute {
-  key: string;
-  label: string;
-  value?: string;
-  // 销售属性：values（可选，因为基本属性没有这个字段）
-  values?: string[]
-}
-
-interface Props {
-  attributes: Attribute[],
-  type: number
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  attributes: () => []
+const props = defineProps({
+  attributes: {
+    type: Array,
+    default: () => []
+  },
+  type: Number
 })
 
-const emit = defineEmits<{
-  (e: 'removeAttribute', key: string, type: number): void
-}>()
+const emit = defineEmits(['removeAttribute'])
 
-const value = ref<string>('')
+const value = ref('')
 
-const removeAttribute = (id: string) => {
+const removeAttribute = (id) => {
   emit('removeAttribute', id, props.type)
 }
 </script>

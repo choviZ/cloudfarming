@@ -14,6 +14,7 @@ import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuDetailRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
 import com.vv.cloudfarming.product.service.SpuService;
+import com.vv.cloudfarming.user.dto.req.UpdateReviewStatusReqDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,7 @@ public class SpuController {
     private final SpuService spuService;
 
     // spu相关接口
-    @Operation(summary = "创建或修改SPU")
+    @Operation(summary = "创建")
     @SaCheckOr(
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
@@ -69,8 +70,8 @@ public class SpuController {
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
     @PostMapping("/api/spu/status")
-    public Result<Void> updateSpuStatus(@RequestParam("id") Long id, @RequestParam("status") Integer status) {
-        spuService.updateSpuStatus(id, status);
+    public Result<Void> updateSpuStatus(@RequestBody UpdateReviewStatusReqDTO requestParam) {
+        spuService.updateSpuStatus(requestParam.getId(), requestParam.getStatus());
         return Results.success();
     }
 

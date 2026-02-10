@@ -45,35 +45,29 @@
   </a-modal>
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   createCategory,
   updateCategory
-} from '@cloudfarming/core'
-import type {
-  CategoryRespDTO,
-  CategoryCreateReqDTO,
-  CategoryUpdateReqDTO
-} from '@cloudfarming/core'
-import type { FormInstance } from 'ant-design-vue'
+} from '@/api/category'
 
 // 定义组件的 props
-const props = defineProps<{
-  open: boolean
-  mode: 'create' | 'create-child' | 'edit'
-  initialData?: CategoryRespDTO | null
-  categoryTree: CategoryRespDTO[]
-}>()
+const props = defineProps({
+  open: { type: Boolean, required: true },
+  mode: { type: String, required: true },
+  initialData: { type: Object, default: null },
+  categoryTree: { type: Array, required: true }
+})
 
 // 定义组件的 emits
 const emit = defineEmits(['update:open', 'success'])
 
 const modalLoading = ref(false)
-const formRef = ref<FormInstance>()
+const formRef = ref()
 
-const formData = reactive<Partial<CategoryCreateReqDTO & CategoryUpdateReqDTO>>({
+const formData = reactive({
   id: undefined,
   name: '',
   parentId: null,
@@ -127,16 +121,16 @@ const handleModalOk = async () => {
     modalLoading.value = true
 
     if (props.mode === 'edit') {
-      await updateCategory(formData as CategoryUpdateReqDTO)
+      await updateCategory(formData)
       message.success('更新成功')
     } else {
-      await createCategory(formData as CategoryCreateReqDTO)
+      await createCategory(formData)
       message.success('创建成功')
     }
 
     emit('success')
     emit('update:open', false)
-  } catch (error: any) {
+  } catch (error) {
     if (error.errorFields) {
       message.error('请检查表单填写是否正确')
     } else {
@@ -147,7 +141,7 @@ const handleModalOk = async () => {
   }
 }
 
-const handleUpdateOpen = (value: boolean) => {
+const handleUpdateOpen = (value) => {
   emit('update:open', value)
 }
 

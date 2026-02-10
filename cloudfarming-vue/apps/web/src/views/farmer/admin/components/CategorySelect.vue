@@ -10,17 +10,18 @@
 <!--  </a-form-item>-->
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref, watch } from 'vue'
-import type { TreeSelectProps } from 'ant-design-vue'
-import { getCategoryTree, type CategoryRespDTO } from '@cloudfarming/core'
+import { getCategoryTree } from '@/api/category'
 
 // ===== v-model 支持 =====
-const props = defineProps<{modelValue?: string}>()
+const props = defineProps({
+  modelValue: String
+})
 
-const emit = defineEmits<{ (e: 'update:modelValue', val?: string): void }>()
+const emit = defineEmits(['update:modelValue'])
 
-const value = ref<string | undefined>(props.modelValue)
+const value = ref(props.modelValue)
 
 watch(() => props.modelValue, v => {
   value.value = v
@@ -31,7 +32,7 @@ watch(value, v => {
 })
 
 // ===== Tree 数据 =====
-const treeData = ref<TreeSelectProps['treeData']>([])
+const treeData = ref([])
 
 const initTreeData = async () => {
   const res = await getCategoryTree()
@@ -40,24 +41,14 @@ const initTreeData = async () => {
 
 initTreeData()
 
-// ===== DTO → TreeSelect =====
-type TreeNode = {
-  label: string
-  value: string
-  key: string
-  disabled?: boolean
-  children?: TreeNode[]
-}
 /**
  * 将分类数据转换为树形结构
  * @param data
  */
-const transformCategoryToTree = (
-  data: CategoryRespDTO[]
-): TreeSelectProps['treeData'] => {
+const transformCategoryToTree = (data) => {
   if (!data?.length) return []
 
-  const convert = (node: CategoryRespDTO): TreeNode => {
+  const convert = (node) => {
     const hasChildren = !!node.children && node.children.length > 0
     return {
       label: node.name,

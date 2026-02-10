@@ -118,29 +118,27 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
-import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { createAdoptItem, listAnimalCategories, getAdoptItemDetail, updateAdoptItem } from '@cloudfarming/core'
-import type { AdoptItemCreateReq, AnimalCategoryResp } from '@cloudfarming/core'
+import { createAdoptItem, listAnimalCategories, getAdoptItemDetail, updateAdoptItem } from '@/api/adopt'
 import { useRoute, useRouter } from 'vue-router'
 import ImageUpload from "@/components/Upload/ImageUpload.vue";
 
 const route = useRoute()
 const router = useRouter()
 const isEdit = computed(() => !!route.query.id)
-const adoptId = computed(() => route.query.id as string)
+const adoptId = computed(() => route.query.id)
 
 // 状态管理
 const loading = ref(false)
 const loadingCategories = ref(false)
 const loadingDetail = ref(false)
-const categories = ref<AnimalCategoryResp[]>([])
-const formRef = ref<FormInstance>()
+const categories = ref([])
+const formRef = ref()
 
 // 表单数据
-const formState = reactive<AdoptItemCreateReq>({
+const formState = reactive({
   title: '',
   animalCategory: '',
   coverImage: '', // 默认占位图，因接口必填
@@ -151,7 +149,7 @@ const formState = reactive<AdoptItemCreateReq>({
 })
 
 // 校验规则
-const rules: Record<string, Rule[]> = {
+const rules = {
   title: [
     { required: true, message: '请输入认养标题', trigger: 'blur' },
     { max: 100, message: '标题不能超过100字', trigger: 'blur' }
@@ -223,7 +221,7 @@ const fetchDetail = async () => {
 }
 
 // 提交表单
-const onSubmit = async (values: AdoptItemCreateReq) => {
+const onSubmit = async (values) => {
   loading.value = true
   try {
     let res

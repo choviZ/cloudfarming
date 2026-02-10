@@ -68,7 +68,7 @@ public class FarmerServiceImpl extends ServiceImpl<FarmerMapper, FarmerDO> imple
     @Override
     public void updateReviewState(UpdateReviewStatusReqDTO requestParam) {
         String remark = requestParam.getRemark();
-        ReviewStatusEnum statusEnum = ReviewStatusEnum.getByDesc(requestParam.getStatus());
+        ReviewStatusEnum statusEnum = ReviewStatusEnum.getByStatus(requestParam.getStatus());
         if (statusEnum == null){
             throw new ClientException("不存在的状态");
         }

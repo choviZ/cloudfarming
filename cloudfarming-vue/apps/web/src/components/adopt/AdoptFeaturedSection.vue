@@ -49,16 +49,15 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { FireFilled, RightOutlined } from '@ant-design/icons-vue';
-import { pageAdoptItems } from '@cloudfarming/core';
-import type { AdoptItemResp } from '@cloudfarming/core';
+import { pageAdoptItems } from '@/api/adopt';
 
 const router = useRouter();
 const loading = ref(false);
-const adoptItems = ref<AdoptItemResp[]>([]);
+const adoptItems = ref([]);
 
 const fetchFeaturedItems = async () => {
   loading.value = true;
@@ -84,16 +83,16 @@ const goToAdoptList = () => {
   router.push('/adopt/list');
 };
 
-const goToDetail = (id: string) => {
+const goToDetail = (id) => {
   router.push(`/adopt/detail/${id}`);
 };
 
-const getStatusText = (status: number) => {
+const getStatusText = (status) => {
   // 简单映射，实际应根据业务规则
   return status === 1 ? '可认养' : '已结束';
 };
 
-const getStatusClass = (status: number) => {
+const getStatusClass = (status) => {
   return status === 1 ? 'status-active' : 'status-inactive';
 };
 

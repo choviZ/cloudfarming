@@ -97,10 +97,9 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import AddressSelector from '../../components/address/AddressSelector.vue';
-import { getAdoptItemDetail } from '@cloudfarming/core/api/adopt';
-import { getSpuDetail } from '@cloudfarming/core/api/spu';
-import { createOrder } from '@cloudfarming/core/api/order/order.ts';
-import { ORDER_TYPE } from '@cloudfarming/core/api/order/types.ts';
+import { getAdoptItemDetail } from '@/api/adopt';
+import { getSpuDetail } from '@/api/spu';
+import { createOrder, ORDER_TYPE } from '@/api/order';
 
 const route = useRoute();
 const router = useRouter();
@@ -138,7 +137,7 @@ const fetchDetail = async () => {
       if (!id) throw new Error('缺少参数: id');
       
       const res = await getAdoptItemDetail(id);
-      if (res.code === '0' && res.data) {
+      if (res.code == '0' && res.data) {
         const data = res.data;
         displayItem.value = {
           id: data.id,

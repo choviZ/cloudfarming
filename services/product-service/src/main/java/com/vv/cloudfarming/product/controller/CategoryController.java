@@ -52,8 +52,8 @@ public class CategoryController {
      */
     @Operation(summary = "删除商品分类")
     @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @GetMapping("/api/category/delete")
-    public Result<Boolean> deleteCategory(@RequestParam @NotNull Long id) {
+    @PostMapping("/api/category/delete")
+    public Result<Boolean> deleteCategory(@RequestBody @NotNull Long id) {
         return Results.success(categoryService.deleteCategory(id));
     }
 

@@ -104,7 +104,7 @@
             v-model:current="pagination.current"
             v-model:page-size="pagination.size"
             :total="total"
-            :show-total="(total: number) => `共 ${total} 条`"
+            :show-total="(total) => `共 ${total} 条`"
             show-size-changer
             @change="handlePageChange"
             @showSizeChange="handleSizeChange"
@@ -115,16 +115,15 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { pageAdoptItems } from '@cloudfarming/core';
-import type { AdoptItemResp, AdoptItemPageReq } from '@cloudfarming/core';
+import { pageAdoptItems } from '@/api/adopt';
 import { message } from 'ant-design-vue';
 
 const router = useRouter();
 const loading = ref(false);
-const list = ref<AdoptItemResp[]>([]);
+const list = ref([]);
 const total = ref(0);
 
 const pagination = reactive({
@@ -134,13 +133,13 @@ const pagination = reactive({
 
 const searchParams = reactive({
   title: '',
-  status: undefined as number | undefined
+  status: undefined
 });
 
 const fetchData = async () => {
   loading.value = true;
   try {
-    const req: AdoptItemPageReq = {
+    const req = {
       current: pagination.current,
       size: pagination.size,
       title: searchParams.title,
@@ -166,23 +165,23 @@ const handleSearch = () => {
   fetchData();
 };
 
-const handleFilterChange = (status: number | undefined) => {
+const handleFilterChange = (status) => {
   searchParams.status = status;
   handleSearch();
 };
 
-const handlePageChange = (page: number) => {
+const handlePageChange = (page) => {
   pagination.current = page;
   fetchData();
 };
 
-const handleSizeChange = (current: number, size: number) => {
+const handleSizeChange = (current, size) => {
   pagination.current = 1;
   pagination.size = size;
   fetchData();
 };
 
-const goToDetail = (id: string) => {
+const goToDetail = (id) => {
   router.push(`/adopt/detail/${id}`);
 };
 

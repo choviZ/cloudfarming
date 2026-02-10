@@ -36,7 +36,7 @@
             <!-- 
             <span>热搜：</span>
             <a href="#" @click.prevent="quickSearch('新鲜采摘')">新鲜采摘</a>
-             -->
+            -->
           </div>
         </div>
 
@@ -157,7 +157,7 @@
             v-model:current="pagination.current"
             v-model:page-size="pagination.size"
             :total="total"
-            :show-total="(total: number) => `共 ${total} 条`"
+            :show-total="(total) => `共 ${total} 条`"
             show-size-changer
             @change="handlePageChange"
             @showSizeChange="handleSizeChange"
@@ -168,20 +168,18 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
-import { listSpuByPage } from '@cloudfarming/core/api/spu';
-import type { SpuRespDTO, SpuPageQueryReqDTO } from '@cloudfarming/core/api/spu';
-import { getTopLevelCategories } from '@cloudfarming/core/api/category';
-import type { CategoryRespDTO } from '@cloudfarming/core/api/category';
+import { listSpuByPage } from '@/api/spu';
+import { getTopLevelCategories } from '@/api/category';
 
 const router = useRouter();
 const loading = ref(false);
-const list = ref<SpuRespDTO[]>([]);
+const list = ref([]);
 const total = ref(0);
-const categoryList = ref<CategoryRespDTO[]>([]);
+const categoryList = ref([]);
 
 const pagination = reactive({
   current: 1,
@@ -197,13 +195,13 @@ const searchParams = reactive({
 // Mock index for badge (in real app, use logic)
 const index = 0; // Placeholder
 
-const getMainImage = (imgStr: string) => {
+const getMainImage = (imgStr) => {
   if (!imgStr) return 'https://via.placeholder.com/400x400?text=No+Image';
   // Trim whitespace and get first image
   return imgStr.trim().split(',')[0].trim();
 };
 
-const getPrice = (item: SpuRespDTO) => {
+const getPrice = (item) => {
   if (item.priceSummary) {
     return item.priceSummary.minPrice.toFixed(2);
   }
@@ -221,7 +219,7 @@ const fetchCategories = async () => {
   }
 };
 
-const handleCategoryClick = (id: string) => {
+const handleCategoryClick = (id) => {
   searchParams.categoryId = id;
   // Reset to first page when filtering
   pagination.current = 1;
@@ -231,7 +229,7 @@ const handleCategoryClick = (id: string) => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const req: SpuPageQueryReqDTO = {
+    const req = {
       current: pagination.current,
       size: pagination.size,
       spuName: searchParams.spuName,
@@ -259,31 +257,31 @@ const handleSearch = () => {
   fetchData();
 };
 
-const quickSearch = (keyword: string) => {
+const quickSearch = (keyword) => {
   searchParams.spuName = keyword;
   handleSearch();
 };
 
-const handlePageChange = (page: number) => {
+const handlePageChange = (page) => {
   pagination.current = page;
   fetchData();
 };
 
-const handleSizeChange = (current: number, size: number) => {
+const handleSizeChange = (current, size) => {
   pagination.current = 1;
   pagination.size = size;
   fetchData();
 };
 
-const goToDetail = (id: number) => {
+const goToDetail = (id) => {
   router.push(`/product/${id}`);
 };
 
-const toggleFav = (id: number) => {
+const toggleFav = (id) => {
   message.success('收藏成功');
 };
 
-const addToCart = (item: SpuRespDTO) => {
+const addToCart = (item) => {
   message.success(`已将 ${item.title} 加入购物车`);
   // Implement cart logic
 };

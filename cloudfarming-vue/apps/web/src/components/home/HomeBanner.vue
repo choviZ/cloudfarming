@@ -19,12 +19,11 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { getShowAdverts } from '@/api/advert';
-import type { AdvertRespDTO } from '@/types/advert';
 
-const adverts = ref<AdvertRespDTO[]>([]);
+const adverts = ref([]);
 const loading = ref(false);
 
 const fetchAdverts = async () => {

@@ -12,16 +12,16 @@
         <template v-if="column.key === 'stock'">
           <a-input-number
             :min="0"
-            :value="getStock(record.__skuKey__ as string)"
-            @change="(val: number | null) => updateStock(record.__skuKey__ as string, val)"
+            :value="getStock(record.__skuKey__)"
+            @change="(val) => updateStock(record.__skuKey__, val)"
             style="width: 120px"
           />
         </template>
         <template v-else-if="column.key === 'price'">
           <a-input-number
             :min="0"
-            :value="getPrice(record.__skuKey__ as string)"
-            @change="(val: number | null) => updatePrice(record.__skuKey__ as string, val)"
+            :value="getPrice(record.__skuKey__)"
+            @change="(val) => updatePrice(record.__skuKey__, val)"
             style="width: 120px"
             :precision="2"
           />
@@ -31,25 +31,21 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, ref, watch } from 'vue'
-import type { TableColumnsType } from 'ant-design-vue'
-import type { SaleAttribute, SpecItem, SKU } from '@/types'
 
 /**
  * 组件Props - 接收父组件传入的销售属性配置
  */
-const props = defineProps<{
-  saleAttributes: SaleAttribute[]
-}>()
+const props = defineProps({
+  saleAttributes: Array
+})
 
 /**
  * 组件事件 - 当SKU数据发生变化时通知父组件
  * @param skus - 最新的SKU列表，包含所有规格组合的价格和库存
  */
-const emit = defineEmits<{
-  (e: 'change', skus: SKU[]): void
-}>()
+const emit = defineEmits(['change'])
 
 /**
  * 生成SKU的唯一标识键
@@ -57,7 +53,7 @@ const emit = defineEmits<{
  * 例如: "1:红色|2:S"
  * 用于在不同地方唯一标识一个SKU组合
  */
-function generateSkuKey(specs: SpecItem[]): string {
+function generateSkuKey(specs) {
   return specs.map(s => `${s.attrId}:${s.value}`).join('|')
 }
 
@@ -66,11 +62,11 @@ function generateSkuKey(specs: SpecItem[]): string {
  * 将多个数组的所有可能组合生成出来
  * 例如: [['红色','蓝色'], ['S','M']] -> [['红色','S'], ['红色','M'], ['蓝色','S'], ['蓝色','M']]
  */
-function cartesian<T>(list: T[][]): T[][] {
+function cartesian(list) {
   if (!list || list.length === 0) return []
   return list.reduce(
     (acc, curr) => acc.flatMap(a => curr.map(c => [...a, c])),
-    [[]] as T[][]
+    [[]]
   )
 }
 
@@ -80,23 +76,23 @@ function cartesian<T>(list: T[][]): T[][] {
  * value: 库存数量
  * 使用Map而非数组，便于通过key快速查找和更新
  */
-const stockMap = ref(new Map<string, number>())
+const stockMap = ref(new Map())
 
 /**
  * 价格数据映射
  * key: SKU唯一标识键
  * value: 价格
  */
-const priceMap = ref(new Map<string, number>())
+const priceMap = ref(new Map())
 
 /**
  * 从Map中安全获取值
  */
-function getStock(key: string): number {
+function getStock(key) {
   return stockMap.value.get(key) ?? 0
 }
 
-function getPrice(key: string): number {
+function getPrice(key) {
   return priceMap.value.get(key) ?? 0
 }
 
@@ -109,7 +105,7 @@ function getPrice(key: string): number {
  */
 const skuList = computed(() => {
   const attrs = props.saleAttributes
-  if (attrs.length === 0) return []
+  if (!attrs || attrs.length === 0) return []
 
   // 将每个属性的值转换为 SpecItem 数组
   const groups = attrs.map(attr =>
@@ -145,7 +141,7 @@ const skuList = computed(() => {
  * - 库存列
  * - 价格列
  */
-const columns = computed<TableColumnsType>(() => [
+const columns = computed(() => [
   ...props.saleAttributes.map(attr => ({
     title: attr.label,
     dataIndex: attr.key,
@@ -176,14 +172,14 @@ const tableData = computed(() => {
 /**
  * 行key函数 - 使用SKU的唯一标识作为行key
  */
-const rowKey = (row: { __skuKey__?: string; key: number }) => row.__skuKey__ ?? row.key
+const rowKey = (row) => row.__skuKey__ ?? row.key
 
 /**
  * 更新库存
  * @param skuKey - SKU唯一标识
  * @param val - 新的库存值（可能为null）
  */
-const updateStock = (skuKey: string, val: number | null) => {
+const updateStock = (skuKey, val) => {
   stockMap.value.set(skuKey, val ?? 0)
   emit('change', skuList.value)
 }
@@ -193,7 +189,7 @@ const updateStock = (skuKey: string, val: number | null) => {
  * @param skuKey - SKU唯一标识
  * @param val - 新的价格值（可能为null）
  */
-const updatePrice = (skuKey: string, val: number | null) => {
+const updatePrice = (skuKey, val) => {
   priceMap.value.set(skuKey, val ?? 0)
   emit('change', skuList.value)
 }

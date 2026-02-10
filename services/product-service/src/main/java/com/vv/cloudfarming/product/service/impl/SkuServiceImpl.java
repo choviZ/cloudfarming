@@ -91,7 +91,10 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
                     throw new ServiceException("sku属性持久化失败");
                 }
             });
+            // 设置库存缓存
+            stockService.initStock(skuDO.getId(), skuItem.getStock(), ProductTypeEnum.AGRICULTURAL_PRODUCTS.getCode());
         }
+
     }
 
     @Override

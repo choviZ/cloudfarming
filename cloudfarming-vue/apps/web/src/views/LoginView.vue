@@ -105,22 +105,21 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { reactive, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import type { FormInstance } from 'ant-design-vue'
 import { LeftOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { userLogin, userRegister } from '../api/user'
-import { useUserStore } from '@/stores/useUserStore.ts'
+import { userLogin, userRegister } from '../api/user.js'
+import { useUserStore } from '@/stores/useUserStore.js'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
 // 表单引用
-const formRef = ref<FormInstance>()
-const registerFormRef = ref<FormInstance>()
+const formRef = ref()
+const registerFormRef = ref()
 
 // 加载状态
 const loading = ref(false)
@@ -168,7 +167,7 @@ const registerRules = reactive({
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     {
-      pattern: /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d!@#$%^&*()_+\-=\[\]{};':"|\\,.<>?]{6,20}$/,
+      pattern: /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d!@#$%^&*()_+\-=[\]{};':"|\\,.<>?]{6,20}$/,
       message: '密码必须为6-20位，且包含字母和数字',
       trigger: 'blur'
     }
@@ -176,12 +175,12 @@ const registerRules = reactive({
   checkPassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     {
-      pattern: /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d!@#$%^&*()_+\-=\[\]{};':"|\\,.<>?]{6,20}$/,
+      pattern: /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d!@#$%^&*()_+\-=[\]{};':"|\\,.<>?]{6,20}$/,
       message: '密码必须为6-20位，且包含字母和数字',
       trigger: 'blur'
     },
     {
-      validator: (_: any, value: string) =>
+      validator: (_, value) =>
         value === registerState.password ? Promise.resolve() : Promise.reject(new Error('两次输入密码不一致')),
       trigger: 'blur'
     }
@@ -239,7 +238,7 @@ const handleRegister = async () => {
 }
 
 // 表单切换函数
-const toggleForm = (type: 'login' | 'register') => {
+const toggleForm = (type) => {
   isRegister.value = type === 'register'
   // 如果是从路由进入，不需要再改变路由
   if (route.path !== `/user/${type}`) {

@@ -107,22 +107,20 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
-import { listSpuByPage, updateSpuStatus } from '@cloudfarming/core/api/spu';
-import { getCategoryTree } from '@cloudfarming/core/api/category';
-import type { SpuRespDTO, SpuPageQueryReqDTO } from '@cloudfarming/core/api/spu';
-import type { CategoryRespDTO } from '@cloudfarming/core/api/category';
+import { listSpuByPage, updateSpuStatus } from '@/api/spu';
+import { getCategoryTree } from '@/api/category';
 
 const router = useRouter();
 const loading = ref(false);
-const list = ref<SpuRespDTO[]>([]);
-const categoryTree = ref<CategoryRespDTO[]>([]);
+const list = ref([]);
+const categoryTree = ref([]);
 
-const queryParams = reactive<SpuPageQueryReqDTO>({
+const queryParams = reactive({
   current: 1,
   size: 10,
   spuName: '',
@@ -135,7 +133,7 @@ const pagination = reactive({
   current: 1,
   pageSize: 10,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total) => `共 ${total} 条`,
 });
 
 const columns = [
@@ -221,17 +219,17 @@ const handleReset = () => {
   handleSearch();
 };
 
-const handleTableChange = (pag: any) => {
+const handleTableChange = (pag) => {
   pagination.current = pag.current;
   pagination.pageSize = pag.pageSize;
   fetchList();
 };
 
-const handleDetail = (record: SpuRespDTO) => {
+const handleDetail = (record) => {
   router.push(`/admin/product/detail/${record.id}`);
 };
 
-const handleUpdateStatus = async (record: SpuRespDTO, status: number) => {
+const handleUpdateStatus = async (record, status) => {
   try {
     const res = await updateSpuStatus(record.id, status);
     if (res.code === '0') {
@@ -246,7 +244,7 @@ const handleUpdateStatus = async (record: SpuRespDTO, status: number) => {
   }
 };
 
-const getStatusColor = (status: number) => {
+const getStatusColor = (status) => {
   switch (status) {
     case 1: return 'success';
     case 0: return 'error';
@@ -255,7 +253,7 @@ const getStatusColor = (status: number) => {
   }
 };
 
-const getStatusText = (status: number) => {
+const getStatusText = (status) => {
   switch (status) {
     case 1: return '上架';
     case 0: return '下架';

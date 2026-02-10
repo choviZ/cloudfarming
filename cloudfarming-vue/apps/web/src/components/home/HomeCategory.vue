@@ -27,7 +27,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { 
   AppstoreOutlined, 
@@ -37,12 +37,11 @@ import {
   RocketOutlined,
   GiftOutlined
 } from '@ant-design/icons-vue';
-import { getCategoryTree } from '@cloudfarming/core/api/category';
-import type { CategoryRespDTO } from '@cloudfarming/core/api/category';
+import { getCategoryTree } from '@/api/category';
 import { message } from 'ant-design-vue';
 
 const loading = ref(false);
-const categories = ref<CategoryRespDTO[]>([]);
+const categories = ref([]);
 
 const fetchCategories = async () => {
   loading.value = true;
@@ -59,7 +58,7 @@ const fetchCategories = async () => {
   }
 };
 
-const getCategoryIcon = (name: string) => {
+const getCategoryIcon = (name) => {
   if (name.includes('家畜')) return TagsOutlined;
   if (name.includes('家禽')) return RocketOutlined;
   if (name.includes('果')) return GiftOutlined;

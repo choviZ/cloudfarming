@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.user.dto.req;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -11,12 +12,14 @@ public class UpdateReviewStatusReqDTO {
     /**
      * 主键
      */
+    @NotNull
     private Long id;
 
     /**
      * 要修改为的状态
      */
-    private String status;
+    @NotNull
+    private Integer status;
 
     /**
      * 备注

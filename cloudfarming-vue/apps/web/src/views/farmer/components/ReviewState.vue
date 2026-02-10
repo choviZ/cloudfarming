@@ -20,22 +20,18 @@
   </a-result>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue';
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons-vue';
-import type { FarmerReviewRespDTO } from '@/types/farmer.ts'
 
-
-interface Props {
-  statusData: FarmerReviewRespDTO;
-  onReApply?: () => void;
-}
-
-const props = defineProps<Props>();
+const props = defineProps({
+  statusData: Object,
+  onReApply: Function
+});
 
 const title = computed(() => {
   switch (props.statusData.status) {

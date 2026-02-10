@@ -12,15 +12,13 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup>
 import { ref } from 'vue'
 import bannerImage from '@/assets/images/login-banner.png'
 import bannerImage2 from '@/assets/images/login-banner2.png'
 import bannerImage3 from '@/assets/images/login-banner3.png'
 
-import type { CarouselProps } from 'ant-design-vue'
-
-const dotPosition = ref<CarouselProps['dotPosition']>('bottom')
+const dotPosition = ref('bottom')
 
 const carouselItem = [
   {
