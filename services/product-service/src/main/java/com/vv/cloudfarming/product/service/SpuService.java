@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.vv.cloudfarming.product.dao.entity.SpuDO;
 import com.vv.cloudfarming.product.dto.req.SpuAttrValueCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuAttrValueUpdateReqDTO;
-import com.vv.cloudfarming.product.dto.req.SpuCreateOrUpdateReqDTO;
+import com.vv.cloudfarming.product.dto.req.SpuCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuPageQueryReqDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
@@ -22,7 +22,7 @@ public interface SpuService extends IService<SpuDO> {
      * 创建SPU
      * @param requestParam 请求参数
      */
-    Long saveSpu(SpuCreateOrUpdateReqDTO requestParam);
+    Long saveSpu(SpuCreateReqDTO requestParam);
 
     /**
      * 根据id删除SPU

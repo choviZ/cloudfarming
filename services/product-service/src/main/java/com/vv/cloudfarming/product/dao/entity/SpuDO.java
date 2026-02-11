@@ -43,4 +43,9 @@ public class SpuDO extends BaseDO implements Serializable {
      * 商品状态：0-下架，1-上架，2-待审核
      */
     private Integer status;
+
+    /**
+     * 审核状态：0-待审核，1-通过，2-拒绝
+     */
+    private Integer auditStatus;
 }

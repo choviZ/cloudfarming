@@ -10,7 +10,7 @@ spring:
         - id: product-service
           uri: lb://cloudfarming-product
           predicates:
-            - Path=/api/adopt/**,/api/attribute/**,/api/cart/**,/api/category/**,/api/shop/**,/api/spu/**,/api/sku/**,/api/skock/**
+            - Path=/api/adopt/**,/api/attribute/**,/api/cart/**,/api/category/**,/api/shop/**,/api/spu/**,/api/sku/**,/api/skock/**,/api/audit/**
 
         - id: user-service
           uri: lb://cloudfarming-user-operation

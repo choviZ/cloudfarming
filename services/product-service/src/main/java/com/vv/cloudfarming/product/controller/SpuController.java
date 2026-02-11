@@ -8,7 +8,7 @@ import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.product.dto.req.SpuAttrValueCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuAttrValueUpdateReqDTO;
-import com.vv.cloudfarming.product.dto.req.SpuCreateOrUpdateReqDTO;
+import com.vv.cloudfarming.product.dto.req.SpuCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuPageQueryReqDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuDetailRespDTO;
@@ -36,7 +36,7 @@ public class SpuController {
             role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
     )
     @PostMapping("/api/spu/create")
-    public Result<Long> createSpu(@Validated @RequestBody SpuCreateOrUpdateReqDTO requestParam) {
+    public Result<Long> createSpu(@Validated @RequestBody SpuCreateReqDTO requestParam) {
         Long spuId = spuService.saveSpu(requestParam);
         return Results.success(spuId);
     }

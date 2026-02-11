@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.product.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
@@ -9,6 +10,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.product.dao.entity.AttributeDO;
@@ -16,21 +18,18 @@ import com.vv.cloudfarming.product.dao.entity.SpuAttrValueDO;
 import com.vv.cloudfarming.product.dao.entity.SpuDO;
 import com.vv.cloudfarming.product.dao.mapper.SpuAttrValueMapper;
 import com.vv.cloudfarming.product.dao.mapper.SpuMapper;
-import com.vv.cloudfarming.product.dto.req.SpuAttrValueCreateReqDTO;
-import com.vv.cloudfarming.product.dto.req.SpuAttrValueUpdateReqDTO;
-import com.vv.cloudfarming.product.dto.req.SpuCreateOrUpdateReqDTO;
-import com.vv.cloudfarming.product.dto.req.SpuPageQueryReqDTO;
+import com.vv.cloudfarming.product.dto.req.*;
 import com.vv.cloudfarming.product.dto.resp.CategoryRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
 import com.vv.cloudfarming.product.dto.domain.SpuPriceSummaryDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuDetailRespDTO;
-import com.vv.cloudfarming.product.service.AttributeService;
-import com.vv.cloudfarming.product.service.CategoryService;
-import com.vv.cloudfarming.product.service.SkuService;
-import com.vv.cloudfarming.product.service.SpuService;
+import com.vv.cloudfarming.product.enums.AuditStatusEnum;
+import com.vv.cloudfarming.product.enums.ProductTypeEnum;
+import com.vv.cloudfarming.product.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -49,9 +48,11 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
     private final SpuAttrValueMapper spuAttrValueMapper;
     private final AttributeService attributeService;
     private final SkuService skuService;
+    private final AuditService auditService;
 
     @Override
-    public Long saveSpu(SpuCreateOrUpdateReqDTO requestParam) {
+    @Transactional
+    public Long saveSpu(SpuCreateReqDTO requestParam) {
         if (requestParam == null) {
             throw new ClientException("参数不能为空");
         }
@@ -62,10 +63,18 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         }
         // 保存
         SpuDO spu = BeanUtil.toBean(requestParam, SpuDO.class);
+        spu.setStatus(ShelfStatusEnum.OFFLINE.getCode());
+        spu.setAuditStatus(AuditStatusEnum.PENDING.getCode());
         boolean result = this.save(spu);
         if (!result) {
             throw new ServiceException("SPU创建或修改失败");
         }
+        // 提交审核记录
+        AuditSubmitReqDTO auditSubmitReqDTO = new AuditSubmitReqDTO();
+        auditSubmitReqDTO.setBizId(spu.getId());
+        auditSubmitReqDTO.setBizType(ProductTypeEnum.SPU.getCode());
+        long userId = StpUtil.getLoginIdAsLong();
+        auditService.submitAudit(userId,auditSubmitReqDTO);
         return spu.getId();
     }
 

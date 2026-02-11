@@ -6,7 +6,7 @@ import lombok.Data;
  * 创建或修改SPU请求参数
  */
 @Data
-public class SpuCreateOrUpdateReqDTO {
+public class SpuCreateReqDTO {
 
     /**
      * 标准商品名称
@@ -27,9 +27,4 @@ public class SpuCreateOrUpdateReqDTO {
      * 商品图片URL，多个图片用逗号分隔
      */
     private String images;
-
-    /**
-     * 商品状态：0-下架，1-上架，2-待审核
-     */
-    private Integer status;
 }

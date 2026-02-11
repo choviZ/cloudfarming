@@ -79,7 +79,7 @@ public class AdoptOrderTemplate extends AbstractOrderCreateTemplate<AdoptItemRes
 
         // 校验项目状态
         for (AdoptItemRespDTO adoptItem : adoptItems) {
-            if (!ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
+            if (!ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getAuditStatus())) {
                 throw new ClientException("认养项目未通过审核: " + adoptItem.getTitle());
             }
             if (!ShelfStatusEnum.ONLINE.getCode().equals(adoptItem.getStatus())) {

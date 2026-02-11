@@ -9,7 +9,7 @@ import lombok.Getter;
 public enum ProductTypeEnum {
 
     ADOPT(0,"adopt","云养殖项目"),
-    AGRICULTURAL_PRODUCTS(1,"sku","农产品");
+    SPU(1,"sku","农产品");
 
     private Integer code;
     private String name;

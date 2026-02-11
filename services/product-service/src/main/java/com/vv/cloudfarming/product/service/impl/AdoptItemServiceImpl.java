@@ -6,25 +6,23 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.vv.cloudfarming.common.enums.ReviewStatusEnum;
 import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.product.dao.entity.AdoptItemDO;
 import com.vv.cloudfarming.product.dao.mapper.AdoptItemMapper;
 import com.vv.cloudfarming.product.dao.mapper.ShopMapper;
-import com.vv.cloudfarming.product.dto.req.AdoptItemCreateReqDTO;
-import com.vv.cloudfarming.product.dto.req.AdoptItemPageReqDTO;
-import com.vv.cloudfarming.product.dto.req.AdoptItemReviewReqDTO;
-import com.vv.cloudfarming.product.dto.req.AdoptItemUpdateReqDTO;
+import com.vv.cloudfarming.product.dto.req.*;
 import com.vv.cloudfarming.product.dto.resp.AdoptItemRespDTO;
+import com.vv.cloudfarming.product.enums.AuditStatusEnum;
 import com.vv.cloudfarming.product.enums.ProductTypeEnum;
 import com.vv.cloudfarming.product.service.AdoptItemService;
+import com.vv.cloudfarming.product.service.AuditService;
 import com.vv.cloudfarming.product.service.StockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 认养项目服务实现类
@@ -36,8 +34,10 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
 
     private final ShopMapper shopMapper;
     private final StockService stockService;
+    private final AuditService auditService;
 
     @Override
+    @Transactional
     public Long createAdoptItem(Long userId, AdoptItemCreateReqDTO requestParam) {
         Long shopId = shopMapper.getIdByFarmerId(userId);
         if (shopId == null) {
@@ -54,8 +54,8 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
                 .expectedYield(requestParam.getExpectedYield())
                 .description(requestParam.getDescription())
                 .coverImage(requestParam.getCoverImage())
-                .reviewStatus(ReviewStatusEnum.PENDING.getStatus()) // 创建后默认待审核
-                .status(ShelfStatusEnum.OFFLINE.getCode())            // 创建后默认未上架
+                .auditStatus(AuditStatusEnum.PENDING.getCode())
+                .status(ShelfStatusEnum.OFFLINE.getCode())
                 .totalCount(totalCount)
                 .availableCount(totalCount)
                 .build();
@@ -63,6 +63,11 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         if (!this.save(adoptItem)) {
             throw new ServiceException("创建认养项目失败");
         }
+        // 提交审核记录
+        AuditSubmitReqDTO auditSubmitReqDTO = new AuditSubmitReqDTO();
+        auditSubmitReqDTO.setBizId(adoptItem.getId());
+        auditSubmitReqDTO.setBizType(ProductTypeEnum.ADOPT.getCode());
+        auditService.submitAudit(userId, auditSubmitReqDTO);
         return adoptItem.getId();
     }
 
@@ -80,7 +85,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 仅当审核状态不是通过时允许修改
-        if (ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
+        if (AuditStatusEnum.APPROVED.getCode().equals(adoptItem.getAuditStatus())) {
             throw new ClientException("已审核通过的认养项目不允许修改");
         }
 
@@ -92,7 +97,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         adoptItem.setExpectedYield(reqDTO.getExpectedYield());
         adoptItem.setDescription(reqDTO.getDescription());
         adoptItem.setCoverImage(reqDTO.getCoverImage());
-        adoptItem.setReviewStatus(ReviewStatusEnum.PENDING.getStatus()); // 修改后重置为待审核
+        adoptItem.setAuditStatus(AuditStatusEnum.PENDING.getCode());
 
         // 保存到数据库
         if (!this.updateById(adoptItem)) {
@@ -114,7 +119,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         }
 
         // 上架时校验审核状态
-        if (ShelfStatusEnum.ONLINE.getCode().equals(status) && !ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
+        if (ShelfStatusEnum.ONLINE.getCode().equals(status) && !AuditStatusEnum.APPROVED.getCode().equals(adoptItem.getAuditStatus())) {
             throw new ClientException("仅审核通过的认养项目允许上架");
         }
 
@@ -171,15 +176,11 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         } else {
             isOwner = userId == null ? false : adoptItem.getShopId().equals(userId);
         }
-        if (!isOwner && !ReviewStatusEnum.APPROVED.getStatus().equals(adoptItem.getReviewStatus())) {
+        if (!isOwner && !AuditStatusEnum.APPROVED.getCode().equals(adoptItem.getAuditStatus())) {
             throw new ClientException("认养项目不存在");
         }
         // 转换为响应DTO
         AdoptItemRespDTO respDTO = BeanUtil.toBean(adoptItem, AdoptItemRespDTO.class);
-        // 仅发布者本人可查看审核说明
-        if (isOwner) {
-            respDTO.setReviewText(adoptItem.getReviewText());
-        }
         return respDTO;
     }
 
@@ -195,7 +196,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         queryWrapper
                 .eq(StrUtil.isNotBlank(animalCategory), AdoptItemDO::getAnimalCategory, animalCategory) // 分类
                 .like(StrUtil.isNotBlank(title), AdoptItemDO::getTitle, title) // 标题
-                .eq(ObjectUtil.isNotNull(reviewStatus), AdoptItemDO::getReviewStatus, reviewStatus) // 审核状态
+                .eq(ObjectUtil.isNotNull(reviewStatus), AdoptItemDO::getAuditStatus, reviewStatus) // 审核状态
                 .eq(ObjectUtil.isNotNull(status), AdoptItemDO::getStatus, status) // 上架状态
                 .eq(ObjectUtil.isNotNull(userId), AdoptItemDO::getShopId, requestParam.getUserId()) // 用户id
                 .orderByDesc(AdoptItemDO::getCreateTime)
@@ -203,33 +204,6 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         // 分页查询
         IPage<AdoptItemDO> pageResult = this.page(requestParam, queryWrapper);
         // 转换为响应DTO
-        return pageResult.convert(adoptItem -> {
-            AdoptItemRespDTO respDTO = BeanUtil.toBean(adoptItem, AdoptItemRespDTO.class);
-            // 仅发布者本人可查看审核说明
-            if (userId != null && userId.equals(adoptItem.getShopId())) {
-                respDTO.setReviewText(adoptItem.getReviewText());
-            }
-            return respDTO;
-        });
-    }
-
-    @Override
-    public void updateReviewStatus(Long userId, AdoptItemReviewReqDTO requestParam) {
-        Long id = requestParam.getId();
-        Integer status = requestParam.getStatus();
-        String message = requestParam.getMessage();
-
-        AdoptItemDO item = this.getById(id);
-        if (item.getStatus().equals(status)) {
-            throw new ClientException("请勿重复修改状态");
-        }
-        item.setStatus(status);
-        if (StrUtil.isNotBlank(message)) {
-            item.setReviewText(message);
-        }
-        boolean updated = this.updateById(item);
-        if (!updated) {
-            throw new ServiceException("审核状态修改失败");
-        }
+        return pageResult.convert(adoptItem -> BeanUtil.toBean(adoptItem, AdoptItemRespDTO.class));
     }
 }

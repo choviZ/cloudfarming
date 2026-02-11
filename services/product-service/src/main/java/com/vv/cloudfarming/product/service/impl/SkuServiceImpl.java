@@ -92,7 +92,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
                 }
             });
             // 设置库存缓存
-            stockService.initStock(skuDO.getId(), skuItem.getStock(), ProductTypeEnum.AGRICULTURAL_PRODUCTS.getCode());
+            stockService.initStock(skuDO.getId(), skuItem.getStock(), ProductTypeEnum.SPU.getCode());
         }
 
     }
@@ -202,7 +202,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
         }
         // 设置的状态为上线，则尝试初始化库存缓存
         if (ShelfStatusEnum.ONLINE == newStatus) {
-            stockService.initStock(sku.getId(), sku.getStock(), ProductTypeEnum.AGRICULTURAL_PRODUCTS.getCode());
+            stockService.initStock(sku.getId(), sku.getStock(), ProductTypeEnum.SPU.getCode());
         }
     }
 

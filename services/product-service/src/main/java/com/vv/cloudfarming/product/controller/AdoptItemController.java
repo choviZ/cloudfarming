@@ -9,7 +9,6 @@ import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.product.dto.req.AdoptItemCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.AdoptItemPageReqDTO;
-import com.vv.cloudfarming.product.dto.req.AdoptItemReviewReqDTO;
 import com.vv.cloudfarming.product.dto.req.AdoptItemUpdateReqDTO;
 import com.vv.cloudfarming.product.dto.resp.AdoptItemRespDTO;
 import com.vv.cloudfarming.product.service.AdoptItemService;
@@ -105,14 +104,5 @@ public class AdoptItemController {
         // 设置用户ID，查询我的发布
         reqDTO.setUserId(userId);
         return Results.success(adoptItemService.pageAdoptItems(reqDTO));
-    }
-
-    @SaCheckRole(UserRoleConstant.ADMIN_DESC)
-    @Operation(summary = "修改审核状态")
-    @PostMapping("/api/adopt/item/v1/review")
-    public Result<Void> updateReviewStatus(@RequestBody AdoptItemReviewReqDTO requestParam) {
-        long userId = StpUtil.getLoginIdAsLong();
-        adoptItemService.updateReviewStatus(userId, requestParam);
-        return Results.success();
     }
 }

@@ -81,12 +81,7 @@ public class AdoptItemDO extends BaseDO implements Serializable {
     /**
      * 审核状态：0=待审核 1=通过 2=拒绝
      */
-    private Integer reviewStatus;
-
-    /**
-     * 审核说明
-     */
-    private String reviewText;
+    private Integer auditStatus;
 
     /**
      * 上架状态：1=上架 0=下架

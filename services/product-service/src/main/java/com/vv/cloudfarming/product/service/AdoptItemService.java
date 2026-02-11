@@ -64,12 +64,4 @@ public interface AdoptItemService extends IService<AdoptItemDO> {
      * @return 分页查询结果
      */
     IPage<AdoptItemRespDTO> pageAdoptItems(AdoptItemPageReqDTO reqDTO);
-
-    /**
-     * 修改审核状态
-     *
-     * @param userId       修改人
-     * @param requestParam 请求参数
-     */
-    void updateReviewStatus(Long userId, AdoptItemReviewReqDTO requestParam);
 }
