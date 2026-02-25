@@ -24,7 +24,7 @@ export const deleteSpuById = (id) => {
  * @returns {Promise<Object>} Result<SpuDetailRespDTO>
  */
 export const getSpuDetail = (id) => {
-  return request.get(`/api/spu/get`, { params: { id } })
+  return request.get(`/api/spu/get`,{params: id})
 }
 
 /**

@@ -4,10 +4,16 @@
       <a-card :bordered="false" class="filter-card">
         <a-flex align="center" gap="middle">
           <span>请选择分类：</span>
-          <a-tree-select v-model:value="selectedCategoryId" style="width: 300px"
-            :dropdown-style="{ maxHeight: '400px', overflow: 'auto' }" :tree-data="categoryTree" placeholder="请选择分类"
-            tree-default-expand-all :field-names="{ label: 'name', value: 'id', children: 'children' }"
-            @change="handleCategoryChange" />
+          <a-tree-select
+            v-model:value="selectedCategoryId"
+            style="width: 300px"
+            :dropdown-style="{ maxHeight: '400px', overflow: 'auto' }"
+            :tree-data="categoryTree"
+            placeholder="请选择分类"
+            tree-default-expand-all
+            :field-names="{ label: 'name', value: 'id', children: 'children' }"
+            @change="handleCategoryChange"
+          />
         </a-flex>
       </a-card>
     </div>
@@ -18,20 +24,26 @@
           <a-space>
             <a-button type="primary" @click="handleAdd">
               <template #icon>
-                <PlusOutlined />
+                <PlusOutlined/>
               </template>
               新增属性
             </a-button>
             <a-button @click="fetchAttributes">
               <template #icon>
-                <ReloadOutlined />
+                <ReloadOutlined/>
               </template>
               刷新
             </a-button>
           </a-space>
         </template>
 
-        <a-table :columns="columns" :data-source="attributeList" :loading="loading" row-key="id" :pagination="false">
+        <a-table
+          :columns="columns"
+          :data-source="attributeList"
+          :loading="loading"
+          row-key="id"
+          :pagination="false"
+        >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'attrType'">
               <a-tag :color="record.attrType === 0 ? 'blue' : 'green'">
@@ -44,7 +56,10 @@
             <template v-if="column.key === 'action'">
               <a-space>
                 <a-button type="link" @click="handleEdit(record)">编辑</a-button>
-                <a-popconfirm title="确定要删除该属性吗？" @confirm="handleDelete(record.id)">
+                <a-popconfirm
+                  title="确定要删除该属性吗？"
+                  @confirm="handleDelete(record.id)"
+                >
                   <a-button type="link" danger>删除</a-button>
                 </a-popconfirm>
               </a-space>
@@ -55,21 +70,25 @@
     </div>
 
     <div v-else class="empty-placeholder">
-      <a-empty description="请先选择一个分类以管理其属性" />
+      <a-empty description="请先选择一个分类以管理其属性"/>
     </div>
 
-    <AttributeModal v-model:open="modalVisible" :edit-data="currentAttribute" :category-id="selectedCategoryId || ''"
-      @success="fetchAttributes" />
+    <AttributeModal
+      v-model:open="modalVisible"
+      :edit-data="currentAttribute"
+      :category-id="selectedCategoryId || ''"
+      @success="fetchAttributes"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
-import { message } from 'ant-design-vue';
+import {ref, onMounted} from 'vue';
+import {PlusOutlined, ReloadOutlined} from '@ant-design/icons-vue';
+import {message} from 'ant-design-vue';
 import dayjs from 'dayjs';
-import { getCategoryTree } from '@/api/category';
-import { getAttributesByCategoryId, deleteAttribute } from '@/api/attribute';
+import {getCategoryTree} from '@/api/category';
+import {getAttributesByCategoryId, deleteAttribute} from '@/api/attribute';
 import AttributeModal from './components/AttributeModal.vue';
 
 const categoryTree = ref([]);
@@ -115,10 +134,10 @@ const columns = [
 // 获取分类树
 const fetchCategoryTree = async () => {
   const res = await getCategoryTree();
-  if (res.code == '0' && res.data) {
+  if (res.code === '0' && res.data) {
     categoryTree.value = res.data;
   } else {
-    message.error('获取分类树失败' + res.message)
+    console.error('获取分类树失败', error);
   }
 };
 
@@ -135,7 +154,7 @@ const fetchAttributes = async () => {
       attributeList.value = [];
     }
   } catch (error) {
-    message.error('获取属性列表失败' + error);
+    message.error('获取属性列表失败');
   } finally {
     loading.value = false;
   }
@@ -165,7 +184,7 @@ const handleDelete = async (id) => {
       message.error(res.message || '删除失败');
     }
   } catch (error) {
-    message.error('删除失败',error);
+    message.error('删除失败');
   }
 };
 

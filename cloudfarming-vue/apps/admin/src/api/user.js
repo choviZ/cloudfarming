@@ -67,7 +67,7 @@ export const updateUser = (data) => {
  * @returns {Promise<Object>} Result<boolean>
  */
 export const deleteUser = (id) => {
-  return request.post(`/api/user/delete`,id)
+  return request.post(`/api/user/delete/${id}`)
 }
 
 /**

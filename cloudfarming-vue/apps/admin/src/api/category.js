@@ -15,7 +15,7 @@ export const createCategory = (data) => {
  * @returns {Promise<Object>} Result<boolean>
  */
 export const updateCategory = (data) => {
-  return request.post('/api/category/update', data)
+  return request.put('/api/category/update', data)
 }
 
 /**
@@ -24,7 +24,7 @@ export const updateCategory = (data) => {
  * @returns {Promise<Object>} Result<boolean>
  */
 export const deleteCategory = (id) => {
-  return request.post('/api/category/delete', id)
+  return request.delete('/api/category/delete', { params: { id } })
 }
 
 /**
