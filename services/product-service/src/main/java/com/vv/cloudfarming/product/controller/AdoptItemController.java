@@ -7,9 +7,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
+import com.vv.cloudfarming.product.dao.mapper.AdoptItemMapper;
 import com.vv.cloudfarming.product.dto.req.AdoptItemCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.AdoptItemPageReqDTO;
 import com.vv.cloudfarming.product.dto.req.AdoptItemUpdateReqDTO;
+import com.vv.cloudfarming.product.dto.req.LockStockReqDTO;
 import com.vv.cloudfarming.product.dto.resp.AdoptItemRespDTO;
 import com.vv.cloudfarming.product.service.AdoptItemService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 public class AdoptItemController {
 
     private final AdoptItemService adoptItemService;
+    private final AdoptItemMapper adoptItemMapper;
 
     @SaCheckRole(UserRoleConstant.FARMER_DESC)
     @Operation(summary = "创建认养项目")
@@ -105,4 +108,13 @@ public class AdoptItemController {
         reqDTO.setUserId(userId);
         return Results.success(adoptItemService.pageAdoptItems(reqDTO));
     }
+
+    @Operation(summary = "锁定库存")
+    @PostMapping("/api/adopt/item/v1/stock/lock")
+    public Result<Integer> lockStock(@RequestBody LockStockReqDTO requestParam) {
+        int updated = adoptItemMapper.lockStock(requestParam.getQuantity(), requestParam.getId());
+        return Results.success(updated);
+    }
+
+
 }

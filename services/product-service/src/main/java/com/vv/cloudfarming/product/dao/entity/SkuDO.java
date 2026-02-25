@@ -41,6 +41,11 @@ public class SkuDO extends BaseDO implements Serializable {
     private BigDecimal price;
 
     /**
+     * 锁定库存数量
+     */
+    private Integer lockStock;
+
+    /**
      * 库存数量
      */
     private Integer stock;

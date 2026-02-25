@@ -1,6 +1,6 @@
 package com.vv.cloudfarming.order.dto.req;
 
-import com.vv.cloudfarming.order.dto.common.ItemDTO;
+import com.vv.cloudfarming.order.dto.common.ProductItemDTO;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -27,5 +27,5 @@ public class OrderCreateReqDTO {
     /**
      * 下单的商品
      */
-    private List<ItemDTO> items;
+    private List<ProductItemDTO> items;
 }

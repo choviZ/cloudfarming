@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vv.cloudfarming.product.dao.mapper.AdoptItemMapper">
+
+    <update id="lockStock">
+        UPDATE t_adopt_item
+        SET available_count = available_count - #{quantity},
+            lock_count = lock_count + #{quantity}
+        WHERE id = #{id}
+          AND available_count >= #{quantity}
+    </update>
+
+    <update id="unlockStock">
+        UPDATE t_adopt_item
+        SET lock_count = lock_count - #{quantity},
+            available_count = available_count + #{quantity}
+        WHERE id = #{id}
+          AND lock_count >= #{quantity}
+    </update>
+
+    <update id="deductStock">
+        UPDATE t_adopt_item
+        SET lock_count = lock_count - #{quantity}
+        WHERE id = #{id}
+          AND lock_count >= #{quantity}
+    </update>
+
+</mapper>

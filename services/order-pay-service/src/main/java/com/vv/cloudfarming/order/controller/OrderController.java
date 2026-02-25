@@ -32,7 +32,7 @@ public class OrderController {
     @PostMapping("/api/order/v1/create")
     public Result<OrderCreateRespDTO> createOrder(@RequestBody @Valid OrderCreateReqDTO requestParam) {
         long userId = StpUtil.getLoginIdAsLong();
-        return Results.success(orderService.createOrder(userId, requestParam));
+        return Results.success(orderService.createOrderV2(userId, requestParam));
     }
 
     @Operation(summary = "查询订单列表")

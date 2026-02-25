@@ -81,7 +81,6 @@ public class OrderDO extends BaseDO implements Serializable {
 
     /**
      * 订单状态: 0-待支付 1-待发货 2-已发货 ...
-     * (支付成功后，状态流转为 1-待发货，无需独立的 pay_status)
      */
     private Integer orderStatus;
 
@@ -96,9 +95,24 @@ public class OrderDO extends BaseDO implements Serializable {
     private String receivePhone;
 
     /**
-     * 收货地址详情
+     * 省份名称
      */
-    private String receiveAddress;
+    private String provinceName;
+
+    /**
+     * 城市名称
+     */
+    private String cityName;
+
+    /**
+     * 区县名称
+     */
+    private String districtName;
+
+    /**
+     * 详细地址
+     */
+    private String detailAddress;
 
     /**
      * 物流单号

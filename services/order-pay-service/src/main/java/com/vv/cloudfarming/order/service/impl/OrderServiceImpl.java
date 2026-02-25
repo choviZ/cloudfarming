@@ -1,11 +1,13 @@
 package com.vv.cloudfarming.order.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailAdoptDO;
@@ -14,28 +16,38 @@ import com.vv.cloudfarming.order.dao.entity.PayOrderDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
+import com.vv.cloudfarming.order.dao.mapper.PayOrderMapper;
+import com.vv.cloudfarming.order.dto.common.ProductItemDTO;
 import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
-import com.vv.cloudfarming.order.dto.req.PayOrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.*;
+import com.vv.cloudfarming.order.enums.OrderStatusEnum;
+import com.vv.cloudfarming.order.enums.PayStatusEnum;
+import com.vv.cloudfarming.order.mq.DelayMessageProcessor;
+import com.vv.cloudfarming.order.mq.constant.MqConstant;
+import com.vv.cloudfarming.order.mq.modal.MultiDelayMessage;
 import com.vv.cloudfarming.order.remote.ShopRemoteService;
 import com.vv.cloudfarming.order.service.OrderService;
-import com.vv.cloudfarming.order.service.PayService;
-import com.vv.cloudfarming.order.strategy.AbstractOrderCreateTemplate;
-import com.vv.cloudfarming.order.strategy.OrderTemplateFactory;
+import com.vv.cloudfarming.order.service.basics.chain.OrderChainContext;
+import com.vv.cloudfarming.order.service.basics.chain.OrderContext;
+import com.vv.cloudfarming.order.strategy.OrderCreateStrategy;
+import com.vv.cloudfarming.order.strategy.StrategyFactory;
 import com.vv.cloudfarming.order.utils.ProductUtil;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
 import com.vv.cloudfarming.product.dto.resp.ShopRespDTO;
+import com.vv.cloudfarming.user.dto.resp.ReceiveAddressRespDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 订单服务实现类 (Refactored)
@@ -45,51 +57,109 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implements OrderService {
 
-    private final OrderTemplateFactory templateFactory;
-    private final PayService payService;
     private final ShopRemoteService shopRemoteService;
     private final ProductUtil productUtil;
     private final RedisIdWorker redisIdWorker;
     private final OrderDetailAdoptMapper orderDetailAdoptMapper;
     private final OrderDetailSkuMapper orderDetailSkuMapper;
+    private final OrderChainContext orderChainContext;
+    private final OrderContext orderContext;
+    private final StrategyFactory strategyFactory;
+    private final PayOrderMapper payOrderMapper;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public OrderCreateRespDTO createOrder(Long userId, OrderCreateReqDTO requestParam) {
-        // 1. 根据订单类型获取对应的模板
-        AbstractOrderCreateTemplate<?, ?> template = templateFactory.getTemplate(requestParam.getOrderType());
+    public OrderCreateRespDTO createOrderV2(Long userId, OrderCreateReqDTO requestParam) {
+        // 1. 参数校验
+        orderChainContext.handler(requestParam);
+        Integer orderType = requestParam.getOrderType();
+        List<ProductItemDTO> items = requestParam.getItems();
+        OrderCreateStrategy strategy = strategyFactory.get(orderType);
 
-        // 2. 生成全局唯一的支付单号
-        String payOrderNo = generatePayOrderNo(userId);
-        
-        // 3. 执行模板方法，生成业务订单列表
-        List<OrderDO> orders = template.createOrder(userId, payOrderNo, requestParam);
-        if (orders.isEmpty()) {
-            throw new ServiceException("订单创建失败：未生成有效订单");
-        }
-        
-        // 4. 计算总金额并生成支付单
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        for (OrderDO order : orders) {
-            if (order.getActualPayAmount() != null) {
-                totalAmount = totalAmount.add(order.getActualPayAmount());
+        // 2. 锁定库存
+        strategy.lockedStock(items);
+
+        // 3. 根据店铺拆单
+        List<OrderDO> orders = new ArrayList<>();
+        Map<Long, List<ProductItemDTO>> shopGroup = items.stream().collect(Collectors.groupingBy(item -> strategy.resolveShopId(item, orderContext)));
+        for (Map.Entry<Long, List<ProductItemDTO>> entry : shopGroup.entrySet()) {
+            Long shopId = entry.getKey();
+            List<ProductItemDTO> itemList = entry.getValue();
+
+            ReceiveAddressRespDTO receiveAddress = orderContext.getReceiveAddress();
+            // 计算价格
+            BigDecimal amount = strategy.calculateOrderAmount(itemList, orderContext);
+            // 4. 创建订单
+            OrderDO order = OrderDO.builder()
+                    .orderNo(generateOrderNo(userId))
+                    .userId(userId)
+                    .shopId(shopId)
+                    .orderType(strategy.bizType())
+                    .totalAmount(amount)
+                    .actualPayAmount(amount)
+                    // 运费和优惠金额，暂时都为0
+                    .freightAmount(new BigDecimal("0"))
+                    .discountAmount(new BigDecimal("0"))
+                    .orderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
+                    .receiveName(receiveAddress.getReceiverName())
+                    .receivePhone(receiveAddress.getReceiverPhone())
+                    .provinceName(receiveAddress.getProvinceName())
+                    .cityName(receiveAddress.getCityName())
+                    .districtName(receiveAddress.getDistrictName())
+                    .detailAddress(receiveAddress.getDetailAddress())
+                    .build();
+            baseMapper.insert(order);
+            orders.add(order);
+
+            // 组织延迟消息消息
+            MultiDelayMessage<Long> msg = MultiDelayMessage.of(order.getId(),
+                    15000, 30000, 120000, 300000, 43500, 900000);
+            // 5. 发送消息延迟消息
+            try {
+                rabbitTemplate.convertAndSend(
+                        MqConstant.DELAY_EXCHANGE,
+                        MqConstant.DELAY_ORDER_ROUTING_KEY,
+                        msg,
+                        new DelayMessageProcessor(msg.removeNextDelay())
+                );
+                log.info("发送延迟消息成功，订单ID：{}", order.getId());
+            } catch (AmqpException ex) {
+                log.error("发送延迟消息失败", ex);
+                // TODO 延迟消息补偿
             }
+
+            // 6. 创建订单详情
+            strategy.createOrderDetails(order, itemList, orderContext);
         }
 
-        PayOrderCreateReqDTO payOrderCreateReq = PayOrderCreateReqDTO.builder()
-                .buyerId(userId)
-                .payOrderNo(payOrderNo)
-                .totalAmount(totalAmount)
-                .build();
-        PayOrderDO payOrder = payService.createPayOrder(payOrderCreateReq);
+        // 7. 创建支付单
+        BigDecimal payTotalAmount = orders.stream()
+                .map(OrderDO::getActualPayAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 5. 构建响应
-        OrderCreateRespDTO response = OrderCreateRespDTO.builder()
-                .payAmount(totalAmount)
-                .payOrderNo(payOrderNo)
-                .expireTime(payOrder.getExpireTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        PayOrderDO payOrderDO = PayOrderDO.builder()
+                .payOrderNo(redisIdWorker.generateId("PaySN").toString())
+                .buyerId(userId)
+                .totalAmount(payTotalAmount)
+                .payStatus(PayStatusEnum.UNPAID.getCode())
+                .bizStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
+                .payChannel(0)
+                .expireTime(LocalDateTime.now().plusMinutes(15))
                 .build();
-        return response;
+        int inserted = payOrderMapper.insert(payOrderDO);
+        if (!SqlHelper.retBool(inserted)) {
+            throw new ServiceException("支付单创建失败");
+        }
+        // 更新订单的支付单号
+        List<Long> ids = orders.stream().map(OrderDO::getId).toList();
+        baseMapper.updatePayOrderNoById(payOrderDO.getPayOrderNo(), ids);
+
+        return OrderCreateRespDTO.builder()
+                .payOrderNo(payOrderDO.getPayOrderNo())
+                .payAmount(payTotalAmount)
+                .expireTime(DateUtil.toInstant(payOrderDO.getExpireTime()).toEpochMilli())
+                .build();
     }
 
     @Override
@@ -107,7 +177,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         return orderPage.convert(each -> {
             ShopRespDTO shop = shopRemoteService.getShopById(each.getShopId()).getData();
             ArrayList<ProductSummaryDTO> summaryList = new ArrayList<>();
-            productUtil.buildProductSummary(each.getId(),each.getOrderType(),summaryList);
+            productUtil.buildProductSummary(each.getId(), each.getOrderType(), summaryList);
             return OrderPageWithProductInfoRespDTO.builder()
                     .id(each.getId())
                     .shopName(shop.getShopName())
@@ -157,7 +227,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         }).toList();
     }
 
-    private String generatePayOrderNo(Long userId) {
-        return redisIdWorker.generateId("paySN").toString();
+    private String generateOrderNo(Long userId) {
+        return redisIdWorker.generateId("orderSN").toString();
     }
 }

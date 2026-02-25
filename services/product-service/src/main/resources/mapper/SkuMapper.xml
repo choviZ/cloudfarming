@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vv.cloudfarming.product.dao.mapper.SkuMapper">
+
+    <!-- 锁定库存 -->
+    <update id="lockSkuStock">
+        UPDATE
+            t_sku
+        SET stock      = stock - #{quantity},
+            lock_stock = lock_stock + #{quantity}
+        WHERE id = #{id}
+          AND stock >= #{quantity}
+    </update>
+
+    <!-- 释放锁定库存（订单取消、超时关闭） -->
+    <update id="unlockSkuStock">
+        UPDATE t_sku
+        SET stock      = stock + #{quantity},     -- 恢复可售库存
+            lock_stock = lock_stock - #{quantity} -- 减少锁定库存
+        WHERE id = #{id}
+          AND lock_stock >= #{quantity} -- 安全防线：防止扣成负数
+    </update>
+
+    <!-- 支付成功，扣减锁定库存 -->
+    <update id="deductSkuStock">
+        UPDATE t_sku
+        SET lock_stock = lock_stock - #{quantity}
+        WHERE id = #{id}
+          AND lock_stock >= #{quantity}
+    </update>
+
+</mapper>

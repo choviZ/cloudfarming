@@ -4,7 +4,9 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
+import com.vv.cloudfarming.product.dao.mapper.SkuMapper;
 import com.vv.cloudfarming.product.dto.req.SkuCreateReqDTO;
+import com.vv.cloudfarming.product.dto.req.LockStockReqDTO;
 import com.vv.cloudfarming.product.dto.resp.SkuRespDTO;
 import com.vv.cloudfarming.product.service.SkuService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +22,7 @@ import java.util.List;
 public class SkuController {
 
     private final SkuService skuService;
+    private final SkuMapper skuMapper;
 
     @Operation(summary = "创建SKU")
     @SaCheckRole(UserRoleConstant.FARMER_DESC)
@@ -41,5 +44,12 @@ public class SkuController {
     @PostMapping("/api/sku/list")
     public Result<List<SkuRespDTO>> listSkuDetailsByIds(@RequestBody List<Long> ids){
         return Results.success(skuService.listSkuDetailsByIds(ids));
+    }
+
+    @Operation(summary = "扣减库存")
+    @PostMapping("/api/sku/stock/lock")
+    public Result<Integer> decreaseStock(@RequestBody LockStockReqDTO requestParam){
+        int updated = skuMapper.lockSkuStock(requestParam.getQuantity(), requestParam.getId());
+        return Results.success(updated);
     }
 }

@@ -15,7 +15,7 @@ public interface OrderService {
     /**
      * 创建订单
      */
-    OrderCreateRespDTO createOrder(Long userId, OrderCreateReqDTO reqDTO);
+    OrderCreateRespDTO createOrderV2(Long userId, OrderCreateReqDTO requestParam);
 
     /**
      * 分页查询订单，部分订单信息聚合简要的商品信息（用户使用）

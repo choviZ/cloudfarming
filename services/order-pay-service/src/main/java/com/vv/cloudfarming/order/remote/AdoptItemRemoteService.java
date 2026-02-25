@@ -1,6 +1,7 @@
 package com.vv.cloudfarming.order.remote;
 
 import com.vv.cloudfarming.common.result.Result;
+import com.vv.cloudfarming.product.dto.req.LockStockReqDTO;
 import com.vv.cloudfarming.product.dto.resp.AdoptItemRespDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,4 +17,10 @@ public interface AdoptItemRemoteService {
 
     @PostMapping("/api/adopt/item/v1/batch")
     Result<List<AdoptItemRespDTO>> batchAdoptItemByIds(@RequestBody List<Long> ids);
+
+    /***
+     * 锁定库存
+     */
+    @PostMapping("/api/adopt/item/v1/stock/lock")
+    Result<Integer> lockAdoptItemStock(@RequestBody LockStockReqDTO requestParam);
 }

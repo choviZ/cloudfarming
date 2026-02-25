@@ -79,6 +79,11 @@ public class AdoptItemDO extends BaseDO implements Serializable {
     private Integer availableCount;
 
     /**
+     * 锁定库存数量
+     */
+    private Integer lockCount;
+
+    /**
      * 审核状态：0=待审核 1=通过 2=拒绝
      */
     private Integer auditStatus;
