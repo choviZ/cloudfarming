@@ -4,7 +4,6 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Map;
 
 /**
  * SKU 详情响应对象
@@ -15,7 +14,7 @@ public class SkuRespDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * SKU ID
+     * ID
      */
     private Long id;
 
@@ -25,24 +24,19 @@ public class SkuRespDTO implements Serializable {
     private Long spuId;
 
     /**
-     * 店铺 ID
+     * 商品图片
      */
-    private Long shopId;
-
-    /**
-     * 商品标题 (来自 SPU)
-     */
-    private String spuTitle;
-
-    /**
-     * 商品图片 (来自 SPU，通常取第一张)
-     */
-    private String spuImage;
+    private String skuImage;
 
     /**
      * 销售价格
      */
     private BigDecimal price;
+
+    /**
+     * 锁定的库存
+     */
+    private Integer lockStock;
 
     /**
      * 库存
@@ -55,8 +49,7 @@ public class SkuRespDTO implements Serializable {
     private Integer status;
 
     /**
-     * 销售属性集合 (key: 属性名, value: 属性值)
-     * 例如: {"颜色": "红色", "尺寸": "L"}
+     * 销售属性 JSON
      */
-    private Map<String, String> saleAttrs;
+    private String saleAttribute;
 }

@@ -2,7 +2,7 @@ package com.vv.cloudfarming.product.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
@@ -12,7 +12,6 @@ import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.product.dao.entity.*;
 import com.vv.cloudfarming.product.dao.mapper.SkuAttrValueMapper;
 import com.vv.cloudfarming.product.dao.mapper.SkuMapper;
-import com.vv.cloudfarming.product.dao.mapper.SpuMapper;
 import com.vv.cloudfarming.product.dto.domain.SaleAttrDTO;
 import com.vv.cloudfarming.product.dto.domain.SkuItemDTO;
 import com.vv.cloudfarming.product.dto.req.SkuCreateReqDTO;
@@ -23,7 +22,6 @@ import com.vv.cloudfarming.product.service.AttributeService;
 import com.vv.cloudfarming.product.service.SkuService;
 import com.vv.cloudfarming.product.service.StockService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -40,9 +38,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
 
     private final AttributeService attributeService;
     private final SkuAttrValueMapper skuAttrValueMapper;
-    private final SpuMapper spuMapper;
     private final StockService stockService;
-    private final StringRedisTemplate stringRedisTemplate;
 
     private static final String STOCK_CACHE_KEY_PREFIX = "cloudfarming:stock:sku:";
 
@@ -105,7 +101,6 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
         }
         SkuRespDTO skuRespDTO = convertToRespDTO(skuDO);
         // 填充实时库存
-        fillRealTimeStock(skuRespDTO);
         return skuRespDTO;
     }
 
@@ -119,8 +114,6 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
                 .map(this::convertToRespDTO)
                 .collect(Collectors.toList());
 
-        // 批量填充库存
-        result.forEach(this::fillRealTimeStock);
         return result;
     }
 
@@ -136,7 +129,6 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
         List<SkuRespDTO> result = skuList.stream()
                 .map(this::convertToRespDTO)
                 .collect(Collectors.toList());
-        result.forEach(this::fillRealTimeStock);
         return result;
     }
 
@@ -215,16 +207,6 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
     private SkuRespDTO convertToRespDTO(SkuDO skuDO) {
         SkuRespDTO skuRespDTO = BeanUtil.toBean(skuDO, SkuRespDTO.class);
 
-        // 填充 SPU 信息
-        SpuDO spuDO = spuMapper.selectById(skuDO.getSpuId());
-        if (spuDO != null) {
-            skuRespDTO.setShopId(spuDO.getShopId());
-            skuRespDTO.setSpuTitle(spuDO.getTitle());
-            if (StrUtil.isNotBlank(spuDO.getImages())) {
-                skuRespDTO.setSpuImage(spuDO.getImages().split(",")[0]);
-            }
-        }
-
         // 填充销售属性
         List<SkuAttrValueDO> attrValues = skuAttrValueMapper.selectList(
                 new LambdaQueryWrapper<SkuAttrValueDO>().eq(SkuAttrValueDO::getSkuId, skuDO.getId())
@@ -244,18 +226,8 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
                     }
                 }
             }
-            skuRespDTO.setSaleAttrs(saleAttrs);
+            skuRespDTO.setSaleAttribute(JSONUtil.toJsonStr(saleAttrs));
         }
         return skuRespDTO;
-    }
-
-    /**
-     * 填充实时库存
-     */
-    private void fillRealTimeStock(SkuRespDTO skuRespDTO) {
-        String stockStr = stringRedisTemplate.opsForValue().get(STOCK_CACHE_KEY_PREFIX + skuRespDTO.getId());
-        if (StrUtil.isNotBlank(stockStr)) {
-            skuRespDTO.setStock(Integer.parseInt(stockStr));
-        }
     }
 }

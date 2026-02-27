@@ -7,8 +7,10 @@ import com.vv.cloudfarming.order.dao.entity.OrderDetailSkuDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dto.common.ProductItemDTO;
 import com.vv.cloudfarming.order.remote.SkuRemoteService;
+import com.vv.cloudfarming.order.remote.SpuRemoteService;
 import com.vv.cloudfarming.order.service.basics.chain.OrderContext;
 import com.vv.cloudfarming.product.dto.req.LockStockReqDTO;
+import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SkuRespDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ public class SkuOrderCreateStrategy implements OrderCreateStrategy {
 
     private final OrderDetailSkuMapper orderDetailSkuMapper;
     private final SkuRemoteService skuRemoteService;
+    private final SpuRemoteService spuRemoteService;
 
     @Override
     public Integer bizType() {
@@ -33,7 +36,9 @@ public class SkuOrderCreateStrategy implements OrderCreateStrategy {
 
     @Override
     public Long resolveShopId(ProductItemDTO item, OrderContext ctx) {
-        return ctx.getSkuMap().get(item.getBizId()).getShopId();
+        Long spuId = ctx.getSkuMap().get(item.getBizId()).getSpuId();
+        ProductRespDTO spu = spuRemoteService.getSpuById(spuId).getData();
+        return spu.getProductSpu().getShopId();
     }
 
     @Override
@@ -57,9 +62,8 @@ public class SkuOrderCreateStrategy implements OrderCreateStrategy {
                     .orderNo(order.getOrderNo())
                     .skuId(item.getBizId())
                     .spuId(skuRespDTO.getSpuId())
-                    .skuName(skuRespDTO.getSpuTitle())
-                    .skuImage(skuRespDTO.getSpuImage())
-                    .skuSpecs(JSONUtil.toJsonStr(skuRespDTO.getSaleAttrs()))
+                    .skuImage(skuRespDTO.getSkuImage())
+                    .skuSpecs(JSONUtil.toJsonStr(skuRespDTO.getSaleAttribute()))
                     .price(skuRespDTO.getPrice())
                     .quantity(item.getQuantity())
                     .totalAmount(skuRespDTO.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))

@@ -5,6 +5,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -23,7 +24,7 @@ import com.vv.cloudfarming.product.dto.resp.CategoryRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
 import com.vv.cloudfarming.product.dto.domain.SpuPriceSummaryDTO;
-import com.vv.cloudfarming.product.dto.resp.SpuDetailRespDTO;
+import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.product.enums.AuditStatusEnum;
 import com.vv.cloudfarming.product.enums.ProductTypeEnum;
 import com.vv.cloudfarming.product.service.*;
@@ -74,7 +75,7 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         auditSubmitReqDTO.setBizId(spu.getId());
         auditSubmitReqDTO.setBizType(ProductTypeEnum.SPU.getCode());
         long userId = StpUtil.getLoginIdAsLong();
-        auditService.submitAudit(userId,auditSubmitReqDTO);
+        auditService.submitAudit(userId, auditSubmitReqDTO);
         return spu.getId();
     }
 
@@ -99,12 +100,12 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
             return null;
         }
         SpuRespDTO spuRespDTO = BeanUtil.toBean(spuDO, SpuRespDTO.class);
-        spuRespDTO.setAttributes(getSpuAttributes(id));
+        spuRespDTO.setAttributes(JSONUtil.toJsonStr(getSpuAttributes(id)));
         return spuRespDTO;
     }
 
     @Override
-    public SpuDetailRespDTO getSpuDetail(Long id) {
+    public ProductRespDTO getProductBySpuId(Long id) {
         if (id == null || id <= 0) {
             throw new ClientException("id不合法");
         }
@@ -112,7 +113,8 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         if (spuDO == null) {
             return null;
         }
-        SpuDetailRespDTO result = BeanUtil.toBean(spuDO, SpuDetailRespDTO.class);
+        SpuRespDTO spuResp = BeanUtil.toBean(spuDO, SpuRespDTO.class);
+        ProductRespDTO result = new ProductRespDTO();
 
         // 1. 获取基础属性
         LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
@@ -132,13 +134,13 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
                         baseAttrs.put(name, av.getAttrValue());
                     }
                 }
-                result.setBaseAttrs(baseAttrs);
+                spuResp.setAttributes(JSONUtil.toJsonStr(baseAttrs));
             }
+            result.setProductSpu(spuResp);
         }
 
         // 2. 获取 SKU 列表
-        result.setSkuList(skuService.getSkusBySpuId(id));
-
+        result.setProductSkus(skuService.getSkusBySpuId(id));
         return result;
     }
 
@@ -169,12 +171,7 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
 
         return spuDOPage.convert(spuDO -> {
             SpuRespDTO spuRespDTO = BeanUtil.toBean(spuDO, SpuRespDTO.class);
-            spuRespDTO.setAttributes(getSpuAttributes(spuDO.getId()));
-            // 填充价格摘要
-            SpuPriceSummaryDTO summary = priceSummaryMap.get(spuDO.getId());
-            if (summary != null) {
-                spuRespDTO.setPriceSummary(summary);
-            }
+            spuRespDTO.setAttributes(JSONUtil.toJsonStr(getSpuAttributes(spuDO.getId())));
             return spuRespDTO;
         });
     }
@@ -402,10 +399,11 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
 
     /**
      * 根据spuId获取相应的属性
+     *
      * @param spuId spuId
      * @return 属性map
      */
-    private HashMap<String,String> getSpuAttributes(Long spuId){
+    private HashMap<String, String> getSpuAttributes(Long spuId) {
         List<SpuAttrValueDO> spuAttributes = spuAttrValueMapper.getAttrValueBySpuId(spuId);
         HashMap<String, String> hashMap = new HashMap<>();
         if (spuAttributes != null) {

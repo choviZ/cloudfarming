@@ -236,16 +236,11 @@ public class CartServiceImpl implements CartService {
 
                 // 设置商品信息
                 // 拼接规格信息到名称
-                String name = skuInfo.getSpuTitle();
-                if (skuInfo.getSaleAttrs() != null && !skuInfo.getSaleAttrs().isEmpty()) {
+                if (skuInfo.getSaleAttribute() != null && !skuInfo.getSaleAttribute().isEmpty()) {
                     StringBuilder spec = new StringBuilder();
-                    skuInfo.getSaleAttrs().forEach((k, v) -> spec.append(" ").append(v));
-                    name = name + spec.toString();
                 }
-                cartItemResp.setProductName(name);
-                cartItemResp.setProductImage(skuInfo.getSpuImage());
+                cartItemResp.setProductImage(skuInfo.getSkuImage());
                 cartItemResp.setPrice(skuInfo.getPrice());
-                cartItemResp.setShopId(skuInfo.getShopId());
 
                 // 计算总价
                 BigDecimal totalPrice = skuInfo.getPrice().multiply(new BigDecimal(cartItem.getQuantity()));

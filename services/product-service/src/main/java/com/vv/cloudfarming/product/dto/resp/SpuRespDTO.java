@@ -1,10 +1,8 @@
 package com.vv.cloudfarming.product.dto.resp;
 
-import com.vv.cloudfarming.product.dto.domain.SpuPriceSummaryDTO;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Data
 public class SpuRespDTO {
@@ -15,9 +13,9 @@ public class SpuRespDTO {
     private Long id;
 
     /**
-     * 价格摘要
+     * 店铺id
      */
-    private SpuPriceSummaryDTO priceSummary;
+    private Long shopId;
 
     /**
      * 标准商品名称
@@ -40,9 +38,9 @@ public class SpuRespDTO {
     private Integer status;
 
     /**
-     * 基本属性
+     * 基本属性 JSON
      */
-    private Map<String,String> attributes;
+    private String attributes;
 
     /**
      * 创建时间

@@ -21,7 +21,7 @@ public interface SkuService extends IService<SkuDO> {
     void createSku(SkuCreateReqDTO requestParam);
 
     /**
-     * 获取 SKU 详情（包含 SPU 信息）
+     * 获取 SKU 详情
      *
      * @param id SKU ID
      * @return SKU 详情

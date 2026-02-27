@@ -11,7 +11,7 @@ import com.vv.cloudfarming.product.dto.req.SpuAttrValueUpdateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuPageQueryReqDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
-import com.vv.cloudfarming.product.dto.resp.SpuDetailRespDTO;
+import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
 import com.vv.cloudfarming.product.service.SpuService;
 import com.vv.cloudfarming.user.dto.req.UpdateReviewStatusReqDTO;
@@ -53,8 +53,8 @@ public class SpuController {
 
     @Operation(summary = "根据id获取单个SPU详情")
     @GetMapping("/api/spu/get")
-    public Result<SpuDetailRespDTO> getSpuById(@RequestParam("id") Long id) {
-        SpuDetailRespDTO spu = spuService.getSpuDetail(id);
+    public Result<ProductRespDTO> getProductBySpuId(@RequestParam("id") Long id) {
+        ProductRespDTO spu = spuService.getProductBySpuId(id);
         return Results.success(spu);
     }
 

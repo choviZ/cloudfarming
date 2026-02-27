@@ -9,7 +9,7 @@ import com.vv.cloudfarming.product.dto.req.SpuCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuPageQueryReqDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
-import com.vv.cloudfarming.product.dto.resp.SpuDetailRespDTO;
+import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
 
 import java.util.List;
 
@@ -38,11 +38,11 @@ public interface SpuService extends IService<SpuDO> {
     SpuRespDTO getSpuById(Long id);
 
     /**
-     * 获取 SPU 完整详情（含属性、SKU列表）
+     * 查询商品详情
      * @param id SPU ID
      * @return 详情
      */
-    SpuDetailRespDTO getSpuDetail(Long id);
+    ProductRespDTO getProductBySpuId(Long id);
 
     /**
      * 分页查询SPU列表
