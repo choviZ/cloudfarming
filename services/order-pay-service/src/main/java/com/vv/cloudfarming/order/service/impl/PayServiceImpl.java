@@ -11,7 +11,7 @@ import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.order.constant.BizStatusConstant;
 import com.vv.cloudfarming.order.constant.PayChannelConstant;
-import com.vv.cloudfarming.order.dao.entity.PayOrderDO;
+import com.vv.cloudfarming.order.dao.entity.PayDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dao.mapper.PayOrderMapper;
 import com.vv.cloudfarming.order.dto.common.OrderIdAndTypeDTO;
@@ -34,18 +34,18 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Lazy
-public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayOrderDO> implements PayService {
+public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayDO> implements PayService {
 
     private final OrderMapper orderMapper;
     private final ProductUtil productUtil;
 
     @Override
-    public PayOrderDO createPayOrder(PayOrderCreateReqDTO requestParam) {
+    public PayDO createPayOrder(PayOrderCreateReqDTO requestParam) {
         Long buyerId = requestParam.getBuyerId();
         String payOrderNo = requestParam.getPayOrderNo();
         BigDecimal totalAmount = requestParam.getTotalAmount();
 
-        PayOrderDO payOrder = PayOrderDO.builder()
+        PayDO payOrder = PayDO.builder()
                 .payOrderNo(payOrderNo)
                 .buyerId(buyerId)
                 .payStatus(PayStatusEnum.UNPAID.getCode())
@@ -69,11 +69,11 @@ public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayOrderDO> impl
         Long buyerId = requestParam.getBuyerId();
         Integer payStatus = requestParam.getPayStatus();
 
-        LambdaQueryWrapper<PayOrderDO> wrapper = Wrappers.lambdaQuery(PayOrderDO.class)
-                .eq(StrUtil.isNotBlank(payOrderNo), PayOrderDO::getPayOrderNo, payOrderNo)
-                .eq(ObjectUtil.isNotNull(buyerId), PayOrderDO::getBuyerId, buyerId)
-                .eq(ObjectUtil.isNotNull(payStatus), PayOrderDO::getPayStatus, payStatus);
-        IPage<PayOrderDO> payOrderPage = baseMapper.selectPage(requestParam, wrapper);
+        LambdaQueryWrapper<PayDO> wrapper = Wrappers.lambdaQuery(PayDO.class)
+                .eq(StrUtil.isNotBlank(payOrderNo), PayDO::getPayOrderNo, payOrderNo)
+                .eq(ObjectUtil.isNotNull(buyerId), PayDO::getBuyerId, buyerId)
+                .eq(ObjectUtil.isNotNull(payStatus), PayDO::getPayStatus, payStatus);
+        IPage<PayDO> payOrderPage = baseMapper.selectPage(requestParam, wrapper);
 
         // 转换
         return payOrderPage.convert(each -> {

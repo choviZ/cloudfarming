@@ -14,7 +14,7 @@ import com.vv.cloudfarming.order.constant.OrderTypeConstant;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailAdoptDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailSkuDO;
-import com.vv.cloudfarming.order.dao.entity.PayOrderDO;
+import com.vv.cloudfarming.order.dao.entity.PayDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
@@ -55,7 +55,7 @@ public class PayController {
     @Operation(summary = "支付宝支付")
     @GetMapping("/pay")
     public void pay(@RequestParam String payOrderNo, HttpServletResponse response) throws IOException {
-        PayOrderDO payOrder = payOrderMapper.selectPayOrderByNo(payOrderNo);
+        PayDO payOrder = payOrderMapper.selectPayOrderByNo(payOrderNo);
         // 创建client
         DefaultAlipayClient defaultAlipayClient = new DefaultAlipayClient(
                 alipayTemplate.getGatewayUrl(),
@@ -95,8 +95,8 @@ public class PayController {
     public void callback(@RequestParam Map<String, String> requestParam) {
         log.info("触发回调，参数{}", requestParam);
         String payOrderNo = requestParam.get("out_trade_no");
-        PayOrderDO payOrderDO = payOrderMapper.selectOne(Wrappers.lambdaQuery(PayOrderDO.class).eq(PayOrderDO::getPayOrderNo, payOrderNo));
-        if (PayStatusEnum.PAID.getCode().equals(payOrderDO.getPayStatus())) {
+        PayDO payDO = payOrderMapper.selectOne(Wrappers.lambdaQuery(PayDO.class).eq(PayDO::getPayOrderNo, payOrderNo));
+        if (PayStatusEnum.PAID.getCode().equals(payDO.getPayStatus())) {
             log.info("支付单已处理，无需重复处理");
             return;
         }
@@ -106,9 +106,9 @@ public class PayController {
             throw new ServiceException("支付单号：" + payOrderNo + "对应的订单不存在");
         }
         // 更新支付表状态
-        LambdaUpdateWrapper<PayOrderDO> wrapper = Wrappers.lambdaUpdate(PayOrderDO.class)
-                .eq(PayOrderDO::getPayOrderNo, payOrderNo)
-                .set(PayOrderDO::getPayStatus, PayStatusEnum.PAID.getCode());
+        LambdaUpdateWrapper<PayDO> wrapper = Wrappers.lambdaUpdate(PayDO.class)
+                .eq(PayDO::getPayOrderNo, payOrderNo)
+                .set(PayDO::getPayStatus, PayStatusEnum.PAID.getCode());
         int payUpdated = payOrderMapper.update(wrapper);
         if (!SqlHelper.retBool(payUpdated)) {
             throw new ServiceException("更新支付单状态失败");

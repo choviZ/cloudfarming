@@ -12,14 +12,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 支付订单表 DO
+ * 支付表
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_pay_order")
-public class PayOrderDO extends BaseDO implements Serializable {
+@TableName("t_pay")
+public class PayDO extends BaseDO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 

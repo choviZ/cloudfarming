@@ -12,7 +12,7 @@ import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailAdoptDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailSkuDO;
-import com.vv.cloudfarming.order.dao.entity.PayOrderDO;
+import com.vv.cloudfarming.order.dao.entity.PayDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
@@ -138,7 +138,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 .map(OrderDO::getActualPayAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        PayOrderDO payOrderDO = PayOrderDO.builder()
+        PayDO payDO = PayDO.builder()
                 .payOrderNo(redisIdWorker.generateId("PaySN").toString())
                 .buyerId(userId)
                 .totalAmount(payTotalAmount)
@@ -147,18 +147,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 .payChannel(0)
                 .expireTime(LocalDateTime.now().plusMinutes(15))
                 .build();
-        int inserted = payOrderMapper.insert(payOrderDO);
+        int inserted = payOrderMapper.insert(payDO);
         if (!SqlHelper.retBool(inserted)) {
             throw new ServiceException("支付单创建失败");
         }
         // 更新订单的支付单号
         List<Long> ids = orders.stream().map(OrderDO::getId).toList();
-        baseMapper.updatePayOrderNoById(payOrderDO.getPayOrderNo(), ids);
+        baseMapper.updatePayOrderNoById(payDO.getPayOrderNo(), ids);
 
         return OrderCreateRespDTO.builder()
-                .payOrderNo(payOrderDO.getPayOrderNo())
+                .payOrderNo(payDO.getPayOrderNo())
                 .payAmount(payTotalAmount)
-                .expireTime(DateUtil.toInstant(payOrderDO.getExpireTime()).toEpochMilli())
+                .expireTime(DateUtil.toInstant(payDO.getExpireTime()).toEpochMilli())
                 .build();
     }
 
