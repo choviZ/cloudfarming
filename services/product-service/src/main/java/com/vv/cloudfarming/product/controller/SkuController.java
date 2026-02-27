@@ -52,4 +52,18 @@ public class SkuController {
         int updated = skuMapper.lockSkuStock(requestParam.getQuantity(), requestParam.getId());
         return Results.success(updated);
     }
+
+    @Operation(summary = "释放锁定库存")
+    @PostMapping("/api/sku/stock/unlock")
+    public Result<Integer> unlockStock(@RequestBody LockStockReqDTO requestParam){
+        int updated = skuMapper.unlockSkuStock(requestParam.getQuantity(), requestParam.getId());
+        return Results.success(updated);
+    }
+
+    @Operation(summary = "扣减库存")
+    @PostMapping("/api/sku/stock/deduct")
+    public Result<Integer> deductStock(@RequestBody LockStockReqDTO requestParam){
+        int updated = skuMapper.deductSkuStock(requestParam.getQuantity(), requestParam.getId());
+        return Results.success(updated);
+    }
 }

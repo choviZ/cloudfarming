@@ -14,4 +14,6 @@ public interface SkuMapper extends BaseMapper<SkuDO> {
     int lockSkuStock(@Param("quantity") Integer quantity, @Param("id") Long id);
 
     int unlockSkuStock(@Param("quantity") Integer quantity, @Param("id") Long id);
+
+    int deductSkuStock(@Param("quantity") Integer quantity, @Param("id") Long id);
 }

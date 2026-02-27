@@ -23,4 +23,10 @@ public interface AdoptItemRemoteService {
      */
     @PostMapping("/api/adopt/item/v1/stock/lock")
     Result<Integer> lockAdoptItemStock(@RequestBody LockStockReqDTO requestParam);
+
+    @PostMapping("/api/adopt/item/v1/stock/unlock")
+    Result<Integer> unlockAdoptItemStock(@RequestBody LockStockReqDTO requestParam);
+
+    @PostMapping("/api/adopt/item/v1/stock/deduct")
+    Result<Integer> reduceAdoptItemStock(@RequestBody LockStockReqDTO requestParam);
 }

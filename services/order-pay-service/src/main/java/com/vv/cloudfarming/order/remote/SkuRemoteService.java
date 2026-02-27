@@ -23,4 +23,10 @@ public interface SkuRemoteService {
      */
     @PostMapping("/api/sku/stock/lock")
     Result<Integer> lockStock(@RequestBody LockStockReqDTO requestParam);
+
+    @PostMapping("/api/sku/stock/unlock")
+    Result<Integer> unlockStock(@RequestBody LockStockReqDTO requestParam);
+
+    @PostMapping("/api/sku/stock/deduct")
+    Result<Integer> deductStock(@RequestBody LockStockReqDTO requestParam);
 }

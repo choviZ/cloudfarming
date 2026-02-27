@@ -116,5 +116,17 @@ public class AdoptItemController {
         return Results.success(updated);
     }
 
+    @Operation(summary = "释放锁定库存")
+    @PostMapping("/api/adopt/item/v1/stock/unlock")
+    public Result<Integer> unlockStock(@RequestBody LockStockReqDTO requestParam) {
+        int updated = adoptItemMapper.unlockStock(requestParam.getQuantity(), requestParam.getId());
+        return Results.success(updated);
+    }
 
+    @Operation(summary = "扣减库存")
+    @PostMapping("/api/adopt/item/v1/stock/deduct")
+    public Result<Integer> deductStock(@RequestBody LockStockReqDTO requestParam) {
+        int updated = adoptItemMapper.deductStock(requestParam.getQuantity(), requestParam.getId());
+        return Results.success(updated);
+    }
 }
