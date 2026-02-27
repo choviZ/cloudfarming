@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
+import com.vv.cloudfarming.product.constant.CacheKeyConstant;
 import com.vv.cloudfarming.product.dao.entity.AttributeDO;
 import com.vv.cloudfarming.product.dao.entity.SpuAttrValueDO;
 import com.vv.cloudfarming.product.dao.entity.SpuDO;
@@ -29,6 +30,9 @@ import com.vv.cloudfarming.product.enums.AuditStatusEnum;
 import com.vv.cloudfarming.product.enums.ProductTypeEnum;
 import com.vv.cloudfarming.product.service.*;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +40,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -50,6 +55,8 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
     private final AttributeService attributeService;
     private final SkuService skuService;
     private final AuditService auditService;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final RedissonClient redissonClient;
 
     @Override
     @Transactional
@@ -109,39 +116,56 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         if (id == null || id <= 0) {
             throw new ClientException("id不合法");
         }
-        SpuDO spuDO = this.getById(id);
-        if (spuDO == null) {
-            return null;
-        }
-        SpuRespDTO spuResp = BeanUtil.toBean(spuDO, SpuRespDTO.class);
-        ProductRespDTO result = new ProductRespDTO();
-
-        // 1. 获取基础属性
-        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-                .eq(SpuAttrValueDO::getSpuId, id);
-        List<SpuAttrValueDO> attrValues = spuAttrValueMapper.selectList(wrapper);
-
-        if (CollUtil.isNotEmpty(attrValues)) {
-            List<Long> attrIds = attrValues.stream().map(SpuAttrValueDO::getAttrId).collect(Collectors.toList());
-            if (CollUtil.isNotEmpty(attrIds)) {
-                Map<Long, String> attrNameMap = attributeService.listByIds(attrIds).stream()
-                        .collect(Collectors.toMap(AttributeDO::getId, AttributeDO::getName));
-
-                Map<String, String> baseAttrs = new HashMap<>();
-                for (SpuAttrValueDO av : attrValues) {
-                    String name = attrNameMap.get(av.getAttrId());
-                    if (name != null) {
-                        baseAttrs.put(name, av.getAttrValue());
+        // 查询缓存
+        String cacheKey = CacheKeyConstant.PRODUCT_SKU_DETAIL_CACHE_KEY + id;
+        String cache = stringRedisTemplate.opsForValue().get(cacheKey);
+        if (StrUtil.isBlank(cache)) {
+            RLock lock = redissonClient.getLock(CacheKeyConstant.LOCK_PRODUCT_SKU_KEY + id);
+            lock.lock();
+            try {
+                // 双重判定锁
+                String s = stringRedisTemplate.opsForValue().get(cacheKey);
+                if (StrUtil.isBlank(s)) {
+                    SpuDO spuDO = this.getById(id);
+                    if (spuDO == null) {
+                        return null;
                     }
-                }
-                spuResp.setAttributes(JSONUtil.toJsonStr(baseAttrs));
-            }
-            result.setProductSpu(spuResp);
-        }
+                    SpuRespDTO spuResp = BeanUtil.toBean(spuDO, SpuRespDTO.class);
+                    ProductRespDTO result = new ProductRespDTO();
 
-        // 2. 获取 SKU 列表
-        result.setProductSkus(skuService.getSkusBySpuId(id));
-        return result;
+                    // 1. 获取基础属性
+                    LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
+                            .eq(SpuAttrValueDO::getSpuId, id);
+                    List<SpuAttrValueDO> attrValues = spuAttrValueMapper.selectList(wrapper);
+
+                    if (CollUtil.isNotEmpty(attrValues)) {
+                        List<Long> attrIds = attrValues.stream().map(SpuAttrValueDO::getAttrId).collect(Collectors.toList());
+                        if (CollUtil.isNotEmpty(attrIds)) {
+                            Map<Long, String> attrNameMap = attributeService.listByIds(attrIds).stream()
+                                    .collect(Collectors.toMap(AttributeDO::getId, AttributeDO::getName));
+
+                            Map<String, String> baseAttrs = new HashMap<>();
+                            for (SpuAttrValueDO av : attrValues) {
+                                String name = attrNameMap.get(av.getAttrId());
+                                if (name != null) {
+                                    baseAttrs.put(name, av.getAttrValue());
+                                }
+                            }
+                            spuResp.setAttributes(JSONUtil.toJsonStr(baseAttrs));
+                        }
+                        result.setProductSpu(spuResp);
+                    }
+                    // 2. 获取 SKU 列表
+                    result.setProductSkus(skuService.getSkusBySpuId(id));
+                    // 3. 构建缓存
+                    stringRedisTemplate.opsForValue().set(cacheKey, JSONUtil.toJsonStr(result), 30, TimeUnit.MINUTES);
+                    return result;
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+        return JSONUtil.toBean(cache, ProductRespDTO.class);
     }
 
     @Override
