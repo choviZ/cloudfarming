@@ -113,7 +113,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             orders.add(order);
 
             // 组织延迟消息消息
-            MultiDelayMessage<Long> msg = MultiDelayMessage.of(order.getId(),
+            MultiDelayMessage<String> msg = MultiDelayMessage.of(order.getOrderNo(),
                     15000, 30000, 120000, 300000, 43500, 900000);
             // 5. 发送消息延迟消息
             try {
@@ -123,7 +123,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                         msg,
                         new DelayMessageProcessor(msg.removeNextDelay())
                 );
-                log.info("发送延迟消息成功，订单ID：{}", order.getId());
+                log.info("发送延迟消息成功，订单ID：{}", order.getOrderNo());
             } catch (AmqpException ex) {
                 log.error("发送延迟消息失败", ex);
                 // TODO 延迟消息补偿
@@ -152,8 +152,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             throw new ServiceException("支付单创建失败");
         }
         // 更新订单的支付单号
-        List<Long> ids = orders.stream().map(OrderDO::getId).toList();
-        baseMapper.updatePayOrderNoById(payDO.getPayOrderNo(), ids);
+        List<String> orderNos = orders.stream().map(OrderDO::getOrderNo).toList();
+        baseMapper.updatePayNoByOrderNo(payDO.getPayOrderNo(), userId, orderNos);
 
         return OrderCreateRespDTO.builder()
                 .payOrderNo(payDO.getPayOrderNo())
@@ -228,6 +228,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     }
 
     private String generateOrderNo(Long userId) {
-        return redisIdWorker.generateId("orderSN").toString();
+        long userTail = Math.floorMod(userId, 1_000_000L);
+        return redisIdWorker.generateId("orderSN").toString() + String.format("%06d", userTail);
     }
 }

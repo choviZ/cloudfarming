@@ -50,13 +50,13 @@ public class OrderStatusCheckListener {
             exchange = @Exchange(value = MqConstant.DELAY_EXCHANGE, delayed = "true", type = ExchangeTypes.TOPIC),
             key = MqConstant.DELAY_ORDER_ROUTING_KEY
     ))
-    public void listenOrderDelayMessage(MultiDelayMessage<Long> msg) {
+    public void listenOrderDelayMessage(MultiDelayMessage<String> msg) {
         log.info("消费者收到延迟消息：{}", msg.toString());
-        Long id = msg.getData();
-        // 查询订单状态
-        OrderDO order = orderMapper.selectById(id);
+        String orderNo = msg.getData();
+        OrderDO order = orderMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class).eq(OrderDO::getOrderNo, orderNo));
         if (order == null) {
-            throw new ServiceException("订单不存在：" + id);
+            log.error("订单不存在，订单号：{}", orderNo);
+            return;
         }
         if (PayStatusEnum.UNPAID.getCode().equals(order.getOrderStatus())) {
             // 未支付-判断是否存在延迟时间
@@ -69,18 +69,18 @@ public class OrderStatusCheckListener {
                         msg,
                         new DelayMessageProcessor(delay)
                 );
-                log.info("订单：{}未支付，发送延迟消息，延迟时间：{}秒", id, delay / 1000);
+                log.info("订单：{}未支付，发送延迟消息，延迟时间：{}秒", orderNo, delay / 1000);
             } else {
                 // 不存在-结束订单
                 LambdaUpdateWrapper<OrderDO> wrapper = Wrappers.lambdaUpdate(OrderDO.class)
                         .set(OrderDO::getOrderStatus, OrderStatusEnum.CANCEL.getCode())
-                        .eq(OrderDO::getId, id)
+                        .eq(OrderDO::getOrderNo, orderNo)
                         .eq(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_PAYMENT.getCode());
                 int updated = orderMapper.update(wrapper);
                 if (SqlHelper.retBool(updated)) {
-                    log.info("订单取消成功，ID：{}", id);
+                    log.info("订单取消成功，订单号：{}", orderNo);
                 } else {
-                    log.info("订单取消失败，状态已变更，ID：{}", id);
+                    log.info("订单取消失败，状态已变更，订单号：{}", orderNo);
                     return;
                 }
 
@@ -111,10 +111,9 @@ public class OrderStatusCheckListener {
                             }
                             break;
                     }
-                    log.info(":{}订单已结束，释放锁定的库存", id);
+                    log.info(":{}订单已结束，释放锁定的库存", orderNo);
                 } catch (Exception e) {
-                    log.error("释放库存失败，订单ID：{}", id);
-                    throw new ServiceException("库存释放失败，请重试");
+                    log.error("释放库存失败，订单号：{}", orderNo);
                 }
             }
         }

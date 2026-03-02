@@ -16,5 +16,7 @@ public interface OrderMapper extends BaseMapper<OrderDO> {
     @Select("SELECT `id`,`order_type` FROM t_order where `pay_order_no` = #{payNo} AND del_flag = 0")
     List<OrderIdAndTypeDTO> getOrderIdByPayNo(String payNo);
 
-    int updatePayOrderNoById(@Param("payOrderNo") String payOrderNo, @Param("ids") List<Long> ids);
+    int updatePayNoByOrderNo(@Param("payOrderNo") String payOrderNo,
+                             @Param("userId") Long userId,
+                             @Param("orderNos") List<String> orderNos);
 }

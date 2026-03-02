@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -94,28 +95,29 @@ public class PayController {
     @PostMapping("/callback")
     public void callback(@RequestParam Map<String, String> requestParam) {
         log.info("触发回调，参数{}", requestParam);
-        String payOrderNo = requestParam.get("out_trade_no");
-        PayDO payDO = payOrderMapper.selectOne(Wrappers.lambdaQuery(PayDO.class).eq(PayDO::getPayOrderNo, payOrderNo));
+        String payNo = requestParam.get("out_trade_no");
+        PayDO payDO = payOrderMapper.selectOne(Wrappers.lambdaQuery(PayDO.class).eq(PayDO::getPayOrderNo, payNo));
         if (PayStatusEnum.PAID.getCode().equals(payDO.getPayStatus())) {
             log.info("支付单已处理，无需重复处理");
             return;
         }
         String totalAmount = requestParam.get("total_amount");
-        List<OrderDO> orders = orderMapper.selectList(Wrappers.lambdaQuery(OrderDO.class).eq(OrderDO::getPayOrderNo, payOrderNo));
+        List<OrderDO> orders = orderMapper.selectList(Wrappers.lambdaQuery(OrderDO.class).eq(OrderDO::getPayOrderNo, payNo));
         if (orders == null || orders.isEmpty()) {
-            throw new ServiceException("支付单号：" + payOrderNo + "对应的订单不存在");
+            throw new ServiceException("支付单号：" + payNo + "对应的订单不存在");
         }
         // 更新支付表状态
         LambdaUpdateWrapper<PayDO> wrapper = Wrappers.lambdaUpdate(PayDO.class)
-                .eq(PayDO::getPayOrderNo, payOrderNo)
-                .set(PayDO::getPayStatus, PayStatusEnum.PAID.getCode());
+                .eq(PayDO::getPayOrderNo, payNo)
+                .set(PayDO::getPayStatus, PayStatusEnum.PAID.getCode())
+                .set(PayDO::getPayTime, LocalDateTime.now());
         int payUpdated = payOrderMapper.update(wrapper);
         if (!SqlHelper.retBool(payUpdated)) {
             throw new ServiceException("更新支付单状态失败");
         }
         // 更新订单状态
         LambdaUpdateWrapper<OrderDO> orderWrapper = Wrappers.lambdaUpdate(OrderDO.class)
-                .eq(OrderDO::getPayOrderNo, payOrderNo)
+                .eq(OrderDO::getPayOrderNo, payNo)
                 .set(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_SHIPMENT.getCode());
         int orderUpdated = orderMapper.update(orderWrapper);
         if (!SqlHelper.retBool(orderUpdated)) {
@@ -129,9 +131,13 @@ public class PayController {
                 List<OrderDetailAdoptDO> orderDetailAdopts = orderDetailAdoptMapper.selectList(adoptDetailWrapper);
                 for (OrderDetailAdoptDO adoptDetail : orderDetailAdopts) {
                     LockStockReqDTO lockStockReqDTO = new LockStockReqDTO();
-                    lockStockReqDTO.setId(adoptDetail.getId());
+                    lockStockReqDTO.setId(adoptDetail.getAdoptItemId());
                     lockStockReqDTO.setQuantity(adoptDetail.getQuantity());
-                    adoptItemRemoteService.unlockAdoptItemStock(lockStockReqDTO);
+                    Integer updated = adoptItemRemoteService.deductAdoptItemStock(lockStockReqDTO).getData();
+                    if (updated == null || updated <= 0) {
+                        log.error("扣减领养项目锁定库存失败，orderNo={}, adoptItemId={}, quantity={}",
+                                order.getOrderNo(), adoptDetail.getAdoptItemId(), adoptDetail.getQuantity());
+                    }
                 }
             } else if (OrderTypeConstant.GOODS == order.getOrderType()) {
                 LambdaQueryWrapper<OrderDetailSkuDO> skuDetailWrapper = Wrappers.lambdaQuery(OrderDetailSkuDO.class)
@@ -139,9 +145,13 @@ public class PayController {
                 List<OrderDetailSkuDO> skuDetails = orderDetailSkuMapper.selectList(skuDetailWrapper);
                 for (OrderDetailSkuDO skuDetail : skuDetails) {
                     LockStockReqDTO lockStockReqDTO = new LockStockReqDTO();
-                    lockStockReqDTO.setId(skuDetail.getId());
+                    lockStockReqDTO.setId(skuDetail.getSkuId());
                     lockStockReqDTO.setQuantity(skuDetail.getQuantity());
-                    skuRemoteService.unlockStock(lockStockReqDTO);
+                    Integer updated = skuRemoteService.deductStock(lockStockReqDTO).getData();
+                    if (updated == null || updated <= 0) {
+                        log.error("扣减SKU锁定库存失败，orderNo={}, skuId={}, quantity={}",
+                                order.getOrderNo(), skuDetail.getSkuId(), skuDetail.getQuantity());
+                    }
                 }
             } else {
                 throw new ServiceException("不支持的订单类型");

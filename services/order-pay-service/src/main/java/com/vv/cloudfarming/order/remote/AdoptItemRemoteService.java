@@ -28,5 +28,5 @@ public interface AdoptItemRemoteService {
     Result<Integer> unlockAdoptItemStock(@RequestBody LockStockReqDTO requestParam);
 
     @PostMapping("/api/adopt/item/v1/stock/deduct")
-    Result<Integer> reduceAdoptItemStock(@RequestBody LockStockReqDTO requestParam);
+    Result<Integer> deductAdoptItemStock(@RequestBody LockStockReqDTO requestParam);
 }
