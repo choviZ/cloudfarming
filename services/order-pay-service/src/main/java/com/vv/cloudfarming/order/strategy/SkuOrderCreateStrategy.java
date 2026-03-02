@@ -1,4 +1,4 @@
-package com.vv.cloudfarming.order.strategy;
+﻿package com.vv.cloudfarming.order.strategy;
 
 import cn.hutool.json.JSONUtil;
 import com.vv.cloudfarming.order.constant.OrderTypeConstant;
@@ -89,4 +89,18 @@ public class SkuOrderCreateStrategy implements OrderCreateStrategy {
             log.info("锁定库存成功，类型：农产品，id：{}，锁定数量：{}",item.getBizId(),item.getQuantity());
         }
     }
+    @Override
+    public void unlockStock(List<ProductItemDTO> items) {
+        for (ProductItemDTO item : items) {
+            LockStockReqDTO requestParam = new LockStockReqDTO();
+            requestParam.setId(item.getBizId());
+            requestParam.setQuantity(item.getQuantity());
+
+            Integer updated = skuRemoteService.unlockStock(requestParam).getData();
+            if (updated == null || updated <= 0) {
+                log.warn("恢复库存失败，类型：农产品，id：{}，恢复数量：{}", item.getBizId(), item.getQuantity());
+            }
+        }
+    }
 }
+

@@ -33,4 +33,9 @@ public interface OrderCreateStrategy {
      * 锁定库存
      */
     void lockedStock(List<ProductItemDTO> items);
+
+    /**
+     * 释放已锁定库存，并恢复真实库存（用于下单流程失败补偿）
+     */
+    void unlockStock(List<ProductItemDTO> items);
 }
