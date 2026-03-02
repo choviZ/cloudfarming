@@ -97,12 +97,23 @@ public class PayController {
         log.info("触发回调，参数{}", requestParam);
         String payNo = requestParam.get("out_trade_no");
         PayDO payDO = payOrderMapper.selectOne(Wrappers.lambdaQuery(PayDO.class).eq(PayDO::getPayOrderNo, payNo));
+        if (payDO == null) {
+            throw new ServiceException("支付单不存在，支付单号：" + payNo);
+        }
         if (PayStatusEnum.PAID.getCode().equals(payDO.getPayStatus())) {
             log.info("支付单已处理，无需重复处理");
             return;
         }
+        Long userId = payDO.getBuyerId();
+        if (userId == null) {
+            throw new ServiceException("支付单缺少买家信息，支付单号：" + payNo);
+        }
         String totalAmount = requestParam.get("total_amount");
-        List<OrderDO> orders = orderMapper.selectList(Wrappers.lambdaQuery(OrderDO.class).eq(OrderDO::getPayOrderNo, payNo));
+        List<OrderDO> orders = orderMapper.selectList(
+                Wrappers.lambdaQuery(OrderDO.class)
+                        .eq(OrderDO::getUserId, userId)
+                        .eq(OrderDO::getPayOrderNo, payNo)
+        );
         if (orders == null || orders.isEmpty()) {
             throw new ServiceException("支付单号：" + payNo + "对应的订单不存在");
         }
@@ -117,6 +128,7 @@ public class PayController {
         }
         // 更新订单状态
         LambdaUpdateWrapper<OrderDO> orderWrapper = Wrappers.lambdaUpdate(OrderDO.class)
+                .eq(OrderDO::getUserId, userId)
                 .eq(OrderDO::getPayOrderNo, payNo)
                 .set(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_SHIPMENT.getCode());
         int orderUpdated = orderMapper.update(orderWrapper);
