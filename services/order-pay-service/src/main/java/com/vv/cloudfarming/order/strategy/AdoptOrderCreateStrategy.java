@@ -1,4 +1,4 @@
-﻿package com.vv.cloudfarming.order.strategy;
+package com.vv.cloudfarming.order.strategy;
 
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateUtil;

@@ -1,4 +1,4 @@
-﻿package com.vv.cloudfarming.order.strategy;
+package com.vv.cloudfarming.order.strategy;
 
 import cn.hutool.json.JSONUtil;
 import com.vv.cloudfarming.order.constant.OrderTypeConstant;
