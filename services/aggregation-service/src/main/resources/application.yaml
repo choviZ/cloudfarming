@@ -8,12 +8,6 @@ spring:
   datasource:
     driver-class-name: org.apache.shardingsphere.driver.ShardingSphereDriver
     url: jdbc:shardingsphere:classpath:shardingsphere-config.yaml
-    hikari:
-      minimum-idle: 20
-      maximum-pool-size: 50    # 默认10，调整为50
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
   data:
     # redis配置
     redis:

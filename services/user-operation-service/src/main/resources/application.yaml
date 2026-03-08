@@ -9,6 +9,15 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/cloud_breeding
     username: root
     password: root
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      validation-timeout: 5000
+      idle-timeout: 600000
+      max-lifetime: 1200000
+      keepalive-time: 300000
+      connection-test-query: SELECT 1
   data:
     redis:
       host: 127.0.0.1

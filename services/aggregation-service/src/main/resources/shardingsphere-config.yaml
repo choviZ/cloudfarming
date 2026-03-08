@@ -6,7 +6,14 @@ dataSources:
     jdbcUrl: jdbc:mysql://127.0.0.1:3306/cloud_farming?useUnicode=true&characterEncoding=UTF-8&rewriteBatchedStatements=true&allowMultiQueries=true&serverTimezone=Asia/Shanghai&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
     username: root
     password: root
-
+    connectionTimeout: 30000
+    idleTimeout: 600000
+    maxLifetime: 1200000
+    keepaliveTime: 300000
+    maximumPoolSize: 20
+    minimumIdle: 5
+    connectionTestQuery: SELECT 1
+    validationTimeout: 5000
 rules:
   # 分片规则
   - !SHARDING
