@@ -1,13 +1,18 @@
 package com.vv.cloudfarming.order.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.convert.Convert;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.lang.Singleton;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
+import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailAdoptDO;
@@ -21,6 +26,7 @@ import com.vv.cloudfarming.order.dto.common.ProductItemDTO;
 import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
+import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
@@ -31,6 +37,7 @@ import com.vv.cloudfarming.order.enums.PayStatusEnum;
 import com.vv.cloudfarming.order.mq.DelayMessageProcessor;
 import com.vv.cloudfarming.order.mq.constant.MqConstant;
 import com.vv.cloudfarming.order.mq.modal.MultiDelayMessage;
+import com.vv.cloudfarming.order.mq.modal.SeckillOrderMessage;
 import com.vv.cloudfarming.order.remote.ShopRemoteService;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.order.service.basics.chain.OrderChainContext;
@@ -39,29 +46,38 @@ import com.vv.cloudfarming.order.strategy.OrderCreateStrategy;
 import com.vv.cloudfarming.order.strategy.StrategyFactory;
 import com.vv.cloudfarming.order.utils.ProductUtil;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
+import com.vv.cloudfarming.product.dao.entity.SeckillActivityDO;
 import com.vv.cloudfarming.product.dto.resp.ShopRespDTO;
 import com.vv.cloudfarming.user.dto.resp.ReceiveAddressRespDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * 订单服务实现类
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implements OrderService {
+
+    private static final String SECKILL_CACHE_KEY = "cloudfarming:seckill";
+    private static final String SECKILL_CLAIM_RECORD = "cloudfarming:seckill:record:";
+    private static final String STOCK_DECREMENT_AND_SAVE_USER_RECEIVE_LUA_PATH = "lua/stock_decrement_and_save_user_receive.lua";
+    private static final String STOCK_ROLLBACK_AND_REDUCE_USER_RECEIVE_LUA_PATH = "lua/stock_rollback_and_reduce_user_receive.lua";
 
     private final ShopRemoteService shopRemoteService;
     private final ProductUtil productUtil;
@@ -73,24 +89,21 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private final StrategyFactory strategyFactory;
     private final PayOrderMapper payOrderMapper;
     private final RabbitTemplate rabbitTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderCreateRespDTO createOrderV2(Long userId, OrderCreateReqDTO requestParam) {
-        // 1. 参数校验
         orderChainContext.handler(requestParam);
         Integer orderType = requestParam.getOrderType();
         List<ProductItemDTO> items = requestParam.getItems();
         OrderCreateStrategy strategy = strategyFactory.get(orderType);
 
-        // 标记是否已经进入锁库存阶段，失败时用于补偿释放库存
         boolean lockStockInvoked = false;
         try {
-            // 2. 锁定库存（先锁库存，失败快速返回）
             lockStockInvoked = true;
             strategy.lockedStock(items);
 
-            // 3. 按店铺拆单，逐单写入订单主表和明细表
             List<OrderDO> orders = new ArrayList<>();
             Map<Long, List<ProductItemDTO>> shopGroup = items.stream()
                     .collect(Collectors.groupingBy(item -> strategy.resolveShopId(item, orderContext)));
@@ -125,9 +138,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 }
                 orders.add(order);
 
-                // 4. 发送订单状态延迟检查消息，发送失败直接抛异常触发事务回滚
-                MultiDelayMessage<String> msg = MultiDelayMessage.of(order.getOrderNo(),
-                        15000, 30000, 120000, 300000, 43500, 900000);
+                MultiDelayMessage<String> msg = MultiDelayMessage.of(
+                        order.getOrderNo(),
+                        15000,
+                        30000,
+                        120000,
+                        300000,
+                        43500,
+                        900000
+                );
                 try {
                     rabbitTemplate.convertAndSend(
                             MqConstant.DELAY_EXCHANGE,
@@ -135,16 +154,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                             msg,
                             new DelayMessageProcessor(msg.removeNextDelay())
                     );
-                    log.info("发送延迟消息成功，orderNo={}", order.getOrderNo());
+                    log.info("订单延迟消息发送成功，orderNo={}", order.getOrderNo());
                 } catch (AmqpException ex) {
-                    log.error("发送延迟消息失败，orderNo={}", order.getOrderNo(), ex);
-                    throw new ServiceException("发送延迟消息失败");
+                    log.error("订单延迟消息发送失败，orderNo={}", order.getOrderNo(), ex);
+                    throw new ServiceException("发送订单延迟消息失败");
                 }
 
                 strategy.createOrderDetails(order, itemList, orderContext);
             }
 
-            // 5. 创建支付单
             BigDecimal payTotalAmount = orders.stream()
                     .map(OrderDO::getActualPayAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -164,30 +182,105 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 throw new ServiceException("创建支付单失败");
             }
 
-            // 6. 回填支付单号到所有拆单后的订单
             List<String> orderNos = orders.stream().map(OrderDO::getOrderNo).toList();
             int updatedOrders = baseMapper.updatePayNoByOrderNo(payDO.getPayOrderNo(), userId, orderNos);
             if (updatedOrders != orderNos.size()) {
                 throw new ServiceException("更新订单支付单号失败");
             }
 
-            // 7. 返回支付信息
             return OrderCreateRespDTO.builder()
                     .payOrderNo(payDO.getPayOrderNo())
                     .payAmount(payTotalAmount)
                     .expireTime(DateUtil.toInstant(payDO.getExpireTime()).toEpochMilli())
                     .build();
         } catch (Exception ex) {
-            // 8. 下单流程任意环节失败时，补偿释放已锁库存，避免库存长期占用
             if (lockStockInvoked) {
                 try {
                     strategy.unlockStock(items);
                 } catch (Exception unlockEx) {
-                    log.error("下单失败后释放锁定库存失败，userId={}", userId, unlockEx);
+                    log.error("创建订单失败后回滚库存异常，userId={}", userId, unlockEx);
                 }
             }
             throw ex;
         }
+    }
+
+    @Override
+    public String createSeckillOrder(SeckillCreateReqDTO requestParam) {
+        Long seckillId = requestParam.getSeckillId();
+        Integer nums = requestParam.getNums();
+        Long receiveId = requestParam.getReceiveId();
+        long userId = StpUtil.getLoginIdAsLong();
+
+        String seckillCacheKey = SECKILL_CACHE_KEY + seckillId;
+        Map<String, String> map = stringRedisTemplate.<String, String>opsForHash().entries(seckillCacheKey);
+        if (CollUtil.isEmpty(map)) {
+            throw new ClientException("秒杀活动不存在");
+        }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime startTime = parseDateTime(map.get("startTime"), formatter);
+        LocalDateTime endTime = parseDateTime(map.get("endTime"), formatter);
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(startTime) || now.isAfter(endTime)) {
+            throw new ClientException("当前不在秒杀时间范围内");
+        }
+
+        Integer limit = Convert.toInt(map.get("limitPerUser"), 0);
+        if (limit <= 0) {
+            throw new ServiceException("秒杀活动限购参数异常");
+        }
+
+        String userCountKey = SECKILL_CLAIM_RECORD + seckillId;
+        long expireSeconds = Math.max(1, Duration.between(now, endTime).getSeconds());
+
+        DefaultRedisScript<Long> buildLuaScript = Singleton.get(STOCK_DECREMENT_AND_SAVE_USER_RECEIVE_LUA_PATH, () -> {
+            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
+            redisScript.setScriptSource(new ResourceScriptSource(new ClassPathResource(STOCK_DECREMENT_AND_SAVE_USER_RECEIVE_LUA_PATH)));
+            redisScript.setResultType(Long.class);
+            return redisScript;
+        });
+
+        Long stockDecrementLuaResult = stringRedisTemplate.execute(
+                buildLuaScript,
+                List.of(seckillCacheKey, userCountKey),
+                String.valueOf(nums),
+                String.valueOf(userId),
+                String.valueOf(expireSeconds),
+                String.valueOf(limit)
+        );
+        if (ObjectUtil.isNull(stockDecrementLuaResult)) {
+            throw new ServiceException("秒杀库存扣减失败");
+        }
+        if (stockDecrementLuaResult == -1) {
+            throw new ClientException("库存不足");
+        }
+        if (stockDecrementLuaResult == -2) {
+            throw new ClientException("购买数量超出限购");
+        }
+        if (stockDecrementLuaResult != 0) {
+            throw new ServiceException("秒杀库存扣减失败");
+        }
+
+        String paySN = redisIdWorker.generateId("PaySN").toString();
+        SeckillOrderMessage msg = SeckillOrderMessage.builder()
+                .seckillActivityDO(buildSeckillActivity(map, formatter))
+                .payNo(paySN)
+                .orderNo(generateOrderNo(userId))
+                .userId(userId)
+                .receiveId(receiveId)
+                .nums(Long.valueOf(nums))
+                .build();
+
+        try {
+            rabbitTemplate.convertAndSend("order-event-exange", "order.seckill.order", msg);
+        } catch (AmqpException ex) {
+            rollbackSeckillCacheQuietly(seckillId, userId, nums);
+            log.error("秒杀下单消息发送失败，已回滚 Redis 预扣库存，seckillId={}, userId={}, nums={}",
+                    seckillId, userId, nums, ex);
+            throw new ServiceException("秒杀下单失败，请稍后重试");
+        }
+        return paySN;
     }
 
     @Override
@@ -253,5 +346,66 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private String generateOrderNo(Long userId) {
         long userTail = Math.floorMod(userId, 1_000_000L);
         return redisIdWorker.generateId("orderSN").toString() + String.format("%06d", userTail);
+    }
+
+    private SeckillActivityDO buildSeckillActivity(Map<String, String> map, DateTimeFormatter formatter) {
+        SeckillActivityDO seckillActivity = new SeckillActivityDO();
+        seckillActivity.setId(Convert.toLong(map.get("id")));
+        seckillActivity.setActivityName(map.get("activityName"));
+        seckillActivity.setSpuId(Convert.toLong(map.get("spuId")));
+        seckillActivity.setSkuId(Convert.toLong(map.get("skuId")));
+        seckillActivity.setShopId(Convert.toLong(map.get("shopId")));
+        seckillActivity.setOriginalPrice(Convert.toBigDecimal(map.get("originalPrice")));
+        seckillActivity.setSeckillPrice(Convert.toBigDecimal(map.get("seckillPrice")));
+        seckillActivity.setTotalStock(Convert.toInt(map.get("totalStock")));
+        seckillActivity.setStock(Convert.toInt(map.get("stock")));
+        seckillActivity.setLockStock(Convert.toInt(map.get("lockStock")));
+        seckillActivity.setLimitPerUser(Convert.toInt(map.get("limitPerUser")));
+        seckillActivity.setStartTime(parseDateTime(map.get("startTime"), formatter));
+        seckillActivity.setEndTime(parseDateTime(map.get("endTime"), formatter));
+        seckillActivity.setStatus(Convert.toInt(map.get("status")));
+        seckillActivity.setAuditStatus(Convert.toInt(map.get("auditStatus")));
+        return seckillActivity;
+    }
+
+    private void rollbackSeckillCacheQuietly(Long seckillId, Long userId, Integer nums) {
+        if (ObjectUtil.hasNull(seckillId, userId, nums) || nums <= 0) {
+            return;
+        }
+        String seckillCacheKey = SECKILL_CACHE_KEY + seckillId;
+        String userCountKey = SECKILL_CLAIM_RECORD + seckillId;
+        DefaultRedisScript<Long> rollbackLuaScript = Singleton.get(STOCK_ROLLBACK_AND_REDUCE_USER_RECEIVE_LUA_PATH, () -> {
+            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
+            redisScript.setScriptSource(new ResourceScriptSource(new ClassPathResource(STOCK_ROLLBACK_AND_REDUCE_USER_RECEIVE_LUA_PATH)));
+            redisScript.setResultType(Long.class);
+            return redisScript;
+        });
+        try {
+            Long rollbackResult = stringRedisTemplate.execute(
+                    rollbackLuaScript,
+                    List.of(seckillCacheKey, userCountKey),
+                    String.valueOf(nums),
+                    String.valueOf(userId)
+            );
+            log.warn("秒杀缓存回滚完成，seckillId={}, userId={}, nums={}, rollbackResult={}",
+                    seckillId, userId, nums, rollbackResult);
+        } catch (Exception ex) {
+            log.error("秒杀缓存回滚异常，seckillId={}, userId={}, nums={}", seckillId, userId, nums, ex);
+        }
+    }
+
+    private LocalDateTime parseDateTime(String value, DateTimeFormatter formatter) {
+        if (ObjectUtil.isEmpty(value)) {
+            throw new ServiceException("秒杀活动时间数据为空");
+        }
+        try {
+            return LocalDateTime.parse(value, formatter);
+        } catch (Exception ignored) {
+            try {
+                return LocalDateTime.parse(value);
+            } catch (Exception ex) {
+                throw new ServiceException("秒杀活动时间格式错误");
+            }
+        }
     }
 }

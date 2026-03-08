@@ -10,7 +10,11 @@ import com.vv.cloudfarming.user.service.ReceiveAddressService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -54,13 +58,20 @@ public class ReceiveAddressController {
         return Results.success(receiveAddressService.getReceiveAddressById(id));
     }
 
+    @Operation(summary = "内部接口：根据地址ID和用户ID获取收货地址")
+    @GetMapping("/api/receive-address/internal/get")
+    public Result<ReceiveAddressRespDTO> getReceiveAddressByIdAndUserId(@RequestParam Long id,
+                                                                         @RequestParam Long userId) {
+        return Results.success(receiveAddressService.getReceiveAddressByIdAndUserId(id, userId));
+    }
+
     @Operation(summary = "获取当前登录用户的所有收货地址")
     @GetMapping("/api/receive-address/list")
     public Result<List<ReceiveAddressRespDTO>> getCurrentUserReceiveAddresses() {
         return Results.success(receiveAddressService.getCurrentUserReceiveAddresses());
     }
 
-    @Operation(summary = "获取当前登录用户的默认收货地址")
+    @Operation(summary = "获取当前登录用户默认收货地址")
     @GetMapping("/api/receive-address/default")
     public Result<ReceiveAddressRespDTO> getCurrentUserDefaultReceiveAddress() {
         return Results.success(receiveAddressService.getCurrentUserDefaultReceiveAddress());

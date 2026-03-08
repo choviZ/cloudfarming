@@ -46,7 +46,7 @@ public class ProductUtil {
         // 查询关联的商品
         else if (orderType.equals(OrderTypeConstant.GOODS)) {
             LambdaQueryWrapper<OrderDetailSkuDO> skuWrapper = Wrappers.lambdaQuery(OrderDetailSkuDO.class)
-                    .eq(OrderDetailSkuDO::getOrderId, orderId);
+                    .eq(OrderDetailSkuDO::getOrderNo, orderId);
             List<OrderDetailSkuDO> orderDetailSkus = orderDetailSkuMapper.selectList(skuWrapper);
             for (OrderDetailSkuDO detailSku : orderDetailSkus) {
                 ProductSummaryDTO payOrderItemResp = ProductSummaryDTO.builder()

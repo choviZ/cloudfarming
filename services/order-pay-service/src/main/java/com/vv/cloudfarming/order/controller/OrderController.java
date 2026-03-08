@@ -8,6 +8,7 @@ import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
+import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
@@ -41,6 +42,13 @@ public class OrderController {
     public Result<OrderCreateRespDTO> createOrder(@RequestBody @Valid OrderCreateReqDTO requestParam) {
         long userId = StpUtil.getLoginIdAsLong();
         return Results.success(orderService.createOrderV2(userId, requestParam));
+    }
+
+    @Operation(summary = "秒杀下单")
+    @NoDuplicateSubmit(message = "请勿重复提交秒杀订单")
+    @PostMapping("/api/order/v1/seckill/create")
+    public Result<String> createSeckillOrder(@RequestBody @Valid SeckillCreateReqDTO requestParam) {
+        return Results.success(orderService.createSeckillOrder(requestParam));
     }
 
     @Operation(summary = "查询订单列表")

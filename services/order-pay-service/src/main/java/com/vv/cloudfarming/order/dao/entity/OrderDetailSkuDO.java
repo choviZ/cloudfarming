@@ -33,12 +33,7 @@ public class OrderDetailSkuDO extends BaseDO implements Serializable {
     private Long id;
 
     /**
-     * 关联的订单ID (t_order.id)
-     */
-    private Long orderId;
-
-    /**
-     * 订单号 (冗余字段，方便查询)
+     * 订单号
      */
     private String orderNo;
 

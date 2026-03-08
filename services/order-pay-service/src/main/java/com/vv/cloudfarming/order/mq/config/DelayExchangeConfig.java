@@ -1,6 +1,13 @@
 package com.vv.cloudfarming.order.mq.config;
 
-import org.springframework.amqp.core.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.ExchangeBuilder;
+import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -12,26 +19,29 @@ public class DelayExchangeConfig {
     @Bean
     public DirectExchange delayExchange() {
         return ExchangeBuilder
-                .directExchange("delay.direct") // 指定交换机类型和名称
-                .delayed() // 设置delay属性为true
-                .durable(true) // 持久化
+                .directExchange("delay.direct")
+                .delayed()
+                .durable(true)
                 .build();
     }
 
     @Bean
-    public Queue delayedQueue(){
+    public Queue delayedQueue() {
         return new Queue("delay.queue");
     }
 
     @Bean
-    public Binding delayQueueBinding(){
+    public Binding delayQueueBinding() {
         return BindingBuilder.bind(delayedQueue())
                 .to(delayExchange())
                 .with("delay");
     }
 
     @Bean
-    public MessageConverter jacksonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
+    public MessageConverter jacksonMessageConverter(ObjectMapper objectMapper) {
+        ObjectMapper rabbitObjectMapper = objectMapper.copy()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return new Jackson2JsonMessageConverter(rabbitObjectMapper);
     }
 }

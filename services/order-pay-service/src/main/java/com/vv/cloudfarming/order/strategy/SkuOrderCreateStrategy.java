@@ -58,7 +58,6 @@ public class SkuOrderCreateStrategy implements OrderCreateStrategy {
             SkuRespDTO skuRespDTO = ctx.getSkuMap().get(item.getBizId());
 
             OrderDetailSkuDO orderDetailSkuDO = OrderDetailSkuDO.builder()
-                    .orderId(order.getId())
                     .orderNo(order.getOrderNo())
                     .skuId(item.getBizId())
                     .spuId(skuRespDTO.getSpuId())

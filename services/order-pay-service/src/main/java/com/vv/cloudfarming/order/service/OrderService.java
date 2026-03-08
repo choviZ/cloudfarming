@@ -3,6 +3,7 @@ package com.vv.cloudfarming.order.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
+import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.*;
 
 import java.util.List;
@@ -16,6 +17,11 @@ public interface OrderService {
      * 创建订单
      */
     OrderCreateRespDTO createOrderV2(Long userId, OrderCreateReqDTO requestParam);
+
+    /**
+     * 秒杀下单
+     */
+    String createSeckillOrder(SeckillCreateReqDTO requestParam);
 
     /**
      * 分页查询订单，部分订单信息聚合简要的商品信息（用户使用）

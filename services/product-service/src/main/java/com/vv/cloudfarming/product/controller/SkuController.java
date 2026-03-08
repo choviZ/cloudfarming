@@ -4,13 +4,17 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
+import com.vv.cloudfarming.product.dao.mapper.SeckillActivityMapper;
 import com.vv.cloudfarming.product.dao.mapper.SkuMapper;
+import com.vv.cloudfarming.product.dto.req.SeckillActivityCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SkuCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.LockStockReqDTO;
 import com.vv.cloudfarming.product.dto.resp.SkuRespDTO;
+import com.vv.cloudfarming.product.service.SeckillActivityService;
 import com.vv.cloudfarming.product.service.SkuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +26,9 @@ import java.util.List;
 public class SkuController {
 
     private final SkuService skuService;
+    private final SeckillActivityService seckillActivityService;
     private final SkuMapper skuMapper;
+    private final SeckillActivityMapper seckillActivityMapper;
 
     @Operation(summary = "创建SKU")
     @SaCheckRole(UserRoleConstant.FARMER_DESC)
@@ -64,6 +70,35 @@ public class SkuController {
     @PostMapping("/api/sku/stock/deduct")
     public Result<Integer> deductStock(@RequestBody LockStockReqDTO requestParam){
         int updated = skuMapper.deductSkuStock(requestParam.getQuantity(), requestParam.getId());
+        return Results.success(updated);
+    }
+
+    @Operation(summary = "扣减秒杀库存")
+    @PostMapping("/api/seckill/stock/lock")
+    public Result<Integer> decreaseSeckillStock(@RequestBody LockStockReqDTO requestParam){
+        int updated = seckillActivityMapper.lockSkuStock(requestParam.getQuantity(), requestParam.getId());
+        return Results.success(updated);
+    }
+
+    @Operation(summary = "创建秒杀商品")
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @PostMapping("/api/seckill/create")
+    public Result<Long> createSeckillActivity(@RequestBody @Valid SeckillActivityCreateReqDTO requestParam){
+        Long seckillId = seckillActivityService.createSeckillActivity(requestParam);
+        return Results.success(seckillId);
+    }
+
+    @Operation(summary = "释放秒杀商品锁定库存")
+    @PostMapping("/api/seckill/stock/unlock")
+    public Result<Integer> unlockSeckillStock(@RequestBody LockStockReqDTO requestParam){
+        int updated = seckillActivityMapper.unlockSkuStock(requestParam.getQuantity(), requestParam.getId());
+        return Results.success(updated);
+    }
+
+    @Operation(summary = "扣减秒杀商品库存")
+    @PostMapping("/api/seckill/stock/deduct")
+    public Result<Integer> deductSeckillStock(@RequestBody LockStockReqDTO requestParam){
+        int updated = seckillActivityMapper.deductSkuStock(requestParam.getQuantity(), requestParam.getId());
         return Results.success(updated);
     }
 }

@@ -7,11 +7,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * 收获地址信息远程服务
+ * 收货地址远程服务
  */
 @FeignClient(value = "cloudfarming-user-operation", contextId = "receiveAddressRemoteService", url = "${aggregation.remote-url:}")
 public interface ReceiveAddressRemoteService {
 
     @GetMapping("/api/receive-address/get")
     Result<ReceiveAddressRespDTO> getReceiveAddressById(@RequestParam("id") Long id);
+
+    @GetMapping("/api/receive-address/internal/get")
+    Result<ReceiveAddressRespDTO> getReceiveAddressByIdAndUserId(@RequestParam("id") Long id,
+                                                                  @RequestParam("userId") Long userId);
 }
