@@ -128,6 +128,7 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
                 if (StrUtil.isBlank(s)) {
                     SpuDO spuDO = this.getById(id);
                     if (spuDO == null) {
+                        stringRedisTemplate.opsForValue().setIfAbsent(cacheKey, "NULL_VALUE", 5, TimeUnit.MINUTES);
                         return null;
                     }
                     SpuRespDTO spuResp = BeanUtil.toBean(spuDO, SpuRespDTO.class);
@@ -164,6 +165,9 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
             } finally {
                 lock.unlock();
             }
+        }
+        if ("NULL_VALUE".equals(cache)) {
+            return null;
         }
         return JSONUtil.toBean(cache, ProductRespDTO.class);
     }
