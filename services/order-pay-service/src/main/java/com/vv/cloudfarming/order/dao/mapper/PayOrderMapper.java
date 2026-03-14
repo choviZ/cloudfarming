@@ -9,6 +9,6 @@ import org.apache.ibatis.annotations.Select;
  */
 public interface PayOrderMapper extends BaseMapper<PayDO> {
 
-    @Select("SELECT * FROM t_pay_order where pay_order_no = #{payOrderNo} and del_flag = 0")
+    @Select("SELECT * FROM cloud_farming.t_pay where pay_order_no = #{payOrderNo} and del_flag = 0")
     PayDO selectPayOrderByNo(String payOrderNo);
 }
