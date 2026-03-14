@@ -10,7 +10,10 @@
       <!-- User Info -->
       <div class="user-info-section">
         <div class="avatar-wrapper">
-          <img :src="userAvatar" alt="Avatar" class="avatar-img">
+          <img v-if="hasAvatar" :src="userAvatar" alt="Avatar" class="avatar-img">
+          <div v-else class="avatar-placeholder">
+            <UserOutlined class="avatar-icon" />
+          </div>
         </div>
         <h3 class="user-name">{{ userName }}</h3>
 
@@ -81,7 +84,8 @@ import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/useUserStore';
 import { 
   EnvironmentOutlined, 
-  RightOutlined 
+  RightOutlined,
+  UserOutlined 
 } from '@ant-design/icons-vue';
 import { getCurrentUserDefaultReceiveAddress } from '@/api/address';
 
@@ -94,7 +98,12 @@ const userName = computed(() => {
 });
 
 const userAvatar = computed(() => {
-  return userStore.loginUser?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Guest';
+  return userStore.loginUser?.avatar || '';
+});
+
+const hasAvatar = computed(() => {
+  const avatar = userAvatar.value;
+  return avatar && avatar !== '' && !avatar.includes('Avatar');
 });
 
 onMounted(async () => {
@@ -178,6 +187,21 @@ onMounted(async () => {
   height: 64px;
   border-radius: 50%;
   background-color: #f8fafc;
+}
+
+.avatar-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-icon {
+  font-size: 32px;
+  color: #94a3b8;
 }
 
 .user-name {
