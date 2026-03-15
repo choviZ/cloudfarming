@@ -129,3 +129,17 @@ export const listSpuAttrValuesBySpuId = (spuId) => {
 export const getSpuAttrValueBySpuIdAndAttrId = (spuId, attrId) => {
   return request.get('/v1/spu/attr/id', { params: { spuId, attrId } })
 }
+
+/**
+ * 上传图片
+ */
+export const uploadImage = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/api/spu/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
