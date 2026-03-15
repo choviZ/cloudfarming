@@ -298,19 +298,27 @@ const fetchProductDetail = async (id) => {
   try {
     const response = await getSpuDetail(Number(id))
     if (response.code === '0' && response.data) {
-      const data = response.data
-      spuInfo.value = data
-      skuList.value = data.skuList || []
+      const { productSpu, productSkus } = response.data
+      spuInfo.value = productSpu
+      skuList.value = productSkus || []
       // 处理逗号分隔的图像并修剪空白
-      if (data.images) {
-        productImages.value = data.images.split(',').map(i => i.trim()).filter(Boolean)
+      if (productSpu.images) {
+        productImages.value = productSpu.images.split(',').map(i => i.trim()).filter(Boolean)
       }
-      extractSpecs(data.skuList || [])
+      // 处理 SKU 的销售属性（JSON 字符串转对象）
+      if (productSkus?.length) {
+        productSkus.forEach(sku => {
+          if (sku.saleAttribute && typeof sku.saleAttribute === 'string') {
+            sku.saleAttrs = JSON.parse(sku.saleAttribute)
+          }
+        })
+      }
+      extractSpecs(productSkus || [])
     } else {
       message.error('获取商品详情失败: ' + (response.message || '未知错误'))
     }
   } catch (error) {
-    message.error('获取商品详情失败',error)
+    message.error('获取商品详情失败', error)
   } finally {
     loading.value = false
   }

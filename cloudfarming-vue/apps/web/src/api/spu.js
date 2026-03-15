@@ -19,12 +19,12 @@ export const deleteSpuById = (id) => {
 }
 
 /**
- * 根据id获取单个SPU详情
+ * 根据 id 获取单个 SPU 详情
  * @param {number} id
  * @returns {Promise<Object>} Result<SpuDetailRespDTO>
  */
 export const getSpuDetail = (id) => {
-  return request.get(`/api/spu/get`,{params: id})
+  return request.get(`/api/spu/get`, { params: { id } })
 }
 
 /**

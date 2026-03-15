@@ -156,8 +156,8 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
                             }
                             spuResp.setAttributes(JSONUtil.toJsonStr(baseAttrs));
                         }
-                        result.setProductSpu(spuResp);
                     }
+                    result.setProductSpu(spuResp);
                     // 2. 获取 SKU 列表
                     result.setProductSkus(skuService.getSkusBySpuId(id));
                     // 3. 构建缓存
