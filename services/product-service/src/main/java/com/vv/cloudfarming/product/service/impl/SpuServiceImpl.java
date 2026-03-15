@@ -18,6 +18,7 @@ import com.vv.cloudfarming.product.constant.CacheKeyConstant;
 import com.vv.cloudfarming.product.dao.entity.AttributeDO;
 import com.vv.cloudfarming.product.dao.entity.SpuAttrValueDO;
 import com.vv.cloudfarming.product.dao.entity.SpuDO;
+import com.vv.cloudfarming.product.dao.mapper.SkuMapper;
 import com.vv.cloudfarming.product.dao.mapper.SpuAttrValueMapper;
 import com.vv.cloudfarming.product.dao.mapper.SpuMapper;
 import com.vv.cloudfarming.product.dto.req.*;
@@ -57,6 +58,7 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
     private final AuditService auditService;
     private final StringRedisTemplate stringRedisTemplate;
     private final RedissonClient redissonClient;
+    private final SkuMapper skuMapper;
 
     @Override
     @Transactional
@@ -136,14 +138,14 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
 
                     // 1. 获取基础属性
                     LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-                            .eq(SpuAttrValueDO::getSpuId, id);
+                        .eq(SpuAttrValueDO::getSpuId, id);
                     List<SpuAttrValueDO> attrValues = spuAttrValueMapper.selectList(wrapper);
 
                     if (CollUtil.isNotEmpty(attrValues)) {
                         List<Long> attrIds = attrValues.stream().map(SpuAttrValueDO::getAttrId).collect(Collectors.toList());
                         if (CollUtil.isNotEmpty(attrIds)) {
                             Map<Long, String> attrNameMap = attributeService.listByIds(attrIds).stream()
-                                    .collect(Collectors.toMap(AttributeDO::getId, AttributeDO::getName));
+                                .collect(Collectors.toMap(AttributeDO::getId, AttributeDO::getName));
 
                             Map<String, String> baseAttrs = new HashMap<>();
                             for (SpuAttrValueDO av : attrValues) {
@@ -183,23 +185,16 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         Integer status = queryParam.getStatus();
         // 构建查询条件
         LambdaQueryWrapper<SpuDO> queryWrapper = Wrappers.lambdaQuery(SpuDO.class)
-                .like(!StrUtil.isBlank(spuName), SpuDO::getTitle, spuName)
-                .eq(categoryId != null, SpuDO::getCategoryId, categoryId)
-                .eq(status != null, SpuDO::getStatus, status);
+            .eq(Objects.nonNull(id), SpuDO::getId, id)
+            .like(!StrUtil.isBlank(spuName), SpuDO::getTitle, spuName)
+            .eq(categoryId != null, SpuDO::getCategoryId, categoryId)
+            .eq(status != null, SpuDO::getStatus, status);
         // 查询
         IPage<SpuDO> spuDOPage = baseMapper.selectPage(queryParam, queryWrapper);
-
-        // 批量查询价格摘要 (避免 N+1)
-        List<Long> spuIds = spuDOPage.getRecords().stream()
-                .map(SpuDO::getId)
-                .collect(Collectors.toList());
-        List<SpuPriceSummaryDTO> priceSummaries = skuService.listPriceSummaryBySpuIds(spuIds);
-        Map<Long, SpuPriceSummaryDTO> priceSummaryMap = priceSummaries.stream()
-                .collect(Collectors.toMap(SpuPriceSummaryDTO::getSpuId, p -> p));
-
         return spuDOPage.convert(spuDO -> {
             SpuRespDTO spuRespDTO = BeanUtil.toBean(spuDO, SpuRespDTO.class);
             spuRespDTO.setAttributes(JSONUtil.toJsonStr(getSpuAttributes(spuDO.getId())));
+            spuRespDTO.setMinPrice(skuMapper.queryLowestPrice(spuDO.getId()));
             return spuRespDTO;
         });
     }
@@ -220,8 +215,8 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
             throw new ClientException("请勿重复修改状态");
         }
         LambdaUpdateWrapper<SpuDO> updateWrapper = Wrappers.lambdaUpdate(SpuDO.class)
-                .eq(SpuDO::getId, id)
-                .set(SpuDO::getStatus, status);
+            .eq(SpuDO::getId, id)
+            .set(SpuDO::getStatus, status);
         boolean updated = this.update(updateWrapper);
         if (!updated) {
             throw new ServiceException("SPU状态更新失败");
@@ -257,8 +252,8 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         }
 
         LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-                .eq(SpuAttrValueDO::getSpuId, spuId)
-                .eq(SpuAttrValueDO::getAttrId, attrId);
+            .eq(SpuAttrValueDO::getSpuId, spuId)
+            .eq(SpuAttrValueDO::getAttrId, attrId);
         SpuAttrValueDO existing = spuAttrValueMapper.selectOne(wrapper);
         if (existing != null) {
             throw new ClientException("该SPU已存在该属性值");
@@ -303,10 +298,10 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         }
 
         LambdaUpdateWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaUpdate(SpuAttrValueDO.class)
-                .eq(SpuAttrValueDO::getId, id)
-                .set(ObjectUtil.isNotNull(spuId), SpuAttrValueDO::getSpuId, spuId)
-                .set(ObjectUtil.isNotNull(attrId), SpuAttrValueDO::getAttrId, attrId)
-                .set(StrUtil.isNotBlank(attrValue), SpuAttrValueDO::getAttrValue, attrValue);
+            .eq(SpuAttrValueDO::getId, id)
+            .set(ObjectUtil.isNotNull(spuId), SpuAttrValueDO::getSpuId, spuId)
+            .set(ObjectUtil.isNotNull(attrId), SpuAttrValueDO::getAttrId, attrId)
+            .set(StrUtil.isNotBlank(attrValue), SpuAttrValueDO::getAttrValue, attrValue);
         int updated = spuAttrValueMapper.update(null, wrapper);
         if (updated < 0) {
             throw new ServiceException("SPU属性值更新失败");
@@ -351,11 +346,11 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
             throw new ClientException("SPU不存在");
         }
         LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-                .eq(SpuAttrValueDO::getSpuId, spuId);
+            .eq(SpuAttrValueDO::getSpuId, spuId);
         List<SpuAttrValueDO> spuAttrValues = spuAttrValueMapper.selectList(wrapper);
         return spuAttrValues.stream()
-                .map(spuAttrValueDO -> BeanUtil.toBean(spuAttrValueDO, SpuAttrValueRespDTO.class))
-                .collect(Collectors.toList());
+            .map(spuAttrValueDO -> BeanUtil.toBean(spuAttrValueDO, SpuAttrValueRespDTO.class))
+            .collect(Collectors.toList());
     }
 
     @Override
@@ -376,8 +371,8 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         }
 
         LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-                .eq(SpuAttrValueDO::getSpuId, spuId)
-                .eq(SpuAttrValueDO::getAttrId, attrId);
+            .eq(SpuAttrValueDO::getSpuId, spuId)
+            .eq(SpuAttrValueDO::getAttrId, attrId);
         SpuAttrValueDO spuAttrValue = spuAttrValueMapper.selectOne(wrapper);
         if (spuAttrValue == null) {
             return null;
@@ -417,7 +412,7 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
             throw new ClientException("SPU不存在");
         }
         LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-                .eq(SpuAttrValueDO::getSpuId, spuId);
+            .eq(SpuAttrValueDO::getSpuId, spuId);
         int deleted = spuAttrValueMapper.delete(wrapper);
         if (deleted < 0) {
             throw new ServiceException("删除SPU属性值失败");

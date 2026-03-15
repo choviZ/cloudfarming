@@ -2,6 +2,7 @@ package com.vv.cloudfarming.product.dto.resp;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -41,6 +42,11 @@ public class SpuRespDTO {
      * 基本属性 JSON
      */
     private String attributes;
+
+    /**
+     * 最低价格
+     */
+    private Double minPrice;
 
     /**
      * 创建时间

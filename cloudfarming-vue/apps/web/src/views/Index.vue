@@ -98,8 +98,7 @@
                     </div>
                     <div class="product-bottom">
                       <div class="product-price">
-                        <span v-if="product.priceSummary">¥{{ product.priceSummary.minPrice }}</span>
-                        <span v-else style="font-size: 14px; color: #999;">暂无价格</span>
+                        <span v-if="product.minPrice">¥{{ product.minPrice }}</span>
                       </div>
                       <div class="product-sold">已售 {{ Math.floor(Math.random() * 1000) }}+</div>
                     </div>
