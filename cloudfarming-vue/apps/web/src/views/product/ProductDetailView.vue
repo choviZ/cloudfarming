@@ -14,31 +14,22 @@
           <!-- Left: Gallery -->
           <div class="gallery-section">
             <div class="main-image-wrapper">
-              <img 
-                v-if="productImages.length > 0"
-                :src="productImages[currentImageIndex]" 
-                alt="Product" 
-                class="main-image"
-              >
+              <img v-if="productImages.length > 0" :src="productImages[currentImageIndex]" alt="Product"
+                class="main-image">
               <div v-else class="no-image">
                 <ShopOutlined class="no-image-icon" />
                 <span>暂无图片</span>
               </div>
               <div class="tag-badge">产地直采</div>
             </div>
-            
+
             <div class="thumbnail-list" v-if="productImages.length > 1">
-              <div 
-                v-for="(img, index) in productImages" 
-                :key="index"
-                class="thumbnail-item"
-                :class="{ active: currentImageIndex === index }"
-                @mouseenter="currentImageIndex = index"
-              >
+              <div v-for="(img, index) in productImages" :key="index" class="thumbnail-item"
+                :class="{ active: currentImageIndex === index }" @mouseenter="currentImageIndex = index">
                 <img :src="img" alt="thumbnail">
               </div>
             </div>
-            
+
             <div class="social-share">
               <span class="share-item" @click="toggleFavorite">
                 <StarFilled v-if="isFavorited" class="icon active" />
@@ -73,13 +64,8 @@
               <div v-for="key in specKeys" :key="key" class="sku-row">
                 <span class="sku-label">{{ key }}</span>
                 <div class="sku-options">
-                  <div 
-                    v-for="val in specs[key]" 
-                    :key="val"
-                    class="sku-chip"
-                    :class="{ active: selectedSpecs[key] === val }"
-                    @click="selectSpec(key, val)"
-                  >
+                  <div v-for="val in specs[key]" :key="val" class="sku-chip"
+                    :class="{ active: selectedSpecs[key] === val }" @click="selectSpec(key, val)">
                     {{ val }}
                     <CheckOutlined v-if="selectedSpecs[key] === val" class="check-icon" />
                   </div>
@@ -91,13 +77,8 @@
             <div class="quantity-section">
               <span class="sku-label">数量</span>
               <div class="quantity-wrapper">
-                <a-input-number 
-                  v-model:value="quantity" 
-                  :min="1" 
-                  :max="currentSku ? currentSku.stock : 9999"
-                  class="quantity-input"
-                  :disabled="!currentSku && specKeys.length > 0"
-                />
+                <a-input-number v-model:value="quantity" :min="1" :max="currentSku ? currentSku.stock : 9999"
+                  class="quantity-input" :disabled="!currentSku && specKeys.length > 0" />
               </div>
             </div>
 
@@ -165,18 +146,10 @@
           <!-- Main Detail -->
           <div class="detail-container">
             <div class="sticky-tabs">
-              <div 
-                class="tab-item" 
-                :class="{ active: activeTab === 'detail' }"
-                @click="activeTab = 'detail'"
-              >
+              <div class="tab-item" :class="{ active: activeTab === 'detail' }" @click="activeTab = 'detail'">
                 商品详情
               </div>
-              <div 
-                class="tab-item" 
-                :class="{ active: activeTab === 'reviews' }"
-                @click="activeTab = 'reviews'"
-              >
+              <div class="tab-item" :class="{ active: activeTab === 'reviews' }" @click="activeTab = 'reviews'">
                 累计评价 (TODO)
               </div>
             </div>
@@ -201,16 +174,16 @@
                 </div>
 
                 <div class="detail-images">
-                   <!-- Since we don't have rich text HTML description, we show images if they exist in description or just placeholder -->
-                   <!-- Assuming spuInfo.description might be text. If backend returns HTML, use v-html. For now, text. -->
-                   <!-- Usually product details are images. If we only have 'images' field (main images), we might not have detail images. -->
-                   <!-- Let's just use the main images again as detail images if no dedicated field, or just show text -->
-                   <div class="prose">
-                      <p v-if="spuInfo.description">{{ spuInfo.description }}</p>
-                      <div class="image-stack" v-if="productImages.length > 0">
-                        <img v-for="(img, idx) in productImages" :key="idx" :src="img" class="detail-img">
-                      </div>
-                   </div>
+                  <!-- Since we don't have rich text HTML description, we show images if they exist in description or just placeholder -->
+                  <!-- Assuming spuInfo.description might be text. If backend returns HTML, use v-html. For now, text. -->
+                  <!-- Usually product details are images. If we only have 'images' field (main images), we might not have detail images. -->
+                  <!-- Let's just use the main images again as detail images if no dedicated field, or just show text -->
+                  <div class="prose">
+                    <p v-if="spuInfo.description">{{ spuInfo.description }}</p>
+                    <div class="image-stack" v-if="productImages.length > 0">
+                      <img v-for="(img, idx) in productImages" :key="idx" :src="img" class="detail-img">
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -305,6 +278,22 @@ const fetchProductDetail = async (id) => {
       if (productSpu.images) {
         productImages.value = productSpu.images.split(',').map(i => i.trim()).filter(Boolean)
       }
+      // 解析基本属性（JSON 字符串转对象）
+      if (productSpu.attributes && typeof productSpu.attributes === 'string') {
+        try {
+          const attrs = JSON.parse(productSpu.attributes)
+          // attributes 格式：{"name":"产地","attr_value":"赤峰"}，转换为 baseAttrs: {产地: 赤峰}
+          spuInfo.value.baseAttrs = {
+            [attrs.name]: attrs.attr_value
+          }
+        } catch (e) {
+          spuInfo.value.baseAttrs = {}
+        }
+      } else if (productSpu.attributes) {
+        spuInfo.value.baseAttrs = productSpu.attributes
+      } else {
+        spuInfo.value.baseAttrs = {}
+      }
       // 处理 SKU 的销售属性（JSON 字符串转对象）
       if (productSkus?.length) {
         productSkus.forEach(sku => {
@@ -326,6 +315,7 @@ const fetchProductDetail = async (id) => {
 
 const extractSpecs = (skus) => {
   for (const key in specs) delete specs[key];
+  for (const key in selectedSpecs) delete selectedSpecs[key];
   if (!skus?.length) return;
   const temp = {};
   skus.forEach(sku => {
@@ -336,7 +326,11 @@ const extractSpecs = (skus) => {
       });
     }
   });
-  Object.entries(temp).forEach(([k, v]) => specs[k] = Array.from(v));
+  Object.entries(temp).forEach(([k, v]) => {
+    specs[k] = Array.from(v);
+    // 默认选中第一个规格值
+    selectedSpecs[k] = specs[k][0];
+  });
 }
 
 const selectSpec = (key, val) => {
@@ -350,9 +344,9 @@ const addToCart = async () => {
     return;
   }
   const res = await addToCartApi({
-      skuId: String(currentSku.value.id),
-      quantity: quantity.value,
-      selected: false
+    skuId: String(currentSku.value.id),
+    quantity: quantity.value,
+    selected: false
   })
   if (res.code === '0') message.success('已成功加入购物车')
   else message.error('加入失败: ' + res.message)
@@ -363,7 +357,7 @@ const buyNow = () => {
     message.warning('请先选择规格');
     return;
   }
-  
+
   // 跳转到订单创建页面，携带商品信息
   router.push({
     path: '/order/create',
@@ -382,9 +376,9 @@ const toggleFavorite = () => {
 }
 
 onMounted(() => {
-  if (spuId){
+  if (spuId) {
     fetchProductDetail(spuId)
-  }else{
+  } else {
     message.error('未获取到SPUID')
   }
 })
@@ -395,7 +389,8 @@ onMounted(() => {
 .product-detail-page {
   min-height: 100vh;
   padding-bottom: 40px;
-  color: #1f2937; /* gray-900 */
+  color: #1f2937;
+  /* gray-900 */
 }
 
 .container {
@@ -466,13 +461,17 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
 }
-.no-image-icon { font-size: 32px; }
+
+.no-image-icon {
+  font-size: 32px;
+}
 
 .tag-badge {
   position: absolute;
   top: 16px;
   left: 16px;
-  background-color: #10b981; /* brand-500 */
+  background-color: #10b981;
+  /* brand-500 */
   color: white;
   font-size: 12px;
   font-weight: 700;
@@ -524,9 +523,18 @@ onMounted(() => {
   gap: 6px;
   transition: color 0.2s;
 }
-.share-item:hover { color: #059669; }
-.share-item .icon { font-size: 16px; }
-.share-item .icon.active { color: #f59e0b; }
+
+.share-item:hover {
+  color: #059669;
+}
+
+.share-item .icon {
+  font-size: 16px;
+}
+
+.share-item .icon.active {
+  color: #f59e0b;
+}
 
 /* Right: Info */
 .info-section {
@@ -570,13 +578,20 @@ onMounted(() => {
 }
 
 .price-value-wrapper {
-  color: #ef4444; /* price red */
+  color: #ef4444;
+  /* price red */
   font-weight: 700;
   line-height: 1;
 }
 
-.currency { font-size: 20px; margin-right: 2px; }
-.amount { font-size: 36px; }
+.currency {
+  font-size: 20px;
+  margin-right: 2px;
+}
+
+.amount {
+  font-size: 36px;
+}
 
 /* SKU */
 .sku-section {
@@ -623,7 +638,8 @@ onMounted(() => {
 
 .sku-chip.active {
   border-color: #10b981;
-  background-color: #ecfdf5; /* brand-50 */
+  background-color: #ecfdf5;
+  /* brand-50 */
   color: #047857;
   font-weight: 500;
 }
@@ -677,7 +693,9 @@ onMounted(() => {
   color: #4b5563;
 }
 
-.service-icon { color: #10b981; }
+.service-icon {
+  color: #10b981;
+}
 
 /* Actions */
 .action-buttons {
@@ -707,14 +725,20 @@ onMounted(() => {
   border: 2px solid #059669;
   color: #059669;
 }
-.btn-secondary:hover:not(:disabled) { background: #ecfdf5; }
+
+.btn-secondary:hover:not(:disabled) {
+  background: #ecfdf5;
+}
 
 .btn-primary {
   background: #059669;
   color: white;
   box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.4);
 }
-.btn-primary:hover:not(:disabled) { background: #047857; }
+
+.btn-primary:hover:not(:disabled) {
+  background: #047857;
+}
 
 /* Content Layout */
 .content-layout {
@@ -727,7 +751,10 @@ onMounted(() => {
   .content-layout {
     grid-template-columns: 1fr;
   }
-  .sidebar { display: none; }
+
+  .sidebar {
+    display: none;
+  }
 }
 
 /* Sidebar */
@@ -773,7 +800,10 @@ onMounted(() => {
   color: #6b7280;
   margin-top: 4px;
 }
-.star { color: #facc15; }
+
+.star {
+  color: #facc15;
+}
 
 .shop-stats {
   display: grid;
@@ -782,8 +812,16 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
-.shop-stats .label { font-size: 12px; color: #9ca3af; }
-.shop-stats .value { font-size: 14px; font-weight: 700; color: #111827; }
+.shop-stats .label {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.shop-stats .value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
 
 .shop-actions {
   display: flex;
@@ -805,13 +843,19 @@ onMounted(() => {
   border: 1px solid #e5e7eb;
   color: #374151;
 }
-.btn-outline:hover { background: #f9fafb; }
+
+.btn-outline:hover {
+  background: #f9fafb;
+}
 
 .btn-filled {
   background: #059669;
   color: white;
 }
-.btn-filled:hover { background: #047857; }
+
+.btn-filled:hover {
+  background: #047857;
+}
 
 /* Main Detail Content */
 .detail-container {
@@ -842,7 +886,9 @@ onMounted(() => {
   transition: all 0.2s;
 }
 
-.tab-item:hover { color: #059669; }
+.tab-item:hover {
+  color: #059669;
+}
 
 .tab-item.active {
   color: #059669;
@@ -862,7 +908,10 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
 }
-.section-title .icon { color: #10b981; }
+
+.section-title .icon {
+  color: #10b981;
+}
 
 .params-grid {
   display: grid;
@@ -900,7 +949,8 @@ onMounted(() => {
 .image-stack {
   display: flex;
   flex-direction: column;
-  gap: 0; /* Seamless vertical stack usually */
+  gap: 0;
+  /* Seamless vertical stack usually */
   margin-top: 24px;
 }
 

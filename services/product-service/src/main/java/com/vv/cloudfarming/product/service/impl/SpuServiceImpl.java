@@ -137,26 +137,8 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
                     ProductRespDTO result = new ProductRespDTO();
 
                     // 1. 获取基础属性
-                    LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-                        .eq(SpuAttrValueDO::getSpuId, id);
-                    List<SpuAttrValueDO> attrValues = spuAttrValueMapper.selectList(wrapper);
-
-                    if (CollUtil.isNotEmpty(attrValues)) {
-                        List<Long> attrIds = attrValues.stream().map(SpuAttrValueDO::getAttrId).collect(Collectors.toList());
-                        if (CollUtil.isNotEmpty(attrIds)) {
-                            Map<Long, String> attrNameMap = attributeService.listByIds(attrIds).stream()
-                                .collect(Collectors.toMap(AttributeDO::getId, AttributeDO::getName));
-
-                            Map<String, String> baseAttrs = new HashMap<>();
-                            for (SpuAttrValueDO av : attrValues) {
-                                String name = attrNameMap.get(av.getAttrId());
-                                if (name != null) {
-                                    baseAttrs.put(name, av.getAttrValue());
-                                }
-                            }
-                            spuResp.setAttributes(JSONUtil.toJsonStr(baseAttrs));
-                        }
-                    }
+                    Map<String, String> baseAttrMap = baseMapper.querySpuAttr(spuDO.getId());
+                    spuResp.setAttributes(JSONUtil.toJsonStr(baseAttrMap));
                     result.setProductSpu(spuResp);
                     // 2. 获取 SKU 列表
                     result.setProductSkus(skuService.getSkusBySpuId(id));
