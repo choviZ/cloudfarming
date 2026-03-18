@@ -57,14 +57,14 @@ public class SeckillOrderCreateListener {
     private final TransactionTemplate transactionTemplate;
 
     @RabbitListener(bindings = @QueueBinding(
-            value = @Queue(value = "order.seckill.queue", durable = "true"),
-            exchange = @Exchange(value = "order-event-exange", type = ExchangeTypes.DIRECT),
-            key = "order.seckill.order"
+        value = @Queue(value = "order.seckill.queue", durable = "true"),
+        exchange = @Exchange(value = "order-event-exange", type = ExchangeTypes.DIRECT),
+        key = "order.seckill.order"
     ))
     @NoDuplicateConsumption(
-            uniqueKeyPrefix = "mq:seckill:create-order:",
-            key = "#p0 == null ? 'null' : (#p0.orderNo == null ? 'null' : #p0.orderNo)",
-            message = "秒杀订单消息消费中，请稍后重试"
+        uniqueKeyPrefix = "mq:seckill:create-order:",
+        key = "#p0 == null ? 'null' : (#p0.orderNo == null ? 'null' : #p0.orderNo)",
+        message = "秒杀订单消息消费中，请稍后重试"
     )
     public void createOrder(SeckillOrderMessage message) {
         LockStockReqDTO lockStockReqDTO = null;
@@ -84,7 +84,7 @@ public class SeckillOrderCreateListener {
             }
 
             Long duplicateCount = orderMapper.selectCount(Wrappers.lambdaQuery(OrderDO.class)
-                    .eq(OrderDO::getOrderNo, orderNo));
+                .eq(OrderDO::getOrderNo, orderNo));
             if (duplicateCount != null && duplicateCount > 0) {
                 log.info("秒杀订单消息重复消费，已忽略，orderNo={}", orderNo);
                 return;
@@ -105,7 +105,7 @@ public class SeckillOrderCreateListener {
             if (skuList == null || skuList.isEmpty()) {
                 rollbackSeckillCacheQuietly(seckillActivity, userId, nums, orderNo);
                 log.error("查询 SKU 详情失败，已回滚秒杀缓存，orderNo={}, skuId={}, result={}",
-                        orderNo, seckillActivity.getSkuId(), JSONUtil.toJsonStr(skuResult));
+                    orderNo, seckillActivity.getSkuId(), JSONUtil.toJsonStr(skuResult));
                 return;
             }
             SkuRespDTO skuRespDTO = skuList.get(0);
@@ -120,52 +120,53 @@ public class SeckillOrderCreateListener {
                 needUnlockOnError = false;
                 rollbackSeckillCacheQuietly(seckillActivity, userId, nums, orderNo);
                 log.error("锁定秒杀库存失败，已回滚秒杀缓存，orderNo={}, activityId={}, lockResult={}",
-                        orderNo, seckillActivity.getId(), JSONUtil.toJsonStr(lockResult));
+                    orderNo, seckillActivity.getId(), JSONUtil.toJsonStr(lockResult));
                 return;
             }
 
             transactionTemplate.executeWithoutResult(status -> {
                 OrderDO order = OrderDO.builder()
-                        .orderNo(orderNo)
-                        .userId(userId)
-                        .shopId(seckillActivity.getShopId())
-                        .orderType(OrderTypeConstant.GOODS)
-                        .totalAmount(amount)
-                        .actualPayAmount(amount)
-                        .freightAmount(BigDecimal.ZERO)
-                        .discountAmount(BigDecimal.ZERO)
-                        .orderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
-                        .receiveName(receiveAddress.getReceiverName())
-                        .receivePhone(receiveAddress.getReceiverPhone())
-                        .provinceName(receiveAddress.getProvinceName())
-                        .cityName(receiveAddress.getCityName())
-                        .districtName(receiveAddress.getDistrictName())
-                        .detailAddress(receiveAddress.getDetailAddress())
-                        .build();
+                    .orderNo(orderNo)
+                    .payOrderNo(message.getPayNo())
+                    .userId(userId)
+                    .shopId(seckillActivity.getShopId())
+                    .orderType(OrderTypeConstant.GOODS)
+                    .totalAmount(amount)
+                    .actualPayAmount(amount)
+                    .freightAmount(BigDecimal.ZERO)
+                    .discountAmount(BigDecimal.ZERO)
+                    .orderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
+                    .receiveName(receiveAddress.getReceiverName())
+                    .receivePhone(receiveAddress.getReceiverPhone())
+                    .provinceName(receiveAddress.getProvinceName())
+                    .cityName(receiveAddress.getCityName())
+                    .districtName(receiveAddress.getDistrictName())
+                    .detailAddress(receiveAddress.getDetailAddress())
+                    .build();
                 int insertedOrder = orderMapper.insert(order);
 
                 OrderDetailSkuDO orderDetailSkuDO = OrderDetailSkuDO.builder()
-                        .orderNo(order.getOrderNo())
-                        .skuId(seckillActivity.getSkuId())
-                        .spuId(seckillActivity.getSpuId())
-                        .skuName(seckillActivity.getActivityName())
-                        .skuImage(skuRespDTO.getSkuImage())
-                        .skuSpecs(JSONUtil.toJsonStr(skuRespDTO.getSaleAttribute()))
-                        .price(seckillActivity.getSeckillPrice())
-                        .quantity(nums.intValue())
-                        .totalAmount(amount)
-                        .build();
+                    .orderNo(order.getOrderNo())
+                    .skuId(seckillActivity.getSkuId())
+                    .spuId(seckillActivity.getSpuId())
+                    .skuName(seckillActivity.getActivityName())
+                    .skuImage(skuRespDTO.getSkuImage())
+                    .skuSpecs(JSONUtil.toJsonStr(skuRespDTO.getSaleAttribute()))
+                    .price(seckillActivity.getSeckillPrice())
+                    .quantity(nums.intValue())
+                    .totalAmount(amount)
+                    .build();
                 int insertedOrderDetail = orderDetailSkuMapper.insert(orderDetailSkuDO);
 
                 PayDO payDO = PayDO.builder()
-                        .payOrderNo(message.getPayNo())
-                        .buyerId(userId)
-                        .totalAmount(amount)
-                        .payStatus(PayStatusEnum.UNPAID.getCode())
-                        .bizStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
-                        .payChannel(0)
-                        .expireTime(LocalDateTime.now().plusMinutes(15))
-                        .build();
+                    .payOrderNo(message.getPayNo())
+                    .buyerId(userId)
+                    .totalAmount(amount)
+                    .payStatus(PayStatusEnum.UNPAID.getCode())
+                    .bizStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
+                    .payChannel(0)
+                    .expireTime(LocalDateTime.now().plusMinutes(15))
+                    .build();
                 int insertedPayOrder = payOrderMapper.insert(payDO);
 
                 if (insertedOrder == 0 || insertedOrderDetail == 0 || insertedPayOrder == 0) {
@@ -210,16 +211,16 @@ public class SeckillOrderCreateListener {
         });
         try {
             Long rollbackResult = stringRedisTemplate.execute(
-                    rollbackLuaScript,
-                    List.of(seckillCacheKey, userCountKey),
-                    String.valueOf(nums),
-                    String.valueOf(userId)
+                rollbackLuaScript,
+                List.of(seckillCacheKey, userCountKey),
+                String.valueOf(nums),
+                String.valueOf(userId)
             );
             log.warn("秒杀缓存回滚完成，orderNo={}, seckillId={}, userId={}, nums={}, rollbackResult={}",
-                    orderNo, seckillActivity.getId(), userId, nums, rollbackResult);
+                orderNo, seckillActivity.getId(), userId, nums, rollbackResult);
         } catch (Exception ex) {
             log.error("秒杀缓存回滚异常，orderNo={}, seckillId={}, userId={}, nums={}",
-                    orderNo, seckillActivity.getId(), userId, nums, ex);
+                orderNo, seckillActivity.getId(), userId, nums, ex);
         }
     }
 }

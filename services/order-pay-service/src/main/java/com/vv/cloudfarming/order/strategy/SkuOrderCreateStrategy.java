@@ -58,15 +58,16 @@ public class SkuOrderCreateStrategy implements OrderCreateStrategy {
             SkuRespDTO skuRespDTO = ctx.getSkuMap().get(item.getBizId());
 
             OrderDetailSkuDO orderDetailSkuDO = OrderDetailSkuDO.builder()
-                    .orderNo(order.getOrderNo())
-                    .skuId(item.getBizId())
-                    .spuId(skuRespDTO.getSpuId())
-                    .skuImage(skuRespDTO.getSkuImage())
-                    .skuSpecs(JSONUtil.toJsonStr(skuRespDTO.getSaleAttribute()))
-                    .price(skuRespDTO.getPrice())
-                    .quantity(item.getQuantity())
-                    .totalAmount(skuRespDTO.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                    .build();
+                .orderNo(order.getOrderNo())
+                .skuId(item.getBizId())
+                .spuId(skuRespDTO.getSpuId())
+                .skuName("默认商品名称")
+                .skuImage(skuRespDTO.getSkuImage())
+                .skuSpecs(JSONUtil.toJsonStr(skuRespDTO.getSaleAttribute()))
+                .price(skuRespDTO.getPrice())
+                .quantity(item.getQuantity())
+                .totalAmount(skuRespDTO.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .build();
 
             orderDetails.add(orderDetailSkuDO);
         }
@@ -75,19 +76,20 @@ public class SkuOrderCreateStrategy implements OrderCreateStrategy {
 
     @Override
     public void lockedStock(List<ProductItemDTO> items) {
-        for (ProductItemDTO item : items){
+        for (ProductItemDTO item : items) {
             LockStockReqDTO requestParam = new LockStockReqDTO();
             requestParam.setId(item.getBizId());
             requestParam.setQuantity(item.getQuantity());
 
             Integer result = skuRemoteService.lockStock(requestParam).getData();
-            if (result == null || result <= 0){
-                log.error("锁定库存失败，类型：农产品，id：{}，锁定数量：{}",item.getBizId(),item.getQuantity());
+            if (result == null || result <= 0) {
+                log.error("锁定库存失败，类型：农产品，id：{}，锁定数量：{}", item.getBizId(), item.getQuantity());
                 throw new RuntimeException("库存不足");
             }
-            log.info("锁定库存成功，类型：农产品，id：{}，锁定数量：{}",item.getBizId(),item.getQuantity());
+            log.info("锁定库存成功，类型：农产品，id：{}，锁定数量：{}", item.getBizId(), item.getQuantity());
         }
     }
+
     @Override
     public void unlockStock(List<ProductItemDTO> items) {
         for (ProductItemDTO item : items) {
