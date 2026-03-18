@@ -102,12 +102,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         boolean lockStockInvoked = false;
         try {
             lockStockInvoked = true;
+            // 锁定库存
             strategy.lockedStock(items);
 
             List<OrderDO> orders = new ArrayList<>();
+            String paySN = redisIdWorker.generateId("PaySN").toString();
             Map<Long, List<ProductItemDTO>> shopGroup = items.stream()
-                    .collect(Collectors.groupingBy(item -> strategy.resolveShopId(item, orderContext)));
+                .collect(Collectors.groupingBy(item -> strategy.resolveShopId(item, orderContext)));
 
+            // 根据店铺拆分
             for (Map.Entry<Long, List<ProductItemDTO>> entry : shopGroup.entrySet()) {
                 Long shopId = entry.getKey();
                 List<ProductItemDTO> itemList = entry.getValue();
@@ -115,84 +118,71 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 ReceiveAddressRespDTO receiveAddress = orderContext.getReceiveAddress();
                 BigDecimal amount = strategy.calculateOrderAmount(itemList, orderContext);
                 OrderDO order = OrderDO.builder()
-                        .orderNo(generateOrderNo(userId))
-                        .userId(userId)
-                        .shopId(shopId)
-                        .orderType(strategy.bizType())
-                        .totalAmount(amount)
-                        .actualPayAmount(amount)
-                        .freightAmount(BigDecimal.ZERO)
-                        .discountAmount(BigDecimal.ZERO)
-                        .orderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
-                        .receiveName(receiveAddress.getReceiverName())
-                        .receivePhone(receiveAddress.getReceiverPhone())
-                        .provinceName(receiveAddress.getProvinceName())
-                        .cityName(receiveAddress.getCityName())
-                        .districtName(receiveAddress.getDistrictName())
-                        .detailAddress(receiveAddress.getDetailAddress())
-                        .build();
-
-                int orderInserted = baseMapper.insert(order);
-                if (!SqlHelper.retBool(orderInserted)) {
-                    throw new ServiceException("创建订单失败");
-                }
+                    .orderNo(generateOrderNo(userId))
+                    .payOrderNo(paySN)
+                    .userId(userId)
+                    .shopId(shopId)
+                    .orderType(strategy.bizType())
+                    .totalAmount(amount)
+                    .actualPayAmount(amount)
+                    .freightAmount(BigDecimal.ZERO)
+                    .discountAmount(BigDecimal.ZERO)
+                    .orderStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
+                    .receiveName(receiveAddress.getReceiverName())
+                    .receivePhone(receiveAddress.getReceiverPhone())
+                    .provinceName(receiveAddress.getProvinceName())
+                    .cityName(receiveAddress.getCityName())
+                    .districtName(receiveAddress.getDistrictName())
+                    .detailAddress(receiveAddress.getDetailAddress())
+                    .build();
                 orders.add(order);
-
+                // 创建订单详情
+                strategy.createOrderDetails(order, itemList, orderContext);
+            }
+            boolean orderSaved = this.saveBatch(orders);
+            if (!orderSaved) {
+                throw new ServiceException("订单创建失败");
+            }
+            // 发送延迟消息
+            for (OrderDO order : orders) {
                 MultiDelayMessage<String> msg = MultiDelayMessage.of(
-                        order.getOrderNo(),
-                        15000,
-                        30000,
-                        120000,
-                        300000,
-                        43500,
-                        900000
+                    order.getOrderNo(), 15000, 30000, 120000, 300000, 435000, 900000
                 );
                 try {
                     rabbitTemplate.convertAndSend(
-                            MqConstant.DELAY_EXCHANGE,
-                            MqConstant.DELAY_ORDER_ROUTING_KEY,
-                            msg,
-                            new DelayMessageProcessor(msg.removeNextDelay())
+                        MqConstant.DELAY_EXCHANGE,
+                        MqConstant.DELAY_ORDER_ROUTING_KEY,
+                        msg,
+                        new DelayMessageProcessor(msg.removeNextDelay())
                     );
                     log.info("订单延迟消息发送成功，orderNo={}", order.getOrderNo());
                 } catch (AmqpException ex) {
                     log.error("订单延迟消息发送失败，orderNo={}", order.getOrderNo(), ex);
                     throw new ServiceException("发送订单延迟消息失败");
                 }
-
-                strategy.createOrderDetails(order, itemList, orderContext);
             }
-
+            // 创建支付单
             BigDecimal payTotalAmount = orders.stream()
-                    .map(OrderDO::getActualPayAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+                .map(OrderDO::getActualPayAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
             PayDO payDO = PayDO.builder()
-                    .payOrderNo(redisIdWorker.generateId("PaySN").toString())
-                    .buyerId(userId)
-                    .totalAmount(payTotalAmount)
-                    .payStatus(PayStatusEnum.UNPAID.getCode())
-                    .bizStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
-                    .payChannel(0)
-                    .expireTime(LocalDateTime.now().plusMinutes(15))
-                    .build();
-
+                .payOrderNo(paySN)
+                .buyerId(userId)
+                .totalAmount(payTotalAmount)
+                .payStatus(PayStatusEnum.UNPAID.getCode())
+                .bizStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
+                .payChannel(0)
+                .expireTime(LocalDateTime.now().plusMinutes(15))
+                .build();
             int inserted = payOrderMapper.insert(payDO);
             if (!SqlHelper.retBool(inserted)) {
                 throw new ServiceException("创建支付单失败");
             }
-
-            List<String> orderNos = orders.stream().map(OrderDO::getOrderNo).toList();
-            int updatedOrders = baseMapper.updatePayNoByOrderNo(payDO.getPayOrderNo(), userId, orderNos);
-            if (updatedOrders != orderNos.size()) {
-                throw new ServiceException("更新订单支付单号失败");
-            }
-
             return OrderCreateRespDTO.builder()
-                    .payOrderNo(payDO.getPayOrderNo())
-                    .payAmount(payTotalAmount)
-                    .expireTime(DateUtil.toInstant(payDO.getExpireTime()).toEpochMilli())
-                    .build();
+                .payOrderNo(payDO.getPayOrderNo())
+                .payAmount(payTotalAmount)
+                .expireTime(DateUtil.toInstant(payDO.getExpireTime()).toEpochMilli())
+                .build();
         } catch (Exception ex) {
             if (lockStockInvoked) {
                 try {
@@ -242,12 +232,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         });
 
         Long stockDecrementLuaResult = stringRedisTemplate.execute(
-                buildLuaScript,
-                List.of(seckillCacheKey, userCountKey),
-                String.valueOf(nums),
-                String.valueOf(userId),
-                String.valueOf(expireSeconds),
-                String.valueOf(limit)
+            buildLuaScript,
+            List.of(seckillCacheKey, userCountKey),
+            String.valueOf(nums),
+            String.valueOf(userId),
+            String.valueOf(expireSeconds),
+            String.valueOf(limit)
         );
         if (ObjectUtil.isNull(stockDecrementLuaResult)) {
             throw new ServiceException("秒杀库存扣减失败");
@@ -264,20 +254,20 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
 
         String paySN = redisIdWorker.generateId("PaySN").toString();
         SeckillOrderMessage msg = SeckillOrderMessage.builder()
-                .seckillActivityDO(buildSeckillActivity(map, formatter))
-                .payNo(paySN)
-                .orderNo(generateOrderNo(userId))
-                .userId(userId)
-                .receiveId(receiveId)
-                .nums(Long.valueOf(nums))
-                .build();
+            .seckillActivityDO(buildSeckillActivity(map, formatter))
+            .payNo(paySN)
+            .orderNo(generateOrderNo(userId))
+            .userId(userId)
+            .receiveId(receiveId)
+            .nums(Long.valueOf(nums))
+            .build();
 
         try {
             rabbitTemplate.convertAndSend("order-event-exange", "order.seckill.order", msg);
         } catch (AmqpException ex) {
             rollbackSeckillCacheQuietly(seckillId, userId, nums);
             log.error("秒杀下单消息发送失败，已回滚 Redis 预扣库存，seckillId={}, userId={}, nums={}",
-                    seckillId, userId, nums, ex);
+                seckillId, userId, nums, ex);
             throw new ServiceException("秒杀下单失败，请稍后重试");
         }
         return paySN;
@@ -290,9 +280,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         Long userId = requestParam.getUserId();
 
         LambdaQueryWrapper<OrderDO> wrapper = Wrappers.lambdaQuery(OrderDO.class)
-                .eq(ObjectUtil.isNotNull(id), OrderDO::getId, id)
-                .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
-                .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId);
+            .eq(ObjectUtil.isNotNull(id), OrderDO::getId, id)
+            .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
+            .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId);
 
         IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
         return orderPage.convert(each -> {
@@ -300,11 +290,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             ArrayList<ProductSummaryDTO> summaryList = new ArrayList<>();
             productUtil.buildProductSummary(each.getId(), each.getOrderType(), summaryList);
             return OrderPageWithProductInfoRespDTO.builder()
-                    .id(each.getId())
-                    .shopName(shop.getShopName())
-                    .items(summaryList)
-                    .totalPrice(each.getTotalAmount())
-                    .build();
+                .id(each.getId())
+                .shopName(shop.getShopName())
+                .items(summaryList)
+                .totalPrice(each.getTotalAmount())
+                .build();
         });
     }
 
@@ -317,11 +307,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         Long shopId = requestParam.getShopId();
 
         LambdaQueryWrapper<OrderDO> wrapper = Wrappers.lambdaQuery(OrderDO.class)
-                .eq(ObjectUtil.isNotNull(id), OrderDO::getId, id)
-                .eq(ObjectUtil.isNotNull(payOrderNo), OrderDO::getPayOrderNo, payOrderNo)
-                .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
-                .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId)
-                .eq(ObjectUtil.isNotNull(shopId), OrderDO::getShopId, shopId);
+            .eq(ObjectUtil.isNotNull(id), OrderDO::getId, id)
+            .eq(ObjectUtil.isNotNull(payOrderNo), OrderDO::getPayOrderNo, payOrderNo)
+            .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
+            .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId)
+            .eq(ObjectUtil.isNotNull(shopId), OrderDO::getShopId, shopId);
 
         IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
         return orderPage.convert(each -> BeanUtil.toBean(each, OrderPageRespDTO.class));
@@ -330,7 +320,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     @Override
     public List<AdoptOrderDetailRespDTO> getAdoptOrderDetail(String orderNo) {
         LambdaQueryWrapper<OrderDetailAdoptDO> wrapper = Wrappers.lambdaQuery(OrderDetailAdoptDO.class)
-                .eq(OrderDetailAdoptDO::getOrderNo, orderNo);
+            .eq(OrderDetailAdoptDO::getOrderNo, orderNo);
         List<OrderDetailAdoptDO> orderDetails = orderDetailAdoptMapper.selectList(wrapper);
         return orderDetails.stream().map(each -> BeanUtil.toBean(each, AdoptOrderDetailRespDTO.class)).toList();
     }
@@ -338,7 +328,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     @Override
     public List<SkuOrderDetailRespDTO> getSkuOrderDetail(String orderNo) {
         LambdaQueryWrapper<OrderDetailSkuDO> wrapper = Wrappers.lambdaQuery(OrderDetailSkuDO.class)
-                .eq(OrderDetailSkuDO::getOrderNo, orderNo);
+            .eq(OrderDetailSkuDO::getOrderNo, orderNo);
         List<OrderDetailSkuDO> orderDetailSkus = orderDetailSkuMapper.selectList(wrapper);
         return orderDetailSkus.stream().map(each -> BeanUtil.toBean(each, SkuOrderDetailRespDTO.class)).toList();
     }
@@ -382,13 +372,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         });
         try {
             Long rollbackResult = stringRedisTemplate.execute(
-                    rollbackLuaScript,
-                    List.of(seckillCacheKey, userCountKey),
-                    String.valueOf(nums),
-                    String.valueOf(userId)
+                rollbackLuaScript,
+                List.of(seckillCacheKey, userCountKey),
+                String.valueOf(nums),
+                String.valueOf(userId)
             );
             log.warn("秒杀缓存回滚完成，seckillId={}, userId={}, nums={}, rollbackResult={}",
-                    seckillId, userId, nums, rollbackResult);
+                seckillId, userId, nums, rollbackResult);
         } catch (Exception ex) {
             log.error("秒杀缓存回滚异常，seckillId={}, userId={}, nums={}", seckillId, userId, nums, ex);
         }
