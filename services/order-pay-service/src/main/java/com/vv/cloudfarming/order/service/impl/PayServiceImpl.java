@@ -83,7 +83,7 @@ public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayDO> implement
             List<OrderIdAndTypeDTO> orderIds = orderMapper.getOrderIdByPayNo(each.getPayOrderNo());
 
             orderIds.forEach(order -> {
-                productUtil.buildProductSummary(order.getId(), order.getOrderType(), payOrderItems);
+                productUtil.buildProductSummary(each.getPayOrderNo(), order.getOrderType(), payOrderItems);
             });
             result.setItems(payOrderItems);
             return result;

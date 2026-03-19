@@ -26,7 +26,7 @@ public class ProductUtil {
      * @param orderType 订单类型
      * @param productSummaries 摘要信息集合
      */
-    public void buildProductSummary(Long orderId, Integer orderType, List<ProductSummaryDTO> productSummaries){
+    public void buildProductSummary(String orderId, Integer orderType, List<ProductSummaryDTO> productSummaries){
         // 查询关联的认养项目
         if (orderType.equals(OrderTypeConstant.ADOPT)) {
             LambdaQueryWrapper<OrderDetailAdoptDO> adoptWrapper = Wrappers.lambdaQuery(OrderDetailAdoptDO.class)

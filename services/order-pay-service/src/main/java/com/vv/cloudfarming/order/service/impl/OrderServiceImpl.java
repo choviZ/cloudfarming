@@ -288,12 +288,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         return orderPage.convert(each -> {
             ShopRespDTO shop = shopRemoteService.getShopById(each.getShopId()).getData();
             ArrayList<ProductSummaryDTO> summaryList = new ArrayList<>();
-            productUtil.buildProductSummary(each.getId(), each.getOrderType(), summaryList);
+            productUtil.buildProductSummary(each.getOrderNo(), each.getOrderType(), summaryList);
             return OrderPageWithProductInfoRespDTO.builder()
                 .id(each.getId())
+                .orderNo(each.getOrderNo())
                 .shopName(shop.getShopName())
                 .items(summaryList)
                 .totalPrice(each.getTotalAmount())
+                .createTime(each.getCreateTime())
                 .build();
         });
     }

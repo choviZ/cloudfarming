@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -24,6 +25,11 @@ public class OrderPageWithProductInfoRespDTO {
     private Long id;
 
     /**
+     * 订单号
+     */
+    private String orderNo;
+
+    /**
      * 店铺名称
      */
     private String shopName;
@@ -37,4 +43,9 @@ public class OrderPageWithProductInfoRespDTO {
      * 订单总价
      */
     private BigDecimal totalPrice;
+
+    /**
+     * 创建时间
+     */
+    private Date createTime;
 }
