@@ -14,6 +14,10 @@
           </span>
         </div>
         <div class="right-links nav-group">
+          <a v-if="userStore.loginUser" class="nav-item flex-center" @click="goToOrders">
+            <FileTextOutlined class="icon"/>
+            我的订单
+          </a>
           <a class="nav-item flex-center" @click="goToCart">
             <ShoppingCartOutlined class="icon"/>
             购物车
@@ -28,7 +32,8 @@
 <script setup lang="ts">
 import {useRouter} from 'vue-router'
 import {
-  ShoppingCartOutlined
+  ShoppingCartOutlined,
+  FileTextOutlined
 } from '@ant-design/icons-vue'
 import { useUserStore } from '@/stores/useUserStore'
 import {message} from 'ant-design-vue'
@@ -43,6 +48,15 @@ const handleLoginClick = () => {
 
 const goToCart = () => {
   router.push('/cart')
+}
+
+const goToOrders = () => {
+  if (!userStore.loginUser) {
+    message.warning('请先登录')
+    router.push('/user/login')
+    return
+  }
+  router.push('/usercenter/orders')
 }
 
 const handleSellerCenterClick = () => {

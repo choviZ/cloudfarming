@@ -13,3 +13,27 @@ export const ORDER_TYPE = {
   ADOPT: 0,
   GOODS: 1
 }
+
+export const ORDER_STATUS = {
+  PENDING_PAYMENT: 0,
+  PENDING_SHIPMENT: 1,
+  SHIPPED: 2,
+  COMPLETED: 3,
+  CANCEL: 4,
+  AFTER_SALE: 5,
+  BREEDING: 6
+}
+
+export const ORDER_STATUS_TEXT = {
+  0: '待付款',
+  1: '待发货',
+  2: '已发货',
+  3: '已完成',
+  4: '已关闭',
+  5: '售后中',
+  6: '养殖中'
+}
+
+export const getOrderList = (data) => {
+  return request.post('/api/order/v1/list', data)
+}

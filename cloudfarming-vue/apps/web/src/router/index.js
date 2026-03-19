@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../views/LoginView.vue'
 import BasicLayout from '../layout/BasicLayout.vue'
 import MerchantLayout from '@/layout/MerchantLayout.vue'
+import UserCenterLayout from '@/layout/UserCenterLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -96,6 +97,20 @@ const router = createRouter({
           path: 'address',
           name: 'userAddress',
           component: () => import('../views/user/address/AddressList.vue')
+        }
+      ]
+    },
+    // 用户中心路由组
+    {
+      path: '/usercenter',
+      name: 'userCenter',
+      component: UserCenterLayout,
+      redirect: '/usercenter/orders',
+      children: [
+        {
+          path: 'orders',
+          name: 'userOrders',
+          component: () => import('../views/user/orders/OrderList.vue')
         }
       ]
     },
