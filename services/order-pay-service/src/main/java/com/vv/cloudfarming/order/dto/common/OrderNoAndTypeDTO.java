@@ -3,9 +3,9 @@ package com.vv.cloudfarming.order.dto.common;
 import lombok.Data;
 
 @Data
-public class OrderIdAndTypeDTO {
+public class OrderNoAndTypeDTO {
 
-    private Long id;
+    private String orderNo;
 
     private Integer orderType;
 }

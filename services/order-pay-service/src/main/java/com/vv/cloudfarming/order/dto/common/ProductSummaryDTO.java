@@ -22,11 +22,6 @@ public class ProductSummaryDTO {
     private String productName;
 
     /**
-     * 类型
-     */
-    private Integer productType;
-
-    /**
      * 封面图片
      */
     private String coverImage;

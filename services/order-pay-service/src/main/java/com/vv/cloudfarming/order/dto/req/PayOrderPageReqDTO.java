@@ -21,6 +21,11 @@ public class PayOrderPageReqDTO extends Page<PayDO> {
     private Long buyerId;
 
     /**
+     * 业务状态
+     */
+    private Integer bizStatus;
+
+    /**
      * 支付状态
      */
     private Integer payStatus;
