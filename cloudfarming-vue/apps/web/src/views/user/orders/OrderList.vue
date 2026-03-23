@@ -22,12 +22,12 @@
           <p>暂无相关订单</p>
         </div>
         <div v-else class="order-items">
-          <div v-for="order in orderList.records" :key="order.id" class="order-card">
+          <div v-for="order in activeTab.value === 'pending' ? orderList : orderList.records" :key="order.payOrderNo || order.id" class="order-card">
             <!-- 订单头部 -->
             <div class="order-header">
-              <span class="order-time">{{ formatDate(order.createTime) }}</span>
-              <span class="order-no">订单号：{{ order.orderNo }}</span>
-              <span class="order-shop">{{ order.shopName }}</span>
+              <span class="order-time">{{ formatDate(order.expireTime || order.createTime) }}</span>
+              <span class="order-no">支付单号：{{ order.payOrderNo || order.orderNo }}</span>
+              <span class="order-shop">{{ order.shopName || order.shopName }}</span>
             </div>
             <!-- 订单商品 -->
             <div class="order-body">
@@ -48,7 +48,7 @@
             <div class="order-footer">
               <div class="order-total">
                 <span class="label">合计：</span>
-                <span class="amount">¥{{ order.totalPrice }}</span>
+                <span class="amount">¥{{ order.totalAmount || order.totalPrice }}</span>
               </div>
             </div>
           </div>
@@ -61,12 +61,13 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
-import { getOrderList } from '@/api/order'
+import { getOrderList, getPayOrderList } from '@/api/order'
 import { useUserStore } from '@/stores/useUserStore'
 
 const loading = ref(false)
 const activeTab = ref('all')
 const orderList = ref([])
+const payOrderList = ref([])
 const userStore = useUserStore()
 
 const userId = computed(() => {
@@ -86,14 +87,24 @@ const fetchOrders = async () => {
   
   loading.value = true
   try {
-    const response = await getOrderList({ userId: userId.value })
-    if (response.code === '0' && response.data) {
-      orderList.value = response.data
+    if (activeTab.value === 'pending') {
+      const response = await getPayOrderList({ 
+        buyerId: userId.value,
+        bizStatus: 0
+      })
+      if (response.code === '0' && response.data) {
+        orderList.value = response.data
+      } else {
+        console.error('获取待支付订单列表失败:', response.message)
+      }
     } else {
-      console.error('获取订单列表失败:', response.message)
+      const response = await getOrderList({ userId: userId.value })
+      if (response.code === '0' && response.data) {
+        orderList.value = response.data
+      } else {
+        console.error('获取订单列表失败:', response.message)
+      }
     }
-  } catch (error) {
-    console.error('获取订单列表失败:', error)
   } finally {
     loading.value = false
   }

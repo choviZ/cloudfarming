@@ -37,3 +37,7 @@ export const ORDER_STATUS_TEXT = {
 export const getOrderList = (data) => {
   return request.post('/api/order/v1/list', data)
 }
+
+export const getPayOrderList = (data) => {
+  return request.post('/api/pay/list', data)
+}
