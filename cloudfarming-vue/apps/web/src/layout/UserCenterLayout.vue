@@ -8,7 +8,9 @@
         <!-- 左侧菜单 -->
         <aside class="sidebar-menu">
           <div class="menu-section">
-            <div class="menu-title">云养殖助农平台</div>
+            <div class="menu-title">
+              <a href="/" class="menu-title-link">云养殖助农平台</a>
+            </div>
             <a-menu mode="inline" v-model:selectedKeys="selectedKeys">
               <a-menu-item key="orders">
                 <template #icon>
@@ -105,6 +107,15 @@ if (route.path.includes('/usercenter/orders')) {
   padding: 8px 24px 16px;
   border-bottom: 1px solid #f3f4f6;
   margin-bottom: 8px;
+}
+
+.menu-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.menu-title-link:hover {
+  color: #16a34a;
 }
 
 .sidebar-menu :deep(.ant-menu) {

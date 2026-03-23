@@ -173,7 +173,7 @@ const fetchProducts = async () => {
     };
 
     const response = await listSpuByPage(queryParam);
-    if (response.code === '0' && response.data) {
+    if (response.code == '0' && response.data) {
       const pageData = response.data;
       productList.value = pageData.records;
       pagination.value.total = pageData.total;

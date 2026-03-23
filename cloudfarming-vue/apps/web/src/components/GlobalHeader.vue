@@ -56,7 +56,7 @@ const goToOrders = () => {
     router.push('/user/login')
     return
   }
-  router.push('/usercenter/orders')
+  window.open('/usercenter/orders', '_blank')
 }
 
 const handleSellerCenterClick = () => {
