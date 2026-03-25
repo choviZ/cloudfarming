@@ -2,17 +2,17 @@ dataSources:
   ds_0:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.cj.jdbc.Driver
-    jdbcUrl: jdbc:mysql://127.0.0.1:3306/cloud_farming?useUnicode=true&characterEncoding=UTF-8&rewriteBatchedStatements=true&allowMultiQueries=true&serverTimezone=Asia/Shanghai&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
+    jdbcUrl: jdbc:mysql://127.0.0.1:3306/cloud_farming?useUnicode=true&characterEncoding=UTF-8&rewriteBatchedStatements=true&allowMultiQueries=true&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password: root
     connectionTimeout: 30000
-    idleTimeout: 600000
-    maxLifetime: 1200000
-    maximumPoolSize: 20
-    minimumIdle: 5
+    idleTimeout: 300000
+    maxLifetime: 540000
+    maximumPoolSize: 10
+    minimumIdle: 1
     connectionTestQuery: SELECT 1
     validationTimeout: 5000
-    keepaliveTime: 300000
+    keepaliveTime: 120000
 rules:
   - !SHARDING
     tables:
