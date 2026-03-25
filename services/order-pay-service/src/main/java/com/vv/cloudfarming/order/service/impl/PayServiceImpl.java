@@ -10,20 +10,18 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.order.constant.BizStatusConstant;
-import com.vv.cloudfarming.order.constant.OrderTypeConstant;
 import com.vv.cloudfarming.order.constant.PayChannelConstant;
 import com.vv.cloudfarming.order.dao.entity.PayDO;
-import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
-import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dao.mapper.PayOrderMapper;
-import com.vv.cloudfarming.order.dto.common.OrderNoAndTypeDTO;
+import com.vv.cloudfarming.order.dto.common.PayOrderOrderRelationDTO;
+import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.PayOrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.PayOrderPageReqDTO;
-import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.resp.PayOrderRespDTO;
 import com.vv.cloudfarming.order.enums.PayStatusEnum;
 import com.vv.cloudfarming.order.service.PayService;
+import com.vv.cloudfarming.order.service.query.OrderProductSummaryQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -31,8 +29,10 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,8 +40,7 @@ import java.util.Objects;
 public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayDO> implements PayService {
 
     private final OrderMapper orderMapper;
-    private final OrderDetailAdoptMapper orderDetailAdoptMapper;
-    private final OrderDetailSkuMapper orderDetailSkuMapper;
+    private final OrderProductSummaryQueryService orderProductSummaryQueryService;
 
     @Override
     public PayDO createPayOrder(PayOrderCreateReqDTO requestParam) {
@@ -68,7 +67,6 @@ public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayDO> implement
 
     @Override
     public IPage<PayOrderRespDTO> listPayOrder(PayOrderPageReqDTO requestParam) {
-        // 参数校验
         String payOrderNo = requestParam.getPayOrderNo();
         Long buyerId = requestParam.getBuyerId();
         Integer payStatus = requestParam.getPayStatus();
@@ -81,22 +79,42 @@ public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayDO> implement
             .eq(ObjectUtil.isNotNull(payStatus), PayDO::getPayStatus, payStatus);
         IPage<PayDO> payOrderPage = baseMapper.selectPage(requestParam, wrapper);
 
-        // 转换
+        List<String> payOrderNos = payOrderPage.getRecords().stream()
+            .map(PayDO::getPayOrderNo)
+            .filter(StrUtil::isNotBlank)
+            .distinct()
+            .collect(Collectors.toList());
+
+        List<PayOrderOrderRelationDTO> payOrderRelations = payOrderNos.isEmpty()
+            ? Collections.emptyList()
+            : orderMapper.listPayOrderRelations(payOrderNos);
+
+        Map<String, List<String>> orderNosByPayOrderNo = payOrderRelations.stream()
+            .collect(Collectors.groupingBy(
+                PayOrderOrderRelationDTO::getPayOrderNo,
+                Collectors.mapping(PayOrderOrderRelationDTO::getOrderNo, Collectors.toList())
+            ));
+        Map<String, List<ProductSummaryDTO>> productSummariesByOrderNo =
+            orderProductSummaryQueryService.mapByOrderNos(payOrderRelations.stream()
+                .map(PayOrderOrderRelationDTO::getOrderNo)
+                .collect(Collectors.toList()));
+
         return payOrderPage.convert(each -> {
             PayOrderRespDTO result = BeanUtil.toBean(each, PayOrderRespDTO.class);
-            List<ProductSummaryDTO> payOrderItems = new ArrayList<>();
-            // 关联相关的商品
-            List<OrderNoAndTypeDTO> orderNoTypes = orderMapper.getOrderIdByPayNo(each.getPayOrderNo());
-            for (OrderNoAndTypeDTO order : orderNoTypes) {
-                Integer orderType = order.getOrderType();
-                if (Objects.equals(OrderTypeConstant.ADOPT,orderType)){
-                    payOrderItems.addAll(orderDetailAdoptMapper.selectProductSummaryByOrderNo(order.getOrderNo()));
-                } else if (Objects.equals(OrderTypeConstant.GOODS, orderType)) {
-                    payOrderItems.addAll(orderDetailSkuMapper.selectProductSummaryByOrderNo(order.getOrderNo()));
-                }
-            }
-            result.setItems(payOrderItems);
+            result.setItems(mergeProductSummaries(orderNosByPayOrderNo.get(each.getPayOrderNo()), productSummariesByOrderNo));
             return result;
         });
+    }
+
+    private List<ProductSummaryDTO> mergeProductSummaries(List<String> orderNos,
+                                                          Map<String, List<ProductSummaryDTO>> productSummariesByOrderNo) {
+        if (orderNos == null || orderNos.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<ProductSummaryDTO> items = new ArrayList<>();
+        for (String orderNo : orderNos) {
+            items.addAll(productSummariesByOrderNo.getOrDefault(orderNo, Collections.emptyList()));
+        }
+        return items;
     }
 }

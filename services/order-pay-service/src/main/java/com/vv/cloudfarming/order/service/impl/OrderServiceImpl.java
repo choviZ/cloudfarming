@@ -42,9 +42,9 @@ import com.vv.cloudfarming.order.remote.ShopRemoteService;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.order.service.basics.chain.OrderChainContext;
 import com.vv.cloudfarming.order.service.basics.chain.OrderContext;
+import com.vv.cloudfarming.order.service.query.OrderProductSummaryQueryService;
 import com.vv.cloudfarming.order.strategy.OrderCreateStrategy;
 import com.vv.cloudfarming.order.strategy.StrategyFactory;
-import com.vv.cloudfarming.order.utils.ProductUtil;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
 import com.vv.cloudfarming.product.dao.entity.SeckillActivityDO;
 import com.vv.cloudfarming.product.dto.resp.ShopRespDTO;
@@ -65,6 +65,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -80,7 +81,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private static final String STOCK_ROLLBACK_AND_REDUCE_USER_RECEIVE_LUA_PATH = "lua/stock_rollback_and_reduce_user_receive.lua";
 
     private final ShopRemoteService shopRemoteService;
-    private final ProductUtil productUtil;
+    private final OrderProductSummaryQueryService orderProductSummaryQueryService;
     private final RedisIdWorker redisIdWorker;
     private final OrderDetailAdoptMapper orderDetailAdoptMapper;
     private final OrderDetailSkuMapper orderDetailSkuMapper;
@@ -285,15 +286,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId);
 
         IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
+        Map<String, List<ProductSummaryDTO>> productSummariesByOrderNo =
+            orderProductSummaryQueryService.mapByOrderNos(orderPage.getRecords().stream()
+                .map(OrderDO::getOrderNo)
+                .collect(Collectors.toList()));
         return orderPage.convert(each -> {
             ShopRespDTO shop = shopRemoteService.getShopById(each.getShopId()).getData();
-            ArrayList<ProductSummaryDTO> summaryList = new ArrayList<>();
-            productUtil.buildProductSummary(each.getOrderNo(), each.getOrderType(), summaryList);
             return OrderPageWithProductInfoRespDTO.builder()
                 .id(each.getId())
                 .orderNo(each.getOrderNo())
                 .shopName(shop.getShopName())
-                .items(summaryList)
+                .items(productSummariesByOrderNo.getOrDefault(each.getOrderNo(), Collections.emptyList()))
                 .totalPrice(each.getTotalAmount())
                 .createTime(each.getCreateTime())
                 .build();

@@ -2,19 +2,14 @@ package com.vv.cloudfarming.order.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
-import com.vv.cloudfarming.order.dto.common.OrderNoAndTypeDTO;
+import com.vv.cloudfarming.order.dto.common.PayOrderOrderRelationDTO;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
 public interface OrderMapper extends BaseMapper<OrderDO> {
 
-    /**
-     * 根据支付单号获取订单号列表
-     */
-    @Select("SELECT `order_no`,`order_type` FROM t_order where `pay_order_no` = #{payNo} AND del_flag = 0")
-    List<OrderNoAndTypeDTO> getOrderIdByPayNo(String payNo);
+    List<PayOrderOrderRelationDTO> listPayOrderRelations(@Param("payOrderNos") List<String> payOrderNos);
 
     int updatePayNoByOrderNo(@Param("payOrderNo") String payOrderNo,
                              @Param("userId") Long userId,
