@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
@@ -172,7 +173,8 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
             .eq(categoryId != null, SpuDO::getCategoryId, categoryId)
             .eq(status != null, SpuDO::getStatus, status);
         // 查询
-        IPage<SpuDO> spuDOPage = baseMapper.selectPage(queryParam, queryWrapper);
+        Page<SpuDO> pageRequest = new Page<>(queryParam.getCurrent(), queryParam.getSize());
+        IPage<SpuDO> spuDOPage = baseMapper.selectPage(pageRequest, queryWrapper);
         return spuDOPage.convert(spuDO -> {
             SpuRespDTO spuRespDTO = BeanUtil.toBean(spuDO, SpuRespDTO.class);
             spuRespDTO.setAttributes(JSONUtil.toJsonStr(getSpuAttributes(spuDO.getId())));
