@@ -1,75 +1,55 @@
 <template>
-  <div class="index-container">
-    <!-- 头部搜索区域 -->
-    <div class="main-header">
-      <div class="header-container main-content">
-        <!-- Logo -->
-        <div class="logo" @click="router.push('/')">
-          <h1 class="logo-text">
-            云农场
-            <span class="logo-sub">优质农产品直供</span>
-          </h1>
+  <div class="index-page">
+    <header class="hero-header">
+      <div class="hero-inner">
+        <div class="brand-block" @click="router.push('/')">
+          <h1 class="brand-title">云农场</h1>
+          <span class="brand-subtitle">优质农产品与认养项目</span>
         </div>
-        <!-- Search Box -->
-        <div class="search-section">
-          <div class="search-box">
-            <div class="search-input-wrapper">
-              <SearchOutlined class="search-icon"/>
-              <input
-                  type="text"
-                  placeholder="搜索 新鲜水果 / 蔬菜 / 农特产"
-                  class="search-input"
-              />
-            </div>
-            <button class="search-button">
-              搜索
-            </button>
+
+        <div class="hero-search">
+          <div class="hero-search-box">
+            <SearchOutlined class="search-icon" />
+            <input
+              v-model="searchKeyword"
+              type="text"
+              class="search-input"
+              placeholder="搜索农产品 / 认养项目"
+              @keyup.enter="handleGlobalSearch"
+            >
           </div>
+          <button class="search-button" @click="handleGlobalSearch">搜索</button>
         </div>
       </div>
-    </div>
+    </header>
 
-    <!-- 核心区域：分类 + Banner + 用户卡片 -->
-    <div class="core-section">
+    <section class="core-section">
       <HomeCategory />
       <HomeBanner />
       <HomeUserCard />
-    </div>
+    </section>
 
-    <!-- 认养精选区域 -->
-    <AdoptFeaturedSection style="margin-top:48px"/>
+    <section class="featured-section">
+      <AdoptFeaturedSection />
+    </section>
 
-    <!-- 下部商品展示区域 -->
-    <div class="fresh-market-section">
-      <!-- 商品列表头部 -->
+    <section class="market-section">
       <div class="section-header">
-        <div class="header-left">
+        <div>
           <h2 class="section-title">
-            <ShoppingOutlined class="title-icon" /> 生鲜市集
+            <ShoppingOutlined class="title-icon" />
+            生鲜市集
           </h2>
-          <p class="section-subtitle">原产地直供，新鲜采摘，让健康走进千家万户</p>
+          <p class="section-subtitle">原产地直供，支持从认养到采购的一体化选购</p>
         </div>
-        <div class="header-right">
-          <!-- <div class="product-tabs">
-            <div
-              v-for="tag in productTags"
-              :key="tag.key"
-              class="tab-item"
-              :class="{ active: activeTag === tag.key }"
-              @click="handleTagClick(tag.key)"
-            >
-              {{ tag.name }}
-            </div>
-          </div> -->
-          <button class="view-all-btn" @click="router.push('/product/list')">
-            去逛逛 <RightOutlined class="btn-icon" />
-          </button>
-        </div>
+        <button class="view-all-button" @click="router.push('/product/list')">
+          查看全部
+          <RightOutlined />
+        </button>
       </div>
 
-      <!-- 商品列表 -->
       <a-skeleton :loading="productLoading" :rows="8" animated>
-        <div class="product-list">
+        <div v-if="productList.length" class="product-grid">
           <a-row :gutter="[20, 20]">
             <a-col
               v-for="product in productList"
@@ -77,41 +57,42 @@
               :xs="24"
               :sm="12"
               :md="8"
-              :lg="4" 
-              :xl="4" 
+              :lg="6"
+              :xl="6"
             >
-              <div class="product-item">
-                <a-card hoverable class="product-card" @click="goToProductDetail(product.id)">
-                  <template #cover>
-                    <div class="product-image-wrapper">
-                      <img
-                        :alt="product.title"
-                        :src="getFirstImage(product.images || product.image)"
-                        class="product-image"
-                      />
-                    </div>
-                  </template>
-                  <div class="product-info">
-                    <div class="product-title">{{ product.title }}</div>
-                    <div class="product-tags">
-                       <span class="product-tag">产地直发</span>
-                    </div>
-                    <div class="product-bottom">
-                      <div class="product-price">
-                        <span v-if="product.minPrice">¥{{ product.minPrice }}</span>
-                      </div>
-                      <div class="product-sold">已售 {{ Math.floor(Math.random() * 1000) }}+</div>
-                    </div>
+              <a-card class="product-card" hoverable @click="goToProductDetail(product.id)">
+                <template #cover>
+                  <div class="product-image-wrap">
+                    <img
+                      :src="getFirstImage(product.images || product.image)"
+                      :alt="product.title"
+                      class="product-image"
+                    >
                   </div>
-                </a-card>
-              </div>
+                </template>
+
+                <div class="product-body">
+                  <h3 class="product-title">{{ product.title }}</h3>
+                  <div class="product-tag-row">
+                    <span class="product-tag">农产品</span>
+                  </div>
+                  <div class="product-footer">
+                    <div class="product-price">
+                      <span v-if="product.minPrice">￥{{ product.minPrice }}</span>
+                      <span v-else>价格待定</span>
+                    </div>
+                    <span class="product-extra">产地直发</span>
+                  </div>
+                </div>
+              </a-card>
             </a-col>
           </a-row>
         </div>
+
+        <a-empty v-else description="暂无农产品" />
       </a-skeleton>
 
-      <!-- 分页组件 -->
-      <div class="pagination-container">
+      <div class="pagination-wrap" v-if="pagination.total > 0">
         <a-pagination
           v-model:current="pagination.current"
           v-model:page-size="pagination.size"
@@ -123,401 +104,393 @@
           @show-size-change="handleSizeChange"
         />
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { SearchOutlined, RightOutlined, ShoppingOutlined } from '@ant-design/icons-vue';
-import { listSpuByPage } from '@/api/spu';
-import { message } from 'ant-design-vue';
-import AdoptFeaturedSection from '@/components/adopt/AdoptFeaturedSection.vue';
-import HomeCategory from '@/components/home/HomeCategory.vue';
-import HomeBanner from '@/components/home/HomeBanner.vue';
-import HomeUserCard from '@/components/home/HomeUserCard.vue';
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { RightOutlined, SearchOutlined, ShoppingOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { listSpuByPage } from '@/api/spu'
+import AdoptFeaturedSection from '@/components/adopt/AdoptFeaturedSection.vue'
+import HomeBanner from '@/components/home/HomeBanner.vue'
+import HomeCategory from '@/components/home/HomeCategory.vue'
+import HomeUserCard from '@/components/home/HomeUserCard.vue'
 
-// 路由实例
-const router = useRouter();
+const router = useRouter()
+const searchKeyword = ref('')
+const productList = ref([])
+const productLoading = ref(false)
 
-// 商品相关
-const productList = ref([]);
-const productLoading = ref(false);
-const activeTag = ref('all');
-
-// 分页相关
 const pagination = ref({
   current: 1,
   size: 20,
-  total: 0,
-});
+  total: 0
+})
 
-// 处理商品图片，只返回第一张
 const getFirstImage = (imageStr) => {
   if (!imageStr) {
-    return 'https://via.placeholder.com/200x200?text=No+Image';
+    return 'https://via.placeholder.com/420x320?text=Cloud+Farming'
   }
-  return imageStr.trim().split(',')[0].trim() || imageStr;
-};
+  return imageStr.trim().split(',')[0].trim() || imageStr
+}
 
-// 获取商品数据
 const fetchProducts = async () => {
-  productLoading.value = true;
+  productLoading.value = true
   try {
-    // 构建查询参数
     const queryParam = {
       current: pagination.value.current,
       size: pagination.value.size,
-      status: 1, // 上架商品
-    };
-
-    const response = await listSpuByPage(queryParam);
-    if (response.code == '0' && response.data) {
-      const pageData = response.data;
-      productList.value = pageData.records;
-      pagination.value.total = pageData.total;
-    } else {
-      message.error('获取商品数据失败：' + (response.message || '未知错误'));
+      status: 1
     }
-  }finally {
-    productLoading.value = false;
+    const response = await listSpuByPage(queryParam)
+    if (response.code === '0' && response.data) {
+      productList.value = response.data.records || []
+      pagination.value.total = response.data.total || 0
+      return
+    }
+    message.error(response.message || '获取商品数据失败')
+  } catch (error) {
+    console.error(error)
+    message.error('系统繁忙，请稍后重试')
+  } finally {
+    productLoading.value = false
   }
-};
+}
 
-// 标签点击事件
-const handleTagClick = (tagKey) => {
-  activeTag.value = tagKey;
-  pagination.value.current = 1;
-  fetchProducts();
-};
+const handleGlobalSearch = () => {
+  const keyword = searchKeyword.value.trim()
+  if (!keyword) {
+    message.warning('请输入搜索关键词')
+    return
+  }
+  router.push({
+    name: 'search',
+    query: { q: keyword }
+  })
+}
 
-// 分页变化事件
 const handlePageChange = (page) => {
-  pagination.value.current = page;
-  fetchProducts();
-};
+  pagination.value.current = page
+  fetchProducts()
+}
 
-// 每页条数变化事件
 const handleSizeChange = (current, size) => {
-  pagination.value.current = current;
-  pagination.value.size = size;
-  fetchProducts();
-};
+  pagination.value.current = current
+  pagination.value.size = size
+  fetchProducts()
+}
 
-// 跳转到商品详情页
 const goToProductDetail = (productId) => {
   router.push({
     name: 'productDetail',
     params: { id: productId.toString() }
-  });
-};
+  })
+}
 
-// 组件挂载时获取数据
 onMounted(() => {
-  fetchProducts();
-});
+  fetchProducts()
+})
 </script>
 
 <style scoped>
-.index-container {
+.index-page {
   min-height: 100vh;
   padding-bottom: 40px;
+  background:
+    radial-gradient(circle at top left, rgba(163, 230, 53, 0.15), transparent 24%),
+    linear-gradient(180deg, #f8fbf5 0%, #ffffff 100%);
 }
 
-.header-container {
-  width: 100%;
+.hero-header {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.hero-inner {
   max-width: 1620px;
   margin: 0 auto;
-  padding: 0 20px;
-}
-
-/* Section Header Styles */
-.section-header {
-  margin-top: 36px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 32px;
-}
-
-.header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.section-title {
-  font-size: 24px;
-  font-weight: 800;
-  color: #0f172a;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
-.title-icon {
-  color: #f59e0b;
-  font-size: 24px;
-}
-
-.section-subtitle {
-  margin-top: 4px;
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.view-all-btn {
-  padding: 8px 20px;
-  height: 40px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  background: white;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.view-all-btn:hover {
-  color: #16a34a;
-  border-color: #bbf7d0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.btn-icon {
-  font-size: 12px;
-  transition: transform 0.3s;
-}
-
-.view-all-btn:hover .btn-icon {
-  transform: translateX(4px);
-}
-
-/* Main Header */
-.main-header {
-  padding: 24px 0;
-  background-color: #FFFFFF;
-  margin-bottom: 24px;
-}
-
-.main-content {
+  padding: 26px 20px;
   display: flex;
   align-items: center;
   gap: 32px;
 }
 
-.logo {
-  width: 180px;
-  flex-shrink: 0;
+.brand-block {
+  width: 220px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-.logo-text {
-  font-size: 30px;
-  font-weight: 800;
-  color: #1e293b;
+.brand-title {
   margin: 0;
+  font-size: 34px;
   line-height: 1;
   letter-spacing: -1px;
+  color: #17212b;
+  font-weight: 800;
 }
 
-.logo-sub {
-  font-size: 12px;
-  color: #16a34a;
-  font-weight: 600;
+.brand-subtitle {
   display: block;
+  margin-top: 8px;
+  color: #2f7d46;
+  font-size: 13px;
   letter-spacing: 1px;
-  margin-top: 4px;
-  text-transform: uppercase;
 }
 
-/* Search Box - Centered as requested */
-.search-section {
+.hero-search {
   flex: 1;
-  max-width: 700px;
-  margin: 0 auto; /* Centering */
-}
-
-.search-box {
+  max-width: 760px;
+  margin: 0 auto;
   display: flex;
-  position: relative;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border-radius: 9999px;
+  gap: 12px;
 }
 
-.search-input-wrapper {
+.hero-search-box {
   flex: 1;
-  border: 2px solid #e2e8f0;
-  border-right: none;
-  border-radius: 9999px 0 0 9999px;
-  overflow: hidden;
+  height: 50px;
   display: flex;
   align-items: center;
-  padding-left: 20px;
-  background-color: #f8fafc;
-  height: 48px;
-  transition: all 0.2s;
+  gap: 12px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 2px solid #dbe5dd;
+  background: #f8fbf7;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.search-input-wrapper:focus-within {
-  border-color: #22c55e;
-  background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+.hero-search-box:focus-within {
+  border-color: #2f8b49;
+  box-shadow: 0 0 0 4px rgba(47, 139, 73, 0.12);
+  background: #fff;
 }
 
 .search-icon {
-  color: #94a3b8;
-  margin-right: 12px;
+  color: #8aa08f;
   font-size: 18px;
 }
 
 .search-input {
   width: 100%;
-  height: 100%;
   border: none;
   outline: none;
-  font-size: 14px;
-  color: #1e293b;
   background: transparent;
+  font-size: 15px;
+  color: #17212b;
 }
 
 .search-button {
-  background-color: #15803d; /* primary-700 */
-  color: #FFFFFF;
-  padding: 0 36px;
-  border-radius: 0 9999px 9999px 0;
-  font-weight: 600;
-  font-size: 16px;
+  height: 50px;
+  padding: 0 28px;
   border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1b6a3a 0%, #2f8b49 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s;
-  height: 48px;
 }
 
-.search-button:hover {
-  background-color: #14532d;
-}
-
-/* Core Section (Grid) */
-.core-section {
+.core-section,
+.market-section,
+.featured-section {
   width: 100%;
   max-width: 1620px;
   margin: 0 auto;
   padding: 0 20px;
-  display: flex;
-  height: 460px;
-  gap: 24px;
 }
 
-/* Product List */
-.product-list {
+.core-section {
+  display: flex;
+  gap: 24px;
+  height: 460px;
+  margin-top: 24px;
+}
+
+.featured-section {
+  margin-top: 44px;
+}
+
+.market-section {
+  margin-top: 48px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.section-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 26px;
+  font-weight: 800;
+  color: #17212b;
+}
+
+.title-icon {
+  color: #d97706;
+}
+
+.section-subtitle {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #5f6d64;
+}
+
+.view-all-button {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid #dbe5dd;
+  background: #fff;
+  color: #355241;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.product-grid {
   width: 100%;
 }
 
 .product-card {
   border: none;
-  border-radius: 16px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  border-radius: 18px;
   overflow: hidden;
-  background-color: #FFFFFF;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(33, 53, 39, 0.08);
 }
 
-.product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.product-image-wrapper {
+.product-image-wrap {
   width: 100%;
   height: 240px;
+  background: #eef3ea;
   overflow: hidden;
-  background-color: #f8fafc;
 }
 
 .product-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  display: block;
+  transition: transform 0.3s ease;
 }
 
 .product-card:hover .product-image {
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
 .product-card :deep(.ant-card-body) {
-  padding: 16px !important;
+  padding: 16px;
 }
 
-.product-info {
+.product-body {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .product-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #0f172a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin: 0;
+  font-size: 16px;
+  color: #17212b;
   line-height: 1.5;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.product-tags {
+.product-tag-row {
   display: flex;
-  gap: 4px;
-  height: 20px;
+  gap: 8px;
 }
 
 .product-tag {
-  font-size: 10px;
-  color: #16a34a;
-  background-color: #f0fdf4;
-  border: 1px solid #dcfce7;
-  padding: 0 4px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eef8ef;
+  color: #24713f;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.product-bottom {
+.product-footer {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-top: 4px;
+  gap: 12px;
 }
 
 .product-price {
-  font-size: 20px;
-  font-weight: 700;
-  color: #dc2626;
-  line-height: 1;
+  font-size: 22px;
+  font-weight: 800;
+  color: #c2410c;
 }
 
-.product-sold {
-  font-size: 10px;
-  color: #94a3b8;
+.product-extra {
+  font-size: 12px;
+  color: #7a8a7d;
 }
 
-/* Pagination */
-.pagination-container {
+.pagination-wrap {
+  margin-top: 34px;
   display: flex;
   justify-content: center;
-  margin-top: 48px;
+}
+
+@media (max-width: 1200px) {
+  .core-section {
+    height: auto;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-inner,
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-search {
+    max-width: none;
+    margin: 0;
+  }
+
+  .brand-block {
+    width: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-inner,
+  .core-section,
+  .market-section,
+  .featured-section {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .hero-search {
+    flex-direction: column;
+  }
+
+  .search-button,
+  .view-all-button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
