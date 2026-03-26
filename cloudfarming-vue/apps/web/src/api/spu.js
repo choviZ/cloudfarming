@@ -133,13 +133,15 @@ export const getSpuAttrValueBySpuIdAndAttrId = (spuId, attrId) => {
 /**
  * 上传图片
  */
-export const uploadImage = (file) => {
+export const uploadImage = (file, options = {}) => {
   const formData = new FormData()
   formData.append('file', file)
+  if (options.bizCode) {
+    formData.append('bizCode', options.bizCode)
+  }
   return request.post('/api/spu/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
   })
 }
-

@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
-import {uploadSpuImage} from "@/api/spu.js";
+import { uploadImage } from "@/api/spu.js";
 
 const props = defineProps({
   value: { type: String, default: '' },
@@ -56,7 +56,7 @@ const customRequest = async (options) => {
   const { file, onSuccess, onError } = options;
   loading.value = true;
   try {
-    const result = await uploadSpuImage(file, { bizCode: props.bizCode });
+    const result = await uploadImage(file, { bizCode: props.bizCode });
     if (result.code === '0' || result.code === '200') {
        onSuccess(result.data, file);
        emit('update:value', result.data);
