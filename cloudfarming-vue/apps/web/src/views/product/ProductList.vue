@@ -63,21 +63,28 @@
         </button>
       </div>
 
-      <div v-if="selectedCategoryName || searchParams.spuName" class="active-filters">
-        <span class="active-filters__label">当前筛选</span>
-        <button
-          v-if="selectedCategoryName"
-          type="button"
-          class="active-filter active-filter--primary"
-          @click="clearCategoryFilter"
-        >
-          <i class="fas fa-folder-open"></i>
-          <span>{{ selectedCategoryName }}</span>
-          <i class="fas fa-times"></i>
-        </button>
-        <span v-if="searchParams.spuName" class="active-filter">
-          关键词：{{ searchParams.spuName }}
-        </span>
+      <div v-if="subCategoryList.length" class="sub-category-panel">
+        <span class="sub-category-panel__label">细分类目</span>
+        <div class="sub-category-panel__list">
+          <button
+            type="button"
+            class="sub-category-chip"
+            :class="{ active: selectedCategoryId === activeTopCategoryId }"
+            @click="handleCategoryClick(activeTopCategoryId, topCategoryName, activeTopCategoryId)"
+          >
+            全部{{ topCategoryName }}
+          </button>
+          <button
+            v-for="item in subCategoryList"
+            :key="item.id"
+            type="button"
+            class="sub-category-chip"
+            :class="{ active: String(selectedCategoryId) === String(item.id) }"
+            @click="handleCategoryClick(item.id, item.name, activeTopCategoryId)"
+          >
+            {{ item.name }}
+          </button>
+        </div>
       </div>
     </section>
 
@@ -88,6 +95,9 @@
           <p>
             <template v-if="selectedCategoryName">
               正在查看 “{{ selectedCategoryName }}” 相关商品
+            </template>
+            <template v-else-if="topCategoryName">
+              正在查看 “{{ topCategoryName }}” 下的全部商品
             </template>
             <template v-else>
               为你展示最新上架的优质农产品
@@ -115,7 +125,7 @@
               </div>
               <h4 class="product-card__title">{{ item.title }}</h4>
               <p class="product-card__desc">
-                {{ selectedCategoryName || '原产地直发，支持产地甄选与品质追溯' }}
+                {{ selectedCategoryName || topCategoryName || '原产地直发，支持产地甄选与品质追溯' }}
               </p>
               <div class="product-card__footer">
                 <span class="product-tag">农产品</span>
@@ -148,10 +158,10 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { getTopLevelCategories } from '@/api/category'
+import { getCategoryById, getChildrenByParentId, getTopLevelCategories } from '@/api/category'
 import { listSpuByPage } from '@/api/spu'
 
 const router = useRouter()
@@ -162,7 +172,10 @@ const list = ref([])
 const total = ref(0)
 const categoryList = ref([])
 const selectedCategoryName = ref('')
+const selectedCategoryId = ref('')
 const activeTopCategoryId = ref('')
+const subCategoryList = ref([])
+const CATEGORY_SELECTION_STORAGE_KEY = 'cloudfarming:selectedCategory'
 
 const pagination = reactive({
   current: 1,
@@ -175,6 +188,14 @@ const searchParams = reactive({
   status: 1
 })
 
+const topCategoryName = computed(() => {
+  if (!activeTopCategoryId.value) {
+    return ''
+  }
+  const matched = categoryList.value.find((item) => String(item.id) === String(activeTopCategoryId.value))
+  return matched?.name || ''
+})
+
 const normalizeQueryValue = (value) => {
   if (Array.isArray(value)) {
     return value[0] || ''
@@ -184,7 +205,7 @@ const normalizeQueryValue = (value) => {
 
 const buildRouteQuery = ({
   keyword = searchParams.spuName,
-  categoryId = searchParams.categoryId,
+  categoryId = selectedCategoryId.value,
   categoryName = selectedCategoryName.value,
   topCategoryId = activeTopCategoryId.value
 } = {}) => {
@@ -194,10 +215,13 @@ const buildRouteQuery = ({
     query.keyword = trimmedKeyword
   }
   if (categoryId) {
+    query.selectedCategoryId = String(categoryId)
     query.categoryId = String(categoryId)
   }
-  if (categoryName) {
-    query.categoryName = categoryName
+  const resolvedCategoryName = categoryName || ''
+  if (resolvedCategoryName) {
+    query.selectedCategoryName = resolvedCategoryName
+    query.categoryName = resolvedCategoryName
   }
   if (topCategoryId) {
     query.topCategoryId = String(topCategoryId)
@@ -208,8 +232,8 @@ const buildRouteQuery = ({
 const isSameRouteQuery = (targetQuery) => {
   const currentQuery = {
     keyword: normalizeQueryValue(route.query.keyword || route.query.q),
-    categoryId: normalizeQueryValue(route.query.categoryId),
-    categoryName: normalizeQueryValue(route.query.categoryName),
+    categoryId: normalizeQueryValue(route.query.selectedCategoryId || route.query.categoryId),
+    categoryName: normalizeQueryValue(route.query.selectedCategoryName || route.query.categoryName),
     topCategoryId: normalizeQueryValue(route.query.topCategoryId)
   }
   return JSON.stringify(currentQuery) === JSON.stringify(targetQuery)
@@ -228,15 +252,85 @@ const updateRouteQuery = async (query) => {
 
 const syncStateFromRoute = () => {
   const keyword = normalizeQueryValue(route.query.keyword || route.query.q)
-  const categoryId = normalizeQueryValue(route.query.categoryId)
-  const categoryName = normalizeQueryValue(route.query.categoryName)
-  const topCategoryId = normalizeQueryValue(route.query.topCategoryId) || categoryId
+  const routeCategoryId = normalizeQueryValue(route.query.selectedCategoryId || route.query.categoryId)
+  const routeCategoryName = normalizeQueryValue(route.query.selectedCategoryName || route.query.categoryName)
+  const routeTopCategoryId = normalizeQueryValue(route.query.topCategoryId) || routeCategoryId
+  const cachedSelection = getCachedCategorySelection()
+
+  let categoryId = routeCategoryId
+  let categoryName = routeCategoryName
+  let topCategoryId = routeTopCategoryId
+
+  if (
+    cachedSelection &&
+    routeTopCategoryId &&
+    cachedSelection.topCategoryId === routeTopCategoryId &&
+    (!routeCategoryId || routeCategoryId === routeTopCategoryId)
+  ) {
+    categoryId = cachedSelection.selectedCategoryId
+    categoryName = cachedSelection.selectedCategoryName
+    topCategoryId = cachedSelection.topCategoryId
+  }
 
   searchParams.spuName = keyword
+  selectedCategoryId.value = categoryId
   searchParams.categoryId = categoryId
   selectedCategoryName.value = categoryName
   activeTopCategoryId.value = topCategoryId
   pagination.current = 1
+}
+
+const getCachedCategorySelection = () => {
+  try {
+    const raw = sessionStorage.getItem(CATEGORY_SELECTION_STORAGE_KEY)
+    if (!raw) {
+      return null
+    }
+    const parsed = JSON.parse(raw)
+    if (!parsed?.selectedCategoryId) {
+      return null
+    }
+    return parsed
+  } catch (error) {
+    return null
+  }
+}
+
+const clearCachedCategorySelection = () => {
+  sessionStorage.removeItem(CATEGORY_SELECTION_STORAGE_KEY)
+}
+
+const fetchSubCategories = async () => {
+  if (!activeTopCategoryId.value) {
+    subCategoryList.value = []
+    return
+  }
+  try {
+    const res = await getChildrenByParentId(activeTopCategoryId.value)
+    if (res.code === '0') {
+      subCategoryList.value = res.data || []
+      return
+    }
+    subCategoryList.value = []
+  } catch (error) {
+    console.error('Failed to fetch sub categories:', error)
+    subCategoryList.value = []
+  }
+}
+
+const syncSelectedCategoryName = async () => {
+  if (!selectedCategoryId.value) {
+    selectedCategoryName.value = ''
+    return
+  }
+  try {
+    const res = await getCategoryById(selectedCategoryId.value)
+    if (res.code === '0' && res.data?.name) {
+      selectedCategoryName.value = res.data.name
+    }
+  } catch (error) {
+    console.error('Failed to fetch category detail:', error)
+  }
 }
 
 const fetchCategories = async () => {
@@ -257,7 +351,7 @@ const fetchData = async () => {
       current: pagination.current,
       size: pagination.size,
       spuName: searchParams.spuName || undefined,
-      categoryId: searchParams.categoryId || undefined,
+      categoryId: selectedCategoryId.value || undefined,
       status: searchParams.status
     })
     if (res.code === '0' && res.data) {
@@ -285,24 +379,24 @@ const handleSearch = async () => {
 
 const handleCategoryClick = async (id = '', name = '', topCategoryId = '') => {
   pagination.current = 1
+  if (id) {
+    sessionStorage.setItem(
+      CATEGORY_SELECTION_STORAGE_KEY,
+      JSON.stringify({
+        selectedCategoryId: String(id),
+        selectedCategoryName: name,
+        topCategoryId: String(topCategoryId || id)
+      })
+    )
+  } else {
+    clearCachedCategorySelection()
+  }
   await updateRouteQuery(
     buildRouteQuery({
       keyword: searchParams.spuName,
       categoryId: id,
       categoryName: name,
       topCategoryId: topCategoryId || id
-    })
-  )
-}
-
-const clearCategoryFilter = async () => {
-  pagination.current = 1
-  await updateRouteQuery(
-    buildRouteQuery({
-      keyword: searchParams.spuName,
-      categoryId: '',
-      categoryName: '',
-      topCategoryId: ''
     })
   )
 }
@@ -348,9 +442,19 @@ onMounted(() => {
 })
 
 watch(
-  () => [route.query.keyword, route.query.q, route.query.categoryId, route.query.categoryName, route.query.topCategoryId],
-  () => {
+  () => [
+    route.query.keyword,
+    route.query.q,
+    route.query.selectedCategoryId,
+    route.query.categoryId,
+    route.query.selectedCategoryName,
+    route.query.categoryName,
+    route.query.topCategoryId
+  ],
+  async () => {
     syncStateFromRoute()
+    await fetchSubCategories()
+    await syncSelectedCategoryName()
     fetchData()
   },
   { immediate: true }
@@ -532,37 +636,46 @@ watch(
   box-shadow: 0 10px 20px rgba(47, 139, 73, 0.08);
 }
 
-.active-filters {
+.sub-category-panel {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 14px;
   margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(23, 33, 43, 0.08);
 }
 
-.active-filters__label {
+.sub-category-panel__label {
+  flex-shrink: 0;
+  padding-top: 8px;
   font-size: 13px;
   color: #6b7280;
 }
 
-.active-filter {
-  min-height: 34px;
-  padding: 0 12px;
+.sub-category-panel__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sub-category-chip {
+  min-height: 36px;
+  padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d9e6dc;
   background: #fff;
   color: #4b5563;
   font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.active-filter--primary {
-  cursor: pointer;
-  border-color: rgba(47, 139, 73, 0.2);
+.sub-category-chip:hover,
+.sub-category-chip.active {
+  border-color: #2f8b49;
   background: #eef8f0;
   color: #1b6a3a;
+  box-shadow: 0 10px 20px rgba(47, 139, 73, 0.08);
 }
 
 .page-content {

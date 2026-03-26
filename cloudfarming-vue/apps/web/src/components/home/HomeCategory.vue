@@ -21,7 +21,7 @@
             <button
               type="button"
               class="category-link"
-              @click="handleCategoryClick(category, category.id, category.id)"
+              @click.stop="handleCategoryClick(category, category.id, category.id)"
             >
               <div class="category-main">
                 <span class="category-icon">
@@ -49,7 +49,7 @@
             <button
               type="button"
               class="panel-all-button"
-              @click="handleCategoryClick(activeCategory, activeCategory.id, activeCategory.id)"
+              @click.stop="handleCategoryClick(activeCategory, activeCategory.id, activeCategory.id)"
             >
               查看全部
             </button>
@@ -66,7 +66,7 @@
                   <button
                     type="button"
                     class="group-title"
-                    @click="handleCategoryClick(group, group.id, activeCategory.id)"
+                    @click.stop="handleCategoryClick(group, group.id, activeCategory.id)"
                   >
                     <span>{{ group.name }}</span>
                     <RightOutlined />
@@ -77,7 +77,7 @@
                       :key="item.id"
                       type="button"
                       class="group-link"
-                      @click="handleCategoryClick(item, item.id, activeCategory.id)"
+                      @click.stop="handleCategoryClick(item, item.id, activeCategory.id)"
                     >
                       {{ item.name }}
                     </button>
@@ -111,7 +111,7 @@
                     :key="item.id"
                     type="button"
                     class="aside-tag"
-                    @click="handleCategoryClick(item, item.id, activeCategory.id)"
+                    @click.stop="handleCategoryClick(item, item.id, activeCategory.id)"
                   >
                     {{ item.name }}
                   </button>
@@ -142,6 +142,7 @@ const router = useRouter()
 const loading = ref(false)
 const categories = ref([])
 const activeCategory = ref(null)
+const CATEGORY_SELECTION_STORAGE_KEY = 'cloudfarming:selectedCategory'
 
 const fetchCategories = async () => {
   loading.value = true
@@ -210,9 +211,19 @@ const handleCategoryClick = (category, categoryId, topCategoryId) => {
   if (!categoryId) {
     return
   }
+  sessionStorage.setItem(
+    CATEGORY_SELECTION_STORAGE_KEY,
+    JSON.stringify({
+      selectedCategoryId: String(categoryId),
+      selectedCategoryName: category.name,
+      topCategoryId: String(topCategoryId || categoryId)
+    })
+  )
   router.push({
     name: 'productList',
     query: {
+      selectedCategoryId: String(categoryId),
+      selectedCategoryName: category.name,
       categoryId: String(categoryId),
       categoryName: category.name,
       topCategoryId: String(topCategoryId || categoryId)
