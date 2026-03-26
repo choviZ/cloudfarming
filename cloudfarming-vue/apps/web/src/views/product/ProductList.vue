@@ -196,6 +196,15 @@ const topCategoryName = computed(() => {
   return matched?.name || ''
 })
 
+const isTopCategoryAllMode = computed(() => {
+  return Boolean(
+    selectedCategoryId.value &&
+    activeTopCategoryId.value &&
+    String(selectedCategoryId.value) === String(activeTopCategoryId.value) &&
+    subCategoryList.value.length
+  )
+})
+
 const normalizeQueryValue = (value) => {
   if (Array.isArray(value)) {
     return value[0] || ''
@@ -344,19 +353,79 @@ const fetchCategories = async () => {
   }
 }
 
+const buildListRequest = (extra = {}) => ({
+  current: pagination.current,
+  size: pagination.size,
+  spuName: searchParams.spuName || undefined,
+  categoryId: selectedCategoryId.value || undefined,
+  status: searchParams.status,
+  ...extra
+})
+
+const applyPageResult = (pageData) => {
+  list.value = pageData.records || []
+  total.value = Number(pageData.total || 0)
+}
+
+const fetchTopCategoryAggregateData = async () => {
+  const requestSize = pagination.current * pagination.size
+  const categoryIds = [activeTopCategoryId.value, ...subCategoryList.value.map((item) => item.id)]
+  const responses = await Promise.all(
+    categoryIds.map((id) =>
+      listSpuByPage({
+        current: 1,
+        size: requestSize,
+        spuName: searchParams.spuName || undefined,
+        categoryId: id,
+        status: searchParams.status
+      })
+    )
+  )
+
+  const mergedMap = new Map()
+  let mergedTotal = 0
+
+  responses.forEach((res) => {
+    if (res.code !== '0' || !res.data) {
+      return
+    }
+    mergedTotal += Number(res.data.total || 0)
+    ;(res.data.records || []).forEach((item) => {
+      if (!mergedMap.has(item.id)) {
+        mergedMap.set(item.id, item)
+      }
+    })
+  })
+
+  const mergedRecords = Array.from(mergedMap.values())
+  const start = (pagination.current - 1) * pagination.size
+  const end = start + pagination.size
+  list.value = mergedRecords.slice(start, end)
+  total.value = mergedTotal
+}
+
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await listSpuByPage({
-      current: pagination.current,
-      size: pagination.size,
-      spuName: searchParams.spuName || undefined,
-      categoryId: selectedCategoryId.value || undefined,
-      status: searchParams.status
-    })
+    if (isTopCategoryAllMode.value) {
+      const categoryIds = [activeTopCategoryId.value, ...subCategoryList.value.map((item) => item.id)]
+      const res = await listSpuByPage(
+        buildListRequest({
+          categoryIds,
+          categoryId: selectedCategoryId.value || undefined
+        })
+      )
+      if (res.code === '0' && res.data && Number(res.data.total || 0) > 0) {
+        applyPageResult(res.data)
+        return
+      }
+      await fetchTopCategoryAggregateData()
+      return
+    }
+
+    const res = await listSpuByPage(buildListRequest())
     if (res.code === '0' && res.data) {
-      list.value = res.data.records || []
-      total.value = Number(res.data.total || 0)
+      applyPageResult(res.data)
       return
     }
     list.value = []

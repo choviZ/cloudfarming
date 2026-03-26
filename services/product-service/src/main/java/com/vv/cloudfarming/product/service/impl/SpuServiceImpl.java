@@ -166,7 +166,9 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         String spuName = queryParam.getSpuName();
         Long categoryId = queryParam.getCategoryId();
         Integer status = queryParam.getStatus();
-        List<Long> categoryIds = resolveCategoryIds(categoryId);
+        List<Long> categoryIds = CollUtil.isNotEmpty(queryParam.getCategoryIds())
+                ? queryParam.getCategoryIds()
+                : resolveCategoryIds(categoryId);
         // 构建查询条件
         LambdaQueryWrapper<SpuDO> queryWrapper = Wrappers.lambdaQuery(SpuDO.class)
             .eq(Objects.nonNull(id), SpuDO::getId, id)

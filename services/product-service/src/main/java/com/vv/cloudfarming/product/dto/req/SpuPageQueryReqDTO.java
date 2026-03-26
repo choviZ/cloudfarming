@@ -3,6 +3,8 @@ package com.vv.cloudfarming.product.dto.req;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class SpuPageQueryReqDTO extends Page {
 
@@ -20,6 +22,11 @@ public class SpuPageQueryReqDTO extends Page {
      * 商品分类id
      */
     private Long categoryId;
+
+    /**
+     * 商品分类id列表
+     */
+    private List<Long> categoryIds;
 
     /**
      * 商品状态：0-下架，1-上架，2-待审核
