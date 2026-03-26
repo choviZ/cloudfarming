@@ -26,7 +26,6 @@ import com.vv.cloudfarming.product.dto.req.*;
 import com.vv.cloudfarming.product.dto.resp.CategoryRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
-import com.vv.cloudfarming.product.dto.domain.SpuPriceSummaryDTO;
 import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.product.enums.AuditStatusEnum;
 import com.vv.cloudfarming.product.enums.ProductTypeEnum;
@@ -38,6 +37,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -166,11 +166,12 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         String spuName = queryParam.getSpuName();
         Long categoryId = queryParam.getCategoryId();
         Integer status = queryParam.getStatus();
+        List<Long> categoryIds = resolveCategoryIds(categoryId);
         // 构建查询条件
         LambdaQueryWrapper<SpuDO> queryWrapper = Wrappers.lambdaQuery(SpuDO.class)
             .eq(Objects.nonNull(id), SpuDO::getId, id)
             .like(!StrUtil.isBlank(spuName), SpuDO::getTitle, spuName)
-            .eq(categoryId != null, SpuDO::getCategoryId, categoryId)
+            .in(CollUtil.isNotEmpty(categoryIds), SpuDO::getCategoryId, categoryIds)
             .eq(status != null, SpuDO::getStatus, status);
         // 查询
         Page<SpuDO> pageRequest = new Page<>(queryParam.getCurrent(), queryParam.getSize());
@@ -181,6 +182,28 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
             spuRespDTO.setMinPrice(skuMapper.queryLowestPrice(spuDO.getId()));
             return spuRespDTO;
         });
+    }
+
+    private List<Long> resolveCategoryIds(Long categoryId) {
+        if (categoryId == null) {
+            return null;
+        }
+        CategoryRespDTO category = categoryService.getCategoryById(categoryId);
+        if (category == null) {
+            throw new ClientException("分类不存在");
+        }
+        List<Long> categoryIds = new ArrayList<>();
+        collectCategoryIds(categoryId, categoryIds);
+        return categoryIds;
+    }
+
+    private void collectCategoryIds(Long categoryId, List<Long> categoryIds) {
+        categoryIds.add(categoryId);
+        List<CategoryRespDTO> children = categoryService.getChildrenByParentId(categoryId);
+        if (CollUtil.isEmpty(children)) {
+            return;
+        }
+        children.forEach(child -> collectCategoryIds(child.getId(), categoryIds));
     }
 
     @Override
