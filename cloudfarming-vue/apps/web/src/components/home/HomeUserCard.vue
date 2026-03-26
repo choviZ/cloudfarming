@@ -1,13 +1,11 @@
 <template>
   <div class="home-user-card">
     <div class="user-card-inner">
-      <!-- Background Decoration -->
       <div class="card-bg">
         <div class="bg-circle"></div>
         <div class="bg-gradient"></div>
       </div>
 
-      <!-- User Info -->
       <div class="user-info-section">
         <div class="avatar-wrapper">
           <img v-if="hasAvatar" :src="userAvatar" alt="Avatar" class="avatar-img">
@@ -17,16 +15,13 @@
         </div>
         <h3 class="user-name">{{ userName }}</h3>
 
-        <!-- Address Section -->
         <div class="address-box" @click="router.push('/user/info/address')">
           <EnvironmentOutlined class="address-icon" />
           <span class="address-text">{{ address }}</span>
           <RightOutlined class="address-arrow" />
         </div>
 
-        <!-- Stats Grid -->
         <div class="stats-grid">
-          <!-- TODO: Backend stats not ready, using mock data -->
           <div class="stat-item group">
             <div class="stat-value">2</div>
             <div class="stat-label">购物车</div>
@@ -47,31 +42,31 @@
       </div>
     </div>
 
-    <!-- Platform Notice -->
     <div class="platform-notice">
       <div class="notice-header">
         <h4 class="notice-title">
           <span class="title-indicator"></span>
           平台公告
         </h4>
-        <span class="notice-more">
+        <span class="notice-more" @click="goToArticleList">
           更多
           <RightOutlined class="more-icon" />
         </span>
       </div>
       <ul class="notice-list">
-        <!-- Mock Notices -->
-        <li class="notice-item">
-          <span class="notice-tag hot">热</span>
-          <span class="notice-text">云端牧场APP 2.0 版本正式上线！</span>
+        <li
+          v-for="notice in noticeList"
+          :key="notice.id"
+          class="notice-item"
+          @click="goToArticleDetail(notice.id)"
+        >
+          <span class="notice-tag" :class="getNoticeTagClass(notice)">
+            {{ getNoticeTagText(notice) }}
+          </span>
+          <span class="notice-text">{{ notice.title }}</span>
         </li>
-        <li class="notice-item">
-          <span class="notice-tag new">新</span>
-          <span class="notice-text">春季果树认养计划开启预定</span>
-        </li>
-        <li class="notice-item">
-          <span class="notice-tag normal">通</span>
-          <span class="notice-text">关于部分偏远地区物流配送延迟</span>
+        <li v-if="!noticeList.length" class="notice-empty">
+          暂无平台公告
         </li>
       </ul>
     </div>
@@ -79,42 +74,99 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useUserStore } from '@/stores/useUserStore';
-import { 
-  EnvironmentOutlined, 
-  RightOutlined,
-  UserOutlined 
-} from '@ant-design/icons-vue';
-import { getCurrentUserDefaultReceiveAddress } from '@/api/address';
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { EnvironmentOutlined, RightOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { getCurrentUserDefaultReceiveAddress } from '@/api/address'
+import { pagePublishedArticles } from '@/api/article'
+import { useUserStore } from '@/stores/useUserStore'
 
-const router = useRouter();
-const userStore = useUserStore();
-const address = ref('暂未设置默认收货地址');
+const router = useRouter()
+const userStore = useUserStore()
 
-const userName = computed(() => {
-  return userStore.loginUser?.username || '请登录';
-});
+const address = ref('暂未设置默认收货地址')
+const noticeList = ref([])
 
-const userAvatar = computed(() => {
-  return userStore.loginUser?.avatar || '';
-});
-
+const userName = computed(() => userStore.loginUser?.username || '请登录')
+const userAvatar = computed(() => userStore.loginUser?.avatar || '')
 const hasAvatar = computed(() => {
-  const avatar = userAvatar.value;
-  return avatar && avatar !== '' && !avatar.includes('Avatar');
-});
+  const avatar = userAvatar.value
+  return avatar && avatar !== '' && !avatar.includes('Avatar')
+})
+
+const goToArticleList = () => {
+  router.push({
+    name: 'articleList',
+    query: { type: '1' }
+  })
+}
+
+const goToArticleDetail = (id) => {
+  if (!id) {
+    return
+  }
+  router.push({
+    name: 'articleDetail',
+    params: { id: String(id) }
+  })
+}
+
+const getNoticeTagClass = (notice) => {
+  if (notice?.isTop) {
+    return 'hot'
+  }
+  const publishTime = new Date(notice?.publishTime || notice?.createTime || '')
+  const sevenDays = 7 * 24 * 60 * 60 * 1000
+  if (!Number.isNaN(publishTime.getTime()) && Date.now() - publishTime.getTime() <= sevenDays) {
+    return 'new'
+  }
+  return 'normal'
+}
+
+const getNoticeTagText = (notice) => {
+  const tagClass = getNoticeTagClass(notice)
+  if (tagClass === 'hot') {
+    return '热'
+  }
+  if (tagClass === 'new') {
+    return '新'
+  }
+  return '公告'
+}
+
+const loadDefaultAddress = async () => {
+  if (!userStore.loginUser) {
+    return
+  }
+  try {
+    const res = await getCurrentUserDefaultReceiveAddress()
+    if (res.code === '0' && res.data) {
+      const { provinceName, cityName, districtName, detailAddress } = res.data
+      address.value = `${provinceName}${cityName}${districtName}${detailAddress}`
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const loadNotices = async () => {
+  try {
+    const res = await pagePublishedArticles({
+      current: 1,
+      size: 3,
+      articleType: 1
+    })
+    if (res.code === '0' && res.data) {
+      noticeList.value = res.data.records || []
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
 
 onMounted(async () => {
-  if (userStore.loginUser) {
-    const res = await getCurrentUserDefaultReceiveAddress();
-    if ((res.code == '0') && res.data) {
-      const { provinceName, cityName, districtName, detailAddress } = res.data;
-      address.value = `${provinceName}${cityName}${districtName}${detailAddress}`;
-    }
-  }
-});
+  await Promise.all([loadDefaultAddress(), loadNotices()])
+})
 </script>
 
 <style scoped>
@@ -132,15 +184,11 @@ onMounted(async () => {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   position: relative;
-  /* height: 260px; */
-  /* Let content define height or fixed? Prototype had specific structure */
 }
 
-/* Background Decoration */
 .card-bg {
   height: 96px;
   background: linear-gradient(135deg, #15803d 0%, #14532d 100%);
-  /* primary-700 to 900 */
   position: relative;
   overflow: hidden;
 }
@@ -165,7 +213,6 @@ onMounted(async () => {
   background: linear-gradient(to top, rgba(0, 0, 0, 0.1), transparent);
 }
 
-/* User Info Section */
 .user-info-section {
   padding: 0 20px 20px;
   margin-top: -48px;
@@ -211,7 +258,6 @@ onMounted(async () => {
   margin-bottom: 12px;
 }
 
-/* Address Box */
 .address-box {
   margin-top: 12px;
   margin-bottom: 24px;
@@ -238,7 +284,6 @@ onMounted(async () => {
 
 .address-icon {
   color: #22c55e;
-  /* primary-500 */
 }
 
 .address-text {
@@ -253,7 +298,6 @@ onMounted(async () => {
   color: #cbd5e1;
 }
 
-/* Stats Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -275,7 +319,6 @@ onMounted(async () => {
 
 .stat-item:hover .stat-value {
   color: #15803d;
-  /* primary-700 */
 }
 
 .stat-label {
@@ -284,7 +327,6 @@ onMounted(async () => {
   margin-top: 2px;
 }
 
-/* Platform Notice */
 .platform-notice {
   background-color: #ffffff;
   border-radius: 16px;
@@ -319,7 +361,6 @@ onMounted(async () => {
   width: 4px;
   height: 16px;
   background-color: #16a34a;
-  /* primary-600 */
   border-radius: 9999px;
 }
 
@@ -393,5 +434,14 @@ onMounted(async () => {
 
 .notice-item:hover .notice-text {
   color: #15803d;
+}
+
+.notice-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 84px;
+  color: #94a3b8;
+  font-size: 12px;
 }
 </style>

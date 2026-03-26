@@ -1,7 +1,6 @@
 <template>
   <div id="default-layout">
     <a-layout>
-      <!-- 顶部导航栏 -->
       <a-layout-header class="navbar">
         <a-flex align="center" justify="space-between" style="height: 60px;">
           <a-space>
@@ -16,40 +15,55 @@
         </a-flex>
       </a-layout-header>
       <a-layout>
-        <!-- 侧边栏-菜单项 -->
         <a-layout-sider class="sider">
-          <a-menu v-model:selectedKeys="selectedKeys" mode="inline" :style="{ lineHeight: '64px' }" :items="items" @click="handleClick"/>
+          <a-menu
+            v-model:selectedKeys="selectedKeys"
+            mode="inline"
+            :style="{ lineHeight: '64px' }"
+            :items="items"
+            @click="handleClick"
+          />
         </a-layout-sider>
-        <!-- 内容区域 -->
         <a-layout-content class="layout-content">
           <router-view />
         </a-layout-content>
       </a-layout>
-      <!-- 页脚 -->
       <a-layout-footer class="footer">Footer</a-layout-footer>
     </a-layout>
   </div>
 </template>
 
 <script setup>
-import { ref, h, watch } from 'vue'
-import {UserOutlined, AppstoreOutlined, TagsOutlined, ShopOutlined, FileTextOutlined} from '@ant-design/icons-vue'
-import { useRouter, useRoute } from 'vue-router';
+import { h, ref, watch } from 'vue'
+import {
+  AppstoreOutlined,
+  FileTextOutlined,
+  NotificationOutlined,
+  ShopOutlined,
+  TagsOutlined,
+  UserOutlined
+} from '@ant-design/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
 
-const router = useRouter();
-const route = useRoute();
-const selectedKeys = ref([]);
+const router = useRouter()
+const route = useRoute()
+const selectedKeys = ref([])
 
-// 监听路由变化，更新选中菜单
+const resolveSelectedKey = (path) => {
+  if (path.startsWith('/admin/product/detail/')) {
+    return 'admin/product'
+  }
+  return path.replace(/^\//, '')
+}
+
 watch(
   () => route.path,
   (path) => {
-    // 移除开头的斜杠，匹配菜单key
-    const key = path.replace(/^\//, '');
-    selectedKeys.value = [key];
+    selectedKeys.value = [resolveSelectedKey(path)]
   },
   { immediate: true }
-);
+)
+
 const items = ref([
   {
     label: '用户管理',
@@ -76,6 +90,12 @@ const items = ref([
     icon: () => h(ShopOutlined),
   },
   {
+    label: '文章资讯',
+    title: '文章资讯',
+    key: 'admin/article',
+    icon: () => h(NotificationOutlined),
+  },
+  {
     label: '订单管理',
     title: '订单管理',
     key: 'admin/order',
@@ -83,8 +103,8 @@ const items = ref([
   }
 ])
 
-const handleClick = ({key}) => {
-  router.push(`/${key}`);
+const handleClick = ({ key }) => {
+  router.push(`/${key}`)
 }
 </script>
 
@@ -117,13 +137,9 @@ const handleClick = ({key}) => {
 
 .layout-content {
   height: calc(100vh - 60px - 40px);
-  /* 减去 navbar 和 footer 的高度 */
   width: calc(100% - 200px);
-  /* 减去 sider 的宽度 */
   margin-top: 60px;
-  /* 为 navbar 腾出空间 */
   margin-left: 200px;
-  /* 为 sider 腾出空间 */
   background-color: #f5f5f5;
   overflow: auto;
   padding: 16px;

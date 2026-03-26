@@ -45,14 +45,19 @@ const router = createRouter({
           component: () => import('@/views/admin/product/index.vue'),
         },
         {
-            path: '/admin/order',
-            name: 'admin-order',
-            component: () => import('@/views/admin/order/index.vue'),
+          path: '/admin/article',
+          name: 'admin-article',
+          component: () => import('@/views/admin/article/index.vue'),
         },
-          {
+        {
+          path: '/admin/order',
+          name: 'admin-order',
+          component: () => import('@/views/admin/order/index.vue'),
+        },
+        {
           path: '/admin/product/detail/:id',
           name: 'admin-product-detail',
-          component: () => import('@/views/admin/product/detail.vue'),
+          component: () => import('@/views/admin/product/components/detail.vue'),
           meta: {
             title: '商品详情',
             hideInMenu: true
@@ -63,35 +68,27 @@ const router = createRouter({
   ],
 })
 
-// 路由守卫
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
 
-  // 如果不是登录页面，检查登录态
   if (to.path !== '/login') {
-    // 如果用户信息不存在，尝试获取
     if (!userStore.loginUser) {
       try {
         await userStore.fetchUser()
       } catch (error) {
-        // 获取用户信息失败，清除用户信息
         userStore.clearUser()
       }
     }
 
-    // 检查是否需要认证
     if (to.meta.requiresAuth && !userStore.loginUser) {
-      // 需要认证但未登录，重定向到登录页
       next({
         path: '/login',
         query: { redirect: to.fullPath }
       })
     } else {
-      // 已登录或不需要认证，继续导航
       next()
     }
   } else {
-    // 是登录页面，直接放行
     next()
   }
 })

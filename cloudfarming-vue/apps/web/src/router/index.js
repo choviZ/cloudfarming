@@ -34,6 +34,16 @@ const router = createRouter({
           component: () => import('../views/SearchResult.vue')
         },
         {
+          path: 'article/list',
+          name: 'articleList',
+          component: () => import('../views/article/ArticleList.vue')
+        },
+        {
+          path: 'article/:id',
+          name: 'articleDetail',
+          component: () => import('../views/article/ArticleDetail.vue')
+        },
+        {
           path: 'adopt/detail/:id',
           name: 'adoptDetail',
           component: () => import('../views/adopt/AdoptDetail.vue')
@@ -73,10 +83,9 @@ const router = createRouter({
           path: 'farmer/join',
           name: 'joinFarmer',
           component: () => import('../views/farmer/JoinFarmer.vue')
-        },
+        }
       ]
     },
-    // 用户相关路由组
     {
       path: '/user',
       name: 'userState',
@@ -90,7 +99,7 @@ const router = createRouter({
           path: 'register',
           name: 'register',
           component: Login
-        },
+        }
       ]
     },
     {
@@ -105,7 +114,6 @@ const router = createRouter({
         }
       ]
     },
-    // 用户中心路由组
     {
       path: '/usercenter',
       name: 'userCenter',
@@ -119,7 +127,6 @@ const router = createRouter({
         }
       ]
     },
-    // 农户后台路由
     {
       path: '/farmer',
       name: 'farmer',
