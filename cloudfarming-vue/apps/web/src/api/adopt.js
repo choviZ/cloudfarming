@@ -110,6 +110,6 @@ export function createAdoptOrder(data) {
  */
 export function listAnimalCategories() {
   return request.get(
-    '/v1/adopt/animal-category/list'
+    '/api/adopt/animal-category/list'
   )
 }
