@@ -112,7 +112,7 @@
                 <div class="content-layout">
                     <!-- Sidebar -->
                     <aside class="sidebar">
-                        <div class="shop-card">
+                        <div class="shop-card shop-card--clickable" @click="goToShopHome">
                             <div class="shop-header">
                                 <div class="shop-avatar">
                                     <img v-if="shopInfo.shopAvatar" :src="shopInfo.shopAvatar" alt="店铺头像"
@@ -122,6 +122,11 @@
                                 <div class="shop-meta">
                                     <div class="shop-name">{{ shopInfo.shopName || '店铺名称加载中...' }}</div>
                                 </div>
+                            </div>
+                            <div class="shop-actions">
+                                <button type="button" class="btn-small btn-outline" @click.stop="goToShopHome">
+                                    进入店铺
+                                </button>
                             </div>
                         </div>
                     </aside>
@@ -311,6 +316,15 @@ const fetchShopInfo = async (shopId) => {
     if (response.code == '0' && response.data) {
         shopInfo.value = response.data
     }
+}
+
+const goToShopHome = () => {
+    const targetShopId = shopInfo.value.id || spuInfo.value.shopId
+    if (!targetShopId) {
+        message.warning('店铺信息加载中，请稍后重试')
+        return
+    }
+    router.push(`/shop/${targetShopId}`)
 }
 
 const extractSpecs = (skus) => {
@@ -763,6 +777,16 @@ onMounted(() => {
     border-radius: 12px;
     padding: 20px;
     border: 1px solid #f3f4f6;
+}
+
+.shop-card--clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.shop-card--clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 28px rgba(17, 24, 39, 0.08);
 }
 
 .shop-header {

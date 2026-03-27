@@ -9,6 +9,9 @@ import org.apache.ibatis.annotations.Select;
  */
 public interface ShopMapper extends BaseMapper<Shop> {
 
-    @Select("SELECT id FROM t_shops WHERE farmer_id = #{farmerId} AND del_flag = 0")
+    @Select("SELECT id FROM t_shops WHERE farmer_id = #{farmerId} AND del_flag = 0 LIMIT 1")
     Long getIdByFarmerId(Long farmerId);
+
+    @Select("SELECT * FROM t_shops WHERE farmer_id = #{farmerId} AND del_flag = 0 LIMIT 1")
+    Shop getByFarmerId(Long farmerId);
 }

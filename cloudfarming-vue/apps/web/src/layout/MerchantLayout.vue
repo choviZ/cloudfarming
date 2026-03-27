@@ -28,7 +28,7 @@
             <span>创建商品</span>
           </a-menu-item>
         </a-sub-menu>
-        <a-menu-item key="2">
+        <a-menu-item key="2" @click="router.push('/farmer/shop')">
           <shop-outlined />
           <span>店铺管理</span>
         </a-menu-item>
@@ -110,6 +110,9 @@ const selectedKeys = computed(() => {
   }
   if (route.path === '/farmer/spu/create') {
     return ['1-2']
+  }
+  if (route.path === '/farmer/shop') {
+    return ['2']
   }
   if (route.path === '/farmer/adopt/create') {
     return ['4-1']

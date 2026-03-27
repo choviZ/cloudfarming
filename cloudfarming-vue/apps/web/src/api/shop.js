@@ -1,6 +1,15 @@
 import request from './request'
 
-// 获取店铺信息
 export const getShopInfo = (shopId) => {
-    return request.get(`/api/shop/get`, { params: { shopId } })
+  return request.get('/api/shop/get', {
+    params: { shopId }
+  })
+}
+
+export const getMyShopInfo = () => {
+  return request.get('/api/shop/my')
+}
+
+export const updateShopInfo = (data) => {
+  return request.post('/api/shop/update', data)
 }

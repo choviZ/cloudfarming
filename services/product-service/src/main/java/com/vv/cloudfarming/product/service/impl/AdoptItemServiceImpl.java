@@ -179,9 +179,10 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
         Integer reviewStatus = requestParam.getReviewStatus();
         Integer status = requestParam.getStatus();
         Long userId = requestParam.getUserId();
-        Long shopId = getShopIdByUserId(userId);
+        Long requestShopId = requestParam.getShopId();
+        Long queryShopId = requestShopId != null ? requestShopId : getShopIdByUserId(userId);
 
-        if (ObjectUtil.isNotNull(userId) && shopId == null) {
+        if (ObjectUtil.isNotNull(userId) && requestShopId == null && queryShopId == null) {
             Page<AdoptItemRespDTO> emptyPage = new Page<>(requestParam.getCurrent(), requestParam.getSize());
             emptyPage.setRecords(Collections.emptyList());
             emptyPage.setTotal(0);
@@ -194,7 +195,7 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
                 .like(StrUtil.isNotBlank(title), AdoptItemDO::getTitle, title)
                 .eq(ObjectUtil.isNotNull(reviewStatus), AdoptItemDO::getAuditStatus, reviewStatus)
                 .eq(ObjectUtil.isNotNull(status), AdoptItemDO::getStatus, status)
-                .eq(ObjectUtil.isNotNull(shopId), AdoptItemDO::getShopId, shopId)
+                .eq(ObjectUtil.isNotNull(queryShopId), AdoptItemDO::getShopId, queryShopId)
                 .orderByDesc(AdoptItemDO::getCreateTime);
 
         IPage<AdoptItemDO> pageResult = this.page(requestParam, queryWrapper);

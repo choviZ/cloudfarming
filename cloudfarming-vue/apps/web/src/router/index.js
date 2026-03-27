@@ -75,6 +75,11 @@ const router = createRouter({
           component: () => import('../views/product/ProductDetailView.vue')
         },
         {
+          path: 'shop/:shopId',
+          name: 'shopHome',
+          component: () => import('../views/shop/ShopHome.vue')
+        },
+        {
           path: 'cart',
           name: 'cart',
           component: () => import('../views/Cart.vue')
@@ -147,6 +152,11 @@ const router = createRouter({
           path: 'spu/create',
           name: 'createSpu',
           component: () => import('../views/farmer/admin/Index.vue')
+        },
+        {
+          path: 'shop',
+          name: 'farmerShop',
+          component: () => import('../views/farmer/shop/ShopManage.vue')
         },
         {
           path: 'adopt/create',
