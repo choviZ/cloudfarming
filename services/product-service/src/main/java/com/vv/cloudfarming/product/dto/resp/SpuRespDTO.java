@@ -39,6 +39,11 @@ public class SpuRespDTO {
     private Integer status;
 
     /**
+     * 审核状态
+     */
+    private Integer auditStatus;
+
+    /**
      * 基本属性 JSON
      */
     private String attributes;

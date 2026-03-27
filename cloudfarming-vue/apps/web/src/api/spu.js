@@ -15,7 +15,9 @@ export const saveSpu = (data) => {
  * @returns {Promise<Object>} Result<void>
  */
 export const deleteSpuById = (id) => {
-  return request.post(`/api/spu/delete${id}`)
+  return request.post('/api/spu/delete', null, {
+    params: { id }
+  })
 }
 
 /**
@@ -36,6 +38,10 @@ export const listSpuByPage = (data) => {
   return request.post('/api/spu/page', data)
 }
 
+export const listMySpuByPage = (data) => {
+  return request.post('/api/spu/my/page', data)
+}
+
 /**
  * 更新SPU状态
  * @param {number} id
@@ -43,9 +49,14 @@ export const listSpuByPage = (data) => {
  * @returns {Promise<Object>} Result<void>
  */
 export const updateSpuStatus = (id, status) => {
-  return request.put(`/api/spu/status/${id}`, null, {
-    params: { status }
+  return request.post('/api/spu/status', {
+    id,
+    status
   })
+}
+
+export const updateSpu = (data) => {
+  return request.put('/api/spu/update', data)
 }
 
 /**

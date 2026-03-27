@@ -32,4 +32,14 @@ public class SpuPageQueryReqDTO extends Page {
      * 商品状态：0-下架，1-上架，2-待审核
      */
     private Integer status;
+
+    /**
+     * 店铺id.
+     */
+    private Long shopId;
+
+    /**
+     * 审核状态
+     */
+    private Integer auditStatus;
 }

@@ -7,9 +7,10 @@ import com.vv.cloudfarming.product.dto.req.SpuAttrValueCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuAttrValueUpdateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuPageQueryReqDTO;
+import com.vv.cloudfarming.product.dto.req.SpuUpdateReqDTO;
+import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
-import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
 
 import java.util.List;
 
@@ -45,11 +46,21 @@ public interface SpuService extends IService<SpuDO> {
     ProductRespDTO getProductBySpuId(Long id);
 
     /**
+     * Page query SPU list.
+     */
+    IPage<SpuRespDTO> listSpuByPage(SpuPageQueryReqDTO queryParam);
+
+    /**
      * 分页查询SPU列表
      * @param queryParam 请求参数
      * @return 分页信息
      */
-    IPage<SpuRespDTO> listSpuByPage(SpuPageQueryReqDTO queryParam);
+    IPage<SpuRespDTO> listMySpuByPage(Long userId, SpuPageQueryReqDTO queryParam);
+
+    /**
+     * 更新spu基础信息
+     */
+    void updateSpu(SpuUpdateReqDTO requestParam);
 
     /**
      * 更新SPU状态

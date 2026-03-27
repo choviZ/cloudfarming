@@ -2,16 +2,18 @@ package com.vv.cloudfarming.product.controller;
 
 import cn.dev33.satoken.annotation.SaCheckOr;
 import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
-import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.product.dto.req.SpuAttrValueCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuAttrValueUpdateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuPageQueryReqDTO;
-import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
+import com.vv.cloudfarming.product.dto.req.SpuUpdateReqDTO;
 import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
+import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
 import com.vv.cloudfarming.product.service.SpuService;
 import com.vv.cloudfarming.user.dto.req.UpdateReviewStatusReqDTO;
@@ -19,21 +21,25 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "商品SPU控制层")
+@Tag(name = "SPU Controller")
 @RestController
 @RequiredArgsConstructor
 public class SpuController {
 
     private final SpuService spuService;
 
-    // spu相关接口
     @Operation(summary = "创建")
     @SaCheckOr(
-            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
     @PostMapping("/api/spu/create")
     public Result<Long> createSpu(@Validated @RequestBody SpuCreateReqDTO requestParam) {
@@ -41,9 +47,19 @@ public class SpuController {
         return Results.success(spuId);
     }
 
+    @Operation(summary = "更新SPU")
+    @SaCheckOr(
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
+    )
+    @PutMapping("/api/spu/update")
+    public Result<Void> updateSpu(@Validated @RequestBody SpuUpdateReqDTO requestParam) {
+        spuService.updateSpu(requestParam);
+        return Results.success();
+    }
+
     @Operation(summary = "根据id删除SPU")
     @SaCheckOr(
-            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
     @PostMapping("/api/spu/delete")
     public Result<Void> deleteSpuById(@RequestParam("id") Long id) {
@@ -65,9 +81,17 @@ public class SpuController {
         return Results.success(pageResult);
     }
 
+    @Operation(summary = "分页查询当前农户spu列表")
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @PostMapping("/api/spu/my/page")
+    public Result<IPage<SpuRespDTO>> listMySpuByPage(@RequestBody SpuPageQueryReqDTO queryParam) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        return Results.success(spuService.listMySpuByPage(userId, queryParam));
+    }
+
     @Operation(summary = "更新SPU状态")
     @SaCheckOr(
-            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
     @PostMapping("/api/spu/status")
     public Result<Void> updateSpuStatus(@RequestBody UpdateReviewStatusReqDTO requestParam) {
@@ -75,11 +99,9 @@ public class SpuController {
         return Results.success();
     }
 
-    // spu属性相关接口
-
     @Operation(summary = "创建SPU属性值")
     @SaCheckOr(
-            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
     @PostMapping("/api/spu/attr/create")
     public Result<Void> createSpuAttrValue(@Validated @RequestBody SpuAttrValueCreateReqDTO requestParam) {
@@ -89,7 +111,7 @@ public class SpuController {
 
     @Operation(summary = "批量创建SPU属性值")
     @SaCheckOr(
-            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
     @PostMapping("/api/spu/attr/create/batch")
     public Result<Void> batchCreateSpuAttrValues(@Validated @RequestBody List<SpuAttrValueCreateReqDTO> requestParams) {
@@ -99,7 +121,7 @@ public class SpuController {
 
     @Operation(summary = "更新SPU属性值")
     @SaCheckOr(
-            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
     @PostMapping("/api/spu/attr/update")
     public Result<Boolean> updateSpuAttrValue(@Validated @RequestBody SpuAttrValueUpdateReqDTO requestParam) {
@@ -108,7 +130,7 @@ public class SpuController {
 
     @Operation(summary = "删除SPU属性值")
     @SaCheckOr(
-            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
     @PostMapping("/api/spu/attr/delete")
     public Result<Boolean> deleteSpuAttrValue(@RequestParam("id") Long id) {
@@ -117,7 +139,7 @@ public class SpuController {
 
     @Operation(summary = "批量删除SPU属性值")
     @SaCheckOr(
-            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
     @PostMapping("/api/spu/attr/delete/batch")
     public Result<Boolean> batchDeleteSpuAttrValues(@RequestBody List<Long> ids) {
@@ -126,7 +148,7 @@ public class SpuController {
 
     @Operation(summary = "根据SPU ID删除所有属性值")
     @SaCheckOr(
-            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC),}
+            role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)}
     )
     @PostMapping("/api/spu/attr/delete/all")
     public Result<Boolean> deleteSpuAttrValuesBySpuId(@RequestParam("spuId") Long spuId) {

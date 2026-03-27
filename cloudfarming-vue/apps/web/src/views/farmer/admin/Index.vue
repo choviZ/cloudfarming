@@ -291,7 +291,6 @@ const handleSave = async () => {
 
     // 第一步：创建SPU（商品主表记录）
     const spuRes = await saveSpu({
-      shopId: '1',
       categoryId: selectedCategoryId.value,
       title: spuTitle.value,
       images: spuCover.value,

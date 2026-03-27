@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
@@ -19,17 +20,28 @@ import com.vv.cloudfarming.product.constant.CacheKeyConstant;
 import com.vv.cloudfarming.product.dao.entity.AttributeDO;
 import com.vv.cloudfarming.product.dao.entity.SpuAttrValueDO;
 import com.vv.cloudfarming.product.dao.entity.SpuDO;
+import com.vv.cloudfarming.product.dao.mapper.ShopMapper;
 import com.vv.cloudfarming.product.dao.mapper.SkuMapper;
 import com.vv.cloudfarming.product.dao.mapper.SpuAttrValueMapper;
 import com.vv.cloudfarming.product.dao.mapper.SpuMapper;
-import com.vv.cloudfarming.product.dto.req.*;
+import com.vv.cloudfarming.product.dto.req.AuditSubmitReqDTO;
+import com.vv.cloudfarming.product.dto.req.SpuAttrValueCreateReqDTO;
+import com.vv.cloudfarming.product.dto.req.SpuAttrValueUpdateReqDTO;
+import com.vv.cloudfarming.product.dto.req.SpuCreateReqDTO;
+import com.vv.cloudfarming.product.dto.req.SpuPageQueryReqDTO;
+import com.vv.cloudfarming.product.dto.req.SpuUpdateReqDTO;
 import com.vv.cloudfarming.product.dto.resp.CategoryRespDTO;
+import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
+import com.vv.cloudfarming.product.dto.resp.SkuRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuAttrValueRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SpuRespDTO;
-import com.vv.cloudfarming.product.dto.resp.ProductRespDTO;
 import com.vv.cloudfarming.product.enums.AuditStatusEnum;
 import com.vv.cloudfarming.product.enums.ProductTypeEnum;
-import com.vv.cloudfarming.product.service.*;
+import com.vv.cloudfarming.product.service.AttributeService;
+import com.vv.cloudfarming.product.service.AuditService;
+import com.vv.cloudfarming.product.service.CategoryService;
+import com.vv.cloudfarming.product.service.SkuService;
+import com.vv.cloudfarming.product.service.SpuService;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -40,17 +52,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * SPU服务实现层
+ * SPU service implementation.
  */
 @Service
 @RequiredArgsConstructor
 public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements SpuService {
+
+    private static final String NULL_VALUE = "NULL_VALUE";
 
     private final CategoryService categoryService;
     private final SpuAttrValueMapper spuAttrValueMapper;
@@ -60,50 +73,97 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
     private final StringRedisTemplate stringRedisTemplate;
     private final RedissonClient redissonClient;
     private final SkuMapper skuMapper;
+    private final ShopMapper shopMapper;
 
     @Override
     @Transactional
     public Long saveSpu(SpuCreateReqDTO requestParam) {
         if (requestParam == null) {
-            throw new ClientException("参数不能为空");
+            throw new ClientException("Request body cannot be null.");
         }
         Long categoryId = requestParam.getCategoryId();
         CategoryRespDTO category = categoryService.getCategoryById(categoryId);
         if (category == null) {
-            throw new ClientException("分类不存在");
+            throw new ClientException("Category does not exist.");
         }
-        // 保存
+
         SpuDO spu = BeanUtil.toBean(requestParam, SpuDO.class);
+        spu.setShopId(resolveOperateShopId(requestParam.getShopId()));
         spu.setStatus(ShelfStatusEnum.OFFLINE.getCode());
         spu.setAuditStatus(AuditStatusEnum.PENDING.getCode());
         boolean result = this.save(spu);
         if (!result) {
-            throw new ServiceException("SPU创建或修改失败");
+            throw new ServiceException("Failed to create SPU.");
         }
-        // 提交审核记录
+
         AuditSubmitReqDTO auditSubmitReqDTO = new AuditSubmitReqDTO();
         auditSubmitReqDTO.setBizId(spu.getId());
         auditSubmitReqDTO.setBizType(ProductTypeEnum.SPU.getCode());
-        long userId = StpUtil.getLoginIdAsLong();
-        auditService.submitAudit(userId, auditSubmitReqDTO);
+        auditService.submitAudit(StpUtil.getLoginIdAsLong(), auditSubmitReqDTO);
         return spu.getId();
+    }
+
+    @Override
+    @Transactional
+    public void updateSpu(SpuUpdateReqDTO requestParam) {
+        if (requestParam == null) {
+            throw new ClientException("Request body cannot be null.");
+        }
+        Long id = requestParam.getId();
+        if (id == null || id <= 0) {
+            throw new ClientException("Invalid SPU id.");
+        }
+        Long categoryId = requestParam.getCategoryId();
+        CategoryRespDTO category = categoryService.getCategoryById(categoryId);
+        if (category == null) {
+            throw new ClientException("Category does not exist.");
+        }
+
+        SpuDO spuDO = this.getById(id);
+        if (spuDO == null) {
+            throw new ClientException("SPU does not exist.");
+        }
+        validateOperatePermission(spuDO);
+
+        spuDO.setTitle(requestParam.getTitle());
+        spuDO.setCategoryId(categoryId);
+        spuDO.setImages(requestParam.getImages());
+        spuDO.setStatus(ShelfStatusEnum.OFFLINE.getCode());
+        spuDO.setAuditStatus(AuditStatusEnum.PENDING.getCode());
+        boolean updated = this.updateById(spuDO);
+        if (!updated) {
+            throw new ServiceException("Failed to update SPU.");
+        }
+
+        syncSkuStatus(id, ShelfStatusEnum.OFFLINE.getCode());
+
+        AuditSubmitReqDTO auditSubmitReqDTO = new AuditSubmitReqDTO();
+        auditSubmitReqDTO.setBizId(spuDO.getId());
+        auditSubmitReqDTO.setBizType(ProductTypeEnum.SPU.getCode());
+        auditService.submitAudit(StpUtil.getLoginIdAsLong(), auditSubmitReqDTO);
+        clearProductCache(id);
     }
 
     @Override
     public void deleteSpuById(Long id) {
         if (id == null || id <= 0) {
-            throw new ClientException("id不合法");
+            throw new ClientException("Invalid SPU id.");
         }
+        SpuDO spuDO = this.getById(id);
+        if (spuDO == null) {
+            throw new ClientException("SPU does not exist.");
+        }
+        validateOperatePermission(spuDO);
         boolean removed = this.removeById(id);
         if (!removed) {
-            throw new ServiceException("SPU删除失败");
+            throw new ServiceException("Failed to delete SPU.");
         }
     }
 
     @Override
     public SpuRespDTO getSpuById(Long id) {
         if (id == null || id <= 0) {
-            throw new ClientException("id不合法");
+            throw new ClientException("Invalid SPU id.");
         }
         SpuDO spuDO = this.getById(id);
         if (spuDO == null) {
@@ -117,41 +177,37 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
     @Override
     public ProductRespDTO getProductBySpuId(Long id) {
         if (id == null || id <= 0) {
-            throw new ClientException("id不合法");
+            throw new ClientException("Invalid SPU id.");
         }
-        // 查询缓存
+
         String cacheKey = CacheKeyConstant.PRODUCT_SKU_DETAIL_CACHE_KEY + id;
         String cache = stringRedisTemplate.opsForValue().get(cacheKey);
         if (StrUtil.isBlank(cache)) {
             RLock lock = redissonClient.getLock(CacheKeyConstant.LOCK_PRODUCT_SKU_KEY + id);
             lock.lock();
             try {
-                // 双重判定锁
-                String s = stringRedisTemplate.opsForValue().get(cacheKey);
-                if (StrUtil.isBlank(s)) {
+                cache = stringRedisTemplate.opsForValue().get(cacheKey);
+                if (StrUtil.isBlank(cache)) {
                     SpuDO spuDO = this.getById(id);
                     if (spuDO == null) {
-                        stringRedisTemplate.opsForValue().setIfAbsent(cacheKey, "NULL_VALUE", 5, TimeUnit.MINUTES);
+                        stringRedisTemplate.opsForValue().setIfAbsent(cacheKey, NULL_VALUE, 5, TimeUnit.MINUTES);
                         return null;
                     }
+
                     SpuRespDTO spuResp = BeanUtil.toBean(spuDO, SpuRespDTO.class);
                     ProductRespDTO result = new ProductRespDTO();
-
-                    // 1. 获取基础属性
-                    Map<String, String> baseAttrMap = baseMapper.querySpuAttr(spuDO.getId());
-                    spuResp.setAttributes(JSONUtil.toJsonStr(baseAttrMap));
                     result.setProductSpu(spuResp);
-                    // 2. 获取 SKU 列表
                     result.setProductSkus(skuService.getSkusBySpuId(id));
-                    // 3. 构建缓存
-                    stringRedisTemplate.opsForValue().set(cacheKey, JSONUtil.toJsonStr(result), 30, TimeUnit.MINUTES);
-                    return result;
+                    spuResp.setAttributes(JSONUtil.toJsonStr(baseMapper.querySpuAttr(spuDO.getId())));
+
+                    cache = JSONUtil.toJsonStr(result);
+                    stringRedisTemplate.opsForValue().set(cacheKey, cache, 30, TimeUnit.MINUTES);
                 }
             } finally {
                 lock.unlock();
             }
         }
-        if ("NULL_VALUE".equals(cache)) {
+        if (NULL_VALUE.equals(cache)) {
             return null;
         }
         return JSONUtil.toBean(cache, ProductRespDTO.class);
@@ -160,22 +216,28 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
     @Override
     public IPage<SpuRespDTO> listSpuByPage(SpuPageQueryReqDTO queryParam) {
         if (queryParam == null) {
-            throw new ClientException("参数不能为空");
+            throw new ClientException("Request body cannot be null.");
         }
+
         Long id = queryParam.getId();
         String spuName = queryParam.getSpuName();
         Long categoryId = queryParam.getCategoryId();
+        Long shopId = queryParam.getShopId();
         Integer status = queryParam.getStatus();
+        Integer auditStatus = queryParam.getAuditStatus();
         List<Long> categoryIds = CollUtil.isNotEmpty(queryParam.getCategoryIds())
                 ? queryParam.getCategoryIds()
                 : resolveCategoryIds(categoryId);
-        // 构建查询条件
+
         LambdaQueryWrapper<SpuDO> queryWrapper = Wrappers.lambdaQuery(SpuDO.class)
-            .eq(Objects.nonNull(id), SpuDO::getId, id)
-            .like(!StrUtil.isBlank(spuName), SpuDO::getTitle, spuName)
-            .in(CollUtil.isNotEmpty(categoryIds), SpuDO::getCategoryId, categoryIds)
-            .eq(status != null, SpuDO::getStatus, status);
-        // 查询
+                .eq(Objects.nonNull(id), SpuDO::getId, id)
+                .eq(Objects.nonNull(shopId), SpuDO::getShopId, shopId)
+                .like(StrUtil.isNotBlank(spuName), SpuDO::getTitle, spuName)
+                .in(CollUtil.isNotEmpty(categoryIds), SpuDO::getCategoryId, categoryIds)
+                .eq(status != null, SpuDO::getStatus, status)
+                .eq(auditStatus != null, SpuDO::getAuditStatus, auditStatus)
+                .orderByDesc(SpuDO::getCreateTime);
+
         Page<SpuDO> pageRequest = new Page<>(queryParam.getCurrent(), queryParam.getSize());
         IPage<SpuDO> spuDOPage = baseMapper.selectPage(pageRequest, queryWrapper);
         return spuDOPage.convert(spuDO -> {
@@ -186,14 +248,261 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         });
     }
 
+    @Override
+    public IPage<SpuRespDTO> listMySpuByPage(Long userId, SpuPageQueryReqDTO queryParam) {
+        if (userId == null || userId <= 0) {
+            throw new ClientException("Invalid user id.");
+        }
+        if (queryParam == null) {
+            queryParam = new SpuPageQueryReqDTO();
+        }
+
+        Long shopId = shopMapper.getIdByFarmerId(userId);
+        if (shopId == null) {
+            return new Page<>(queryParam.getCurrent(), queryParam.getSize());
+        }
+
+        queryParam.setShopId(shopId);
+        return listSpuByPage(queryParam);
+    }
+
+    @Override
+    public void updateSpuStatus(Long id, Integer status) {
+        if (id == null || id <= 0) {
+            throw new ClientException("Invalid SPU id.");
+        }
+        ShelfStatusEnum newStatus = ShelfStatusEnum.of(status);
+        if (newStatus == null) {
+            throw new ClientException("Invalid shelf status.");
+        }
+
+        SpuDO spuDO = baseMapper.selectById(id);
+        if (spuDO == null) {
+            throw new ClientException("SPU does not exist.");
+        }
+        validateOperatePermission(spuDO);
+
+        if (ShelfStatusEnum.ONLINE == newStatus
+                && !AuditStatusEnum.APPROVED.getCode().equals(spuDO.getAuditStatus())) {
+            throw new ClientException("Only approved SPU can be put online.");
+        }
+        if (Objects.equals(spuDO.getStatus(), status)) {
+            throw new ClientException("SPU already has the target status.");
+        }
+
+        LambdaUpdateWrapper<SpuDO> updateWrapper = Wrappers.lambdaUpdate(SpuDO.class)
+                .eq(SpuDO::getId, id)
+                .set(SpuDO::getStatus, status);
+        boolean updated = this.update(updateWrapper);
+        if (!updated) {
+            throw new ServiceException("Failed to update SPU status.");
+        }
+
+        syncSkuStatus(id, status);
+        clearProductCache(id);
+    }
+
+    @Override
+    public void createSpuAttrValue(SpuAttrValueCreateReqDTO requestParam) {
+        if (requestParam == null) {
+            throw new ClientException("Request body cannot be null.");
+        }
+        Long spuId = requestParam.getSpuId();
+        Long attrId = requestParam.getAttrId();
+        String attrValue = requestParam.getAttrValue();
+
+        if (spuId == null || spuId <= 0) {
+            throw new ClientException("Invalid SPU id.");
+        }
+        if (attrId == null || attrId <= 0) {
+            throw new ClientException("Invalid attribute id.");
+        }
+        if (StrUtil.isBlank(attrValue)) {
+            throw new ClientException("Attribute value cannot be blank.");
+        }
+
+        SpuDO spu = this.getById(spuId);
+        if (spu == null) {
+            throw new ClientException("SPU does not exist.");
+        }
+        if (spuAttrValueMapper.checkAttributeExists(attrId) == 0) {
+            throw new ClientException("Attribute does not exist.");
+        }
+
+        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
+                .eq(SpuAttrValueDO::getSpuId, spuId)
+                .eq(SpuAttrValueDO::getAttrId, attrId);
+        SpuAttrValueDO existing = spuAttrValueMapper.selectOne(wrapper);
+        if (existing != null) {
+            throw new ClientException("SPU attribute value already exists.");
+        }
+
+        SpuAttrValueDO spuAttrValue = BeanUtil.toBean(requestParam, SpuAttrValueDO.class);
+        int inserted = spuAttrValueMapper.insert(spuAttrValue);
+        if (inserted < 1) {
+            throw new ServiceException("Failed to create SPU attribute value.");
+        }
+    }
+
+    @Override
+    public boolean updateSpuAttrValue(SpuAttrValueUpdateReqDTO requestParam) {
+        if (requestParam == null) {
+            throw new ClientException("Request body cannot be null.");
+        }
+        Long id = requestParam.getId();
+        Long spuId = requestParam.getSpuId();
+        Long attrId = requestParam.getAttrId();
+        String attrValue = requestParam.getAttrValue();
+
+        if (id == null || id <= 0) {
+            throw new ClientException("Invalid id.");
+        }
+
+        SpuAttrValueDO existing = spuAttrValueMapper.selectById(id);
+        if (existing == null) {
+            throw new ClientException("SPU attribute value does not exist.");
+        }
+
+        if (ObjectUtil.isNotNull(spuId) && this.getById(spuId) == null) {
+            throw new ClientException("SPU does not exist.");
+        }
+        if (ObjectUtil.isNotNull(attrId) && spuAttrValueMapper.checkAttributeExists(attrId) == 0) {
+            throw new ClientException("Attribute does not exist.");
+        }
+
+        LambdaUpdateWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaUpdate(SpuAttrValueDO.class)
+                .eq(SpuAttrValueDO::getId, id)
+                .set(ObjectUtil.isNotNull(spuId), SpuAttrValueDO::getSpuId, spuId)
+                .set(ObjectUtil.isNotNull(attrId), SpuAttrValueDO::getAttrId, attrId)
+                .set(StrUtil.isNotBlank(attrValue), SpuAttrValueDO::getAttrValue, attrValue);
+        int updated = spuAttrValueMapper.update(null, wrapper);
+        if (updated < 1) {
+            throw new ServiceException("Failed to update SPU attribute value.");
+        }
+        return true;
+    }
+
+    @Override
+    public boolean deleteSpuAttrValue(Long id) {
+        if (id == null || id <= 0) {
+            throw new ClientException("Invalid id.");
+        }
+        SpuAttrValueDO spuAttrValue = spuAttrValueMapper.selectById(id);
+        if (spuAttrValue == null) {
+            throw new ClientException("SPU attribute value does not exist.");
+        }
+
+        int deleted = spuAttrValueMapper.deleteById(id);
+        if (deleted < 1) {
+            throw new ServiceException("Failed to delete SPU attribute value.");
+        }
+        return true;
+    }
+
+    @Override
+    public SpuAttrValueRespDTO getSpuAttrValueById(Long id) {
+        if (id == null || id <= 0) {
+            throw new ClientException("Invalid id.");
+        }
+        SpuAttrValueDO spuAttrValueDO = spuAttrValueMapper.selectById(id);
+        if (spuAttrValueDO == null) {
+            return null;
+        }
+        return BeanUtil.toBean(spuAttrValueDO, SpuAttrValueRespDTO.class);
+    }
+
+    @Override
+    public List<SpuAttrValueRespDTO> listSpuAttrValuesBySpuId(Long spuId) {
+        if (spuId == null || spuId <= 0) {
+            throw new ClientException("Invalid SPU id.");
+        }
+        if (this.getById(spuId) == null) {
+            throw new ClientException("SPU does not exist.");
+        }
+
+        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
+                .eq(SpuAttrValueDO::getSpuId, spuId);
+        List<SpuAttrValueDO> spuAttrValues = spuAttrValueMapper.selectList(wrapper);
+        return spuAttrValues.stream()
+                .map(item -> BeanUtil.toBean(item, SpuAttrValueRespDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public SpuAttrValueRespDTO getSpuAttrValueBySpuIdAndAttrId(Long spuId, Long attrId) {
+        if (spuId == null || spuId <= 0) {
+            throw new ClientException("Invalid SPU id.");
+        }
+        if (attrId == null || attrId <= 0) {
+            throw new ClientException("Invalid attribute id.");
+        }
+        if (this.getById(spuId) == null) {
+            throw new ClientException("SPU does not exist.");
+        }
+        if (spuAttrValueMapper.checkAttributeExists(attrId) == 0) {
+            throw new ClientException("Attribute does not exist.");
+        }
+
+        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
+                .eq(SpuAttrValueDO::getSpuId, spuId)
+                .eq(SpuAttrValueDO::getAttrId, attrId);
+        SpuAttrValueDO spuAttrValue = spuAttrValueMapper.selectOne(wrapper);
+        if (spuAttrValue == null) {
+            return null;
+        }
+        return BeanUtil.toBean(spuAttrValue, SpuAttrValueRespDTO.class);
+    }
+
+    @Override
+    public void batchCreateSpuAttrValues(List<SpuAttrValueCreateReqDTO> requestParams) {
+        if (CollUtil.isEmpty(requestParams)) {
+            throw new ClientException("Request list cannot be empty.");
+        }
+        for (SpuAttrValueCreateReqDTO requestParam : requestParams) {
+            createSpuAttrValue(requestParam);
+        }
+    }
+
+    @Override
+    public boolean batchDeleteSpuAttrValues(List<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            throw new ClientException("Id list cannot be empty.");
+        }
+        int deleted = spuAttrValueMapper.deleteBatchIds(ids);
+        if (deleted < 1) {
+            throw new ServiceException("Failed to batch delete SPU attribute values.");
+        }
+        return true;
+    }
+
+    @Override
+    public boolean deleteSpuAttrValuesBySpuId(Long spuId) {
+        if (spuId == null || spuId <= 0) {
+            throw new ClientException("Invalid SPU id.");
+        }
+        if (this.getById(spuId) == null) {
+            throw new ClientException("SPU does not exist.");
+        }
+
+        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
+                .eq(SpuAttrValueDO::getSpuId, spuId);
+        int deleted = spuAttrValueMapper.delete(wrapper);
+        if (deleted < 1) {
+            throw new ServiceException("Failed to delete SPU attribute values.");
+        }
+        return true;
+    }
+
     private List<Long> resolveCategoryIds(Long categoryId) {
         if (categoryId == null) {
             return null;
         }
+
         CategoryRespDTO category = categoryService.getCategoryById(categoryId);
         if (category == null) {
-            throw new ClientException("分类不存在");
+            throw new ClientException("Category does not exist.");
         }
+
         List<Long> categoryIds = new ArrayList<>();
         collectCategoryIds(categoryId, categoryIds);
         return categoryIds;
@@ -208,244 +517,61 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         children.forEach(child -> collectCategoryIds(child.getId(), categoryIds));
     }
 
-    @Override
-    public void updateSpuStatus(Long id, Integer status) {
-        if (id == null || id <= 0) {
-            throw new ClientException("id不合法");
-        }
-        if (status == null) {
-            throw new ClientException("状态不能为空");
-        }
-        SpuDO spuDO = baseMapper.selectById(id);
-        if (spuDO == null) {
-            throw new ClientException("SPU不存在");
-        }
-        if (Objects.equals(spuDO.getStatus(), status)) {
-            throw new ClientException("请勿重复修改状态");
-        }
-        LambdaUpdateWrapper<SpuDO> updateWrapper = Wrappers.lambdaUpdate(SpuDO.class)
-            .eq(SpuDO::getId, id)
-            .set(SpuDO::getStatus, status);
-        boolean updated = this.update(updateWrapper);
-        if (!updated) {
-            throw new ServiceException("SPU状态更新失败");
-        }
-    }
-
-    @Override
-    public void createSpuAttrValue(SpuAttrValueCreateReqDTO requestParam) {
-        if (requestParam == null) {
-            throw new ClientException("参数不能为空");
-        }
-        Long spuId = requestParam.getSpuId();
-        Long attrId = requestParam.getAttrId();
-        String attrValue = requestParam.getAttrValue();
-
-        if (spuId == null || spuId <= 0) {
-            throw new ClientException("SPU ID不合法");
-        }
-        if (attrId == null || attrId <= 0) {
-            throw new ClientException("属性ID不合法");
-        }
-        if (StrUtil.isBlank(attrValue)) {
-            throw new ClientException("属性值不能为空");
-        }
-
-        SpuDO spu = this.getById(spuId);
-        if (spu == null) {
-            throw new ClientException("SPU不存在");
-        }
-
-        if (spuAttrValueMapper.checkAttributeExists(attrId) == 0) {
-            throw new ClientException("属性不存在");
-        }
-
-        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-            .eq(SpuAttrValueDO::getSpuId, spuId)
-            .eq(SpuAttrValueDO::getAttrId, attrId);
-        SpuAttrValueDO existing = spuAttrValueMapper.selectOne(wrapper);
-        if (existing != null) {
-            throw new ClientException("该SPU已存在该属性值");
-        }
-
-        SpuAttrValueDO spuAttrValue = BeanUtil.toBean(requestParam, SpuAttrValueDO.class);
-        int inserted = spuAttrValueMapper.insert(spuAttrValue);
-        if (inserted < 0) {
-            throw new ServiceException("SPU属性值创建失败");
-        }
-    }
-
-    @Override
-    public boolean updateSpuAttrValue(SpuAttrValueUpdateReqDTO requestParam) {
-        if (requestParam == null) {
-            throw new ClientException("参数不能为空");
-        }
-        Long id = requestParam.getId();
-        Long spuId = requestParam.getSpuId();
-        Long attrId = requestParam.getAttrId();
-        String attrValue = requestParam.getAttrValue();
-
-        if (id == null || id <= 0) {
-            throw new ClientException("ID不合法");
-        }
-
-        SpuAttrValueDO existing = spuAttrValueMapper.selectById(id);
-        if (existing == null) {
-            throw new ClientException("SPU属性值不存在");
-        }
-
-        if (ObjectUtil.isNotNull(spuId)) {
-            if (this.getById(spuId) == null) {
-                throw new ClientException("SPU不存在");
-            }
-        }
-
-        if (ObjectUtil.isNotNull(attrId)) {
-            if (spuAttrValueMapper.checkAttributeExists(attrId) == 0) {
-                throw new ClientException("属性不存在");
-            }
-        }
-
-        LambdaUpdateWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaUpdate(SpuAttrValueDO.class)
-            .eq(SpuAttrValueDO::getId, id)
-            .set(ObjectUtil.isNotNull(spuId), SpuAttrValueDO::getSpuId, spuId)
-            .set(ObjectUtil.isNotNull(attrId), SpuAttrValueDO::getAttrId, attrId)
-            .set(StrUtil.isNotBlank(attrValue), SpuAttrValueDO::getAttrValue, attrValue);
-        int updated = spuAttrValueMapper.update(null, wrapper);
-        if (updated < 0) {
-            throw new ServiceException("SPU属性值更新失败");
-        }
-        return true;
-    }
-
-    @Override
-    public boolean deleteSpuAttrValue(Long id) {
-        if (id == null || id <= 0) {
-            throw new ClientException("ID不合法");
-        }
-        SpuAttrValueDO spuAttrValue = spuAttrValueMapper.selectById(id);
-        if (spuAttrValue == null) {
-            throw new ClientException("SPU属性值不存在");
-        }
-        int deleted = spuAttrValueMapper.deleteById(id);
-        if (deleted < 0) {
-            throw new ServiceException("SPU属性值删除失败");
-        }
-        return true;
-    }
-
-    @Override
-    public SpuAttrValueRespDTO getSpuAttrValueById(Long id) {
-        if (id == null || id <= 0) {
-            throw new ClientException("ID不合法");
-        }
-        SpuAttrValueDO spuAttrValueDO = spuAttrValueMapper.selectById(id);
-        if (spuAttrValueDO == null) {
-            return null;
-        }
-        return BeanUtil.toBean(spuAttrValueDO, SpuAttrValueRespDTO.class);
-    }
-
-    @Override
-    public List<SpuAttrValueRespDTO> listSpuAttrValuesBySpuId(Long spuId) {
-        if (spuId == null || spuId <= 0) {
-            throw new ClientException("SPU ID不合法");
-        }
-        if (this.getById(spuId) == null) {
-            throw new ClientException("SPU不存在");
-        }
-        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-            .eq(SpuAttrValueDO::getSpuId, spuId);
-        List<SpuAttrValueDO> spuAttrValues = spuAttrValueMapper.selectList(wrapper);
-        return spuAttrValues.stream()
-            .map(spuAttrValueDO -> BeanUtil.toBean(spuAttrValueDO, SpuAttrValueRespDTO.class))
-            .collect(Collectors.toList());
-    }
-
-    @Override
-    public SpuAttrValueRespDTO getSpuAttrValueBySpuIdAndAttrId(Long spuId, Long attrId) {
-        if (spuId == null || spuId <= 0) {
-            throw new ClientException("SPU ID不合法");
-        }
-        if (attrId == null || attrId <= 0) {
-            throw new ClientException("属性ID不合法");
-        }
-
-        if (this.getById(spuId) == null) {
-            throw new ClientException("SPU不存在");
-        }
-
-        if (spuAttrValueMapper.checkAttributeExists(attrId) == 0) {
-            throw new ClientException("属性不存在");
-        }
-
-        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-            .eq(SpuAttrValueDO::getSpuId, spuId)
-            .eq(SpuAttrValueDO::getAttrId, attrId);
-        SpuAttrValueDO spuAttrValue = spuAttrValueMapper.selectOne(wrapper);
-        if (spuAttrValue == null) {
-            return null;
-        }
-        return BeanUtil.toBean(spuAttrValue, SpuAttrValueRespDTO.class);
-    }
-
-    @Override
-    public void batchCreateSpuAttrValues(List<SpuAttrValueCreateReqDTO> requestParams) {
-        if (requestParams == null || requestParams.isEmpty()) {
-            throw new ClientException("参数列表不能为空");
-        }
-
-        for (SpuAttrValueCreateReqDTO requestParam : requestParams) {
-            createSpuAttrValue(requestParam);
-        }
-    }
-
-    @Override
-    public boolean batchDeleteSpuAttrValues(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            throw new ClientException("ID列表不能为空");
-        }
-        int deleted = spuAttrValueMapper.deleteBatchIds(ids);
-        if (deleted < 0) {
-            throw new ServiceException("批量删除SPU属性值失败");
-        }
-        return true;
-    }
-
-    @Override
-    public boolean deleteSpuAttrValuesBySpuId(Long spuId) {
-        if (spuId == null || spuId <= 0) {
-            throw new ClientException("SPU ID不合法");
-        }
-        if (this.getById(spuId) == null) {
-            throw new ClientException("SPU不存在");
-        }
-        LambdaQueryWrapper<SpuAttrValueDO> wrapper = Wrappers.lambdaQuery(SpuAttrValueDO.class)
-            .eq(SpuAttrValueDO::getSpuId, spuId);
-        int deleted = spuAttrValueMapper.delete(wrapper);
-        if (deleted < 0) {
-            throw new ServiceException("删除SPU属性值失败");
-        }
-        return true;
-    }
-
     /**
-     * 根据spuId获取相应的属性
-     *
-     * @param spuId spuId
-     * @return 属性map
+     * Build base attribute map for the current SPU.
      */
     private HashMap<String, String> getSpuAttributes(Long spuId) {
         List<SpuAttrValueDO> spuAttributes = spuAttrValueMapper.getAttrValueBySpuId(spuId);
-        HashMap<String, String> hashMap = new HashMap<>();
-        if (spuAttributes != null) {
-            // TODO 待优化
-            spuAttributes.forEach(spuAttrValue -> {
-                // 查询属性名称
-                AttributeDO attribute = attributeService.getById(spuAttrValue.getAttrId());
-                hashMap.put(attribute.getName(), spuAttrValue.getAttrValue());
-            });
+        HashMap<String, String> result = new HashMap<>();
+        if (spuAttributes == null) {
+            return result;
         }
-        return hashMap;
+
+        for (SpuAttrValueDO spuAttrValue : spuAttributes) {
+            AttributeDO attribute = attributeService.getById(spuAttrValue.getAttrId());
+            if (attribute != null) {
+                result.put(attribute.getName(), spuAttrValue.getAttrValue());
+            }
+        }
+        return result;
+    }
+
+    private Long resolveOperateShopId(Long requestShopId) {
+        if (StpUtil.hasRole(UserRoleConstant.ADMIN_DESC)) {
+            if (requestShopId == null || requestShopId <= 0) {
+                throw new ClientException("shopId is required for admin operation.");
+            }
+            return requestShopId;
+        }
+
+        Long shopId = shopMapper.getIdByFarmerId(StpUtil.getLoginIdAsLong());
+        if (shopId == null) {
+            throw new ClientException("Current farmer does not have an associated shop.");
+        }
+        return shopId;
+    }
+
+    private void validateOperatePermission(SpuDO spuDO) {
+        if (spuDO == null || StpUtil.hasRole(UserRoleConstant.ADMIN_DESC)) {
+            return;
+        }
+
+        Long currentShopId = resolveOperateShopId(null);
+        if (!Objects.equals(currentShopId, spuDO.getShopId())) {
+            throw new ClientException("No permission to operate this SPU.");
+        }
+    }
+
+    private void syncSkuStatus(Long spuId, Integer status) {
+        List<Long> skuIds = skuService.getSkusBySpuId(spuId).stream()
+                .map(SkuRespDTO::getId)
+                .collect(Collectors.toList());
+        for (Long skuId : skuIds) {
+            skuService.updateSkuStatus(skuId, status);
+        }
+    }
+
+    private void clearProductCache(Long spuId) {
+        stringRedisTemplate.delete(CacheKeyConstant.PRODUCT_SKU_DETAIL_CACHE_KEY + spuId);
     }
 }

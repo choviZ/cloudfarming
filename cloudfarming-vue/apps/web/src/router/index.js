@@ -139,6 +139,11 @@ const router = createRouter({
           component: () => import('../views/farmer/Workbench.vue')
         },
         {
+          path: 'spu/list',
+          name: 'mySpuList',
+          component: () => import('../views/farmer/admin/ProductList.vue')
+        },
+        {
           path: 'spu/create',
           name: 'createSpu',
           component: () => import('../views/farmer/admin/Index.vue')
