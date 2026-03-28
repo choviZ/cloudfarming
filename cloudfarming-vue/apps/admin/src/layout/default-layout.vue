@@ -38,6 +38,7 @@ import { h, ref, watch } from 'vue'
 import {
   AppstoreOutlined,
   FileTextOutlined,
+  MessageOutlined,
   NotificationOutlined,
   ShopOutlined,
   TagsOutlined,
@@ -100,6 +101,12 @@ const items = ref([
     title: '订单管理',
     key: 'admin/order',
     icon: () => h(FileTextOutlined),
+  },
+  {
+    label: '反馈处理',
+    title: '反馈处理',
+    key: 'admin/feedback',
+    icon: () => h(MessageOutlined),
   }
 ])
 

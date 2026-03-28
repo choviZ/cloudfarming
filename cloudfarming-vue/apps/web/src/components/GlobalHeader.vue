@@ -5,8 +5,8 @@
         <div class="left-links nav-group">
           <span class="nav-item">中国大陆</span>
           <span v-if="!userStore.loginUser" class="flex gap-small">
-            <a @click="handleLoginClick" class="nav-item highlight">亲，请登录</a>
-            <a class="nav-item">免费注册</a>
+            <a @click="handleLoginClick" class="nav-item highlight">你好，请登录</a>
+            <a @click="goToRegister" class="nav-item">免费注册</a>
           </span>
           <span v-else class="flex gap-small">
             <span>Hi, {{ userStore.loginUser.username }}</span>
@@ -16,14 +16,25 @@
         <div class="right-links nav-group">
           <a v-if="showHomeEntry" class="nav-item" @click="goToHome">平台首页</a>
           <a v-if="userStore.loginUser" class="nav-item flex-center" @click="goToOrders">
-            <FileTextOutlined class="icon"/>
+            <FileTextOutlined class="icon" />
             我的订单
           </a>
           <a class="nav-item flex-center" @click="goToCart">
-            <ShoppingCartOutlined class="icon"/>
+            <ShoppingCartOutlined class="icon" />
             购物车
           </a>
           <a class="nav-item" @click="handleSellerCenterClick">卖家中心</a>
+          <a-dropdown placement="bottomRight" :trigger="['hover']">
+            <a class="nav-item nav-item--dropdown" @click.prevent>
+              帮助中心
+              <DownOutlined class="dropdown-icon" />
+            </a>
+            <template #overlay>
+              <a-menu @click="handleHelpMenuClick">
+                <a-menu-item key="feedback">意见反馈</a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
         </div>
       </div>
     </div>
@@ -34,20 +45,26 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  ShoppingCartOutlined,
-  FileTextOutlined
+  DownOutlined,
+  FileTextOutlined,
+  ShoppingCartOutlined
 } from '@ant-design/icons-vue'
-import { useUserStore } from '@/stores/useUserStore'
-import {message} from 'ant-design-vue'
+import { message } from 'ant-design-vue'
 import { userLogout } from '@/api/user'
+import { useUserStore } from '@/stores/useUserStore'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+
 const showHomeEntry = computed(() => !['/', '/index'].includes(route.path))
 
 const handleLoginClick = () => {
   router.push('/user/login')
+}
+
+const goToRegister = () => {
+  router.push('/user/register')
 }
 
 const goToHome = () => {
@@ -67,23 +84,35 @@ const goToOrders = () => {
   window.open('/usercenter/orders', '_blank')
 }
 
+const goToFeedback = () => {
+  if (!userStore.loginUser) {
+    message.warning('请先登录后再提交反馈')
+    router.push('/user/login')
+    return
+  }
+  router.push('/feedback')
+}
+
+const handleHelpMenuClick = ({ key }: { key: string }) => {
+  if (key === 'feedback') {
+    goToFeedback()
+  }
+}
+
 const handleSellerCenterClick = () => {
   if (!userStore.loginUser) {
     message.warning('请先登录')
     router.push('/user/login')
     return
   }
-  
-  // userType: 0-普通用户 1-农户 2-系统管理员
+
   if (userStore.loginUser.userType === 1) {
     router.push('/farmer')
   } else {
-    // 普通用户或其他角色跳转到入驻页面
     router.push('/farmer/join')
   }
 }
 
-// 退出登录处理函数
 const handleLogout = async () => {
   try {
     await userLogout()
@@ -102,7 +131,7 @@ const handleLogout = async () => {
   display: flex;
   flex-direction: column;
   width: 100%;
-  background-color: #FFFFFF;
+  background-color: #ffffff;
 }
 
 .header-container {
@@ -128,15 +157,14 @@ const handleLogout = async () => {
   gap: 8px;
 }
 
-/* Top Nav */
 .top-nav {
-  background-color: #F5F5F5;
+  background-color: #f5f5f5;
   color: #718096;
   font-size: 12px;
   padding: 0;
   height: 32px;
   line-height: 32px;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .nav-group {
@@ -150,18 +178,27 @@ const handleLogout = async () => {
   transition: color 0.2s;
   display: flex;
   align-items: center;
+  color: inherit;
 }
 
 .nav-item:hover {
-  color: #388E3C;
+  color: #388e3c;
 }
 
 .nav-item.highlight {
-  color: #388E3C;
+  color: #388e3c;
 }
 
 .nav-item.highlight:hover {
-  color: #1B5E20;
+  color: #1b5e20;
+}
+
+.nav-item--dropdown {
+  gap: 4px;
+}
+
+.dropdown-icon {
+  font-size: 10px;
 }
 
 .icon {

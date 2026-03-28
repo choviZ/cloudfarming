@@ -13,4 +13,4 @@ spring:
         - id: user-service
           uri: lb://cloudfarming-aggregation
           predicates:
-            - Path=/api/farmer/**,/api/user/**,/api/advert/**,/api/receive-address/**,/api/article/**
+            - Path=/api/farmer/**,/api/user/**,/api/advert/**,/api/receive-address/**,/api/article/**,/api/feedback/**

@@ -85,6 +85,11 @@ const router = createRouter({
           component: () => import('../views/Cart.vue')
         },
         {
+          path: 'feedback',
+          name: 'feedbackCenter',
+          component: () => import('../views/help/FeedbackCenter.vue')
+        },
+        {
           path: 'farmer/join',
           name: 'joinFarmer',
           component: () => import('../views/farmer/JoinFarmer.vue')

@@ -55,6 +55,11 @@ const router = createRouter({
           component: () => import('@/views/admin/order/index.vue'),
         },
         {
+          path: '/admin/feedback',
+          name: 'admin-feedback',
+          component: () => import('@/views/admin/feedback/index.vue'),
+        },
+        {
           path: '/admin/product/detail/:id',
           name: 'admin-product-detail',
           component: () => import('@/views/admin/product/components/detail.vue'),

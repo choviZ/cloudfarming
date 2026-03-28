@@ -88,6 +88,26 @@ create table t_cart_item
     key idx_user_selected (user_id, selected)
 ) COMMENT '购物车表' charset = utf8mb4;
 
+create table t_feedback
+(
+    id             bigint                               not null comment '主键ID' primary key,
+    user_id        bigint                               not null comment '提交用户ID',
+    submitter_type tinyint(1)                           not null comment '提交人类型：0-普通用户 1-农户',
+    feedback_type  varchar(32)                          not null comment '反馈类型编码',
+    content        varchar(1000)                        not null comment '反馈内容',
+    contact_phone  varchar(20)                          not null comment '联系电话',
+    status         tinyint(1) default 0                 not null comment '处理状态：0-待处理 1-已处理',
+    reply_content  varchar(500)                         null comment '处理回复',
+    handler_id     bigint                               null comment '处理人ID',
+    handle_time    datetime                             null comment '处理时间',
+    create_time    datetime   default CURRENT_TIMESTAMP not null comment '创建时间',
+    update_time    datetime   default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    del_flag       tinyint(1) default 0                 not null comment '逻辑删除',
+    key idx_user_create_time (user_id, create_time),
+    key idx_status_create_time (status, create_time),
+    key idx_type_create_time (feedback_type, create_time)
+) COMMENT '意见反馈表' charset = utf8mb4;
+
 create table t_adopt_item
 (
     id              bigint auto_increment
