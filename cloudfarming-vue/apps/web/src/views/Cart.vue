@@ -1,6 +1,13 @@
 <template>
   <div class="cart-container">
     <div class="cart-shell">
+      <button type="button" class="cart-brand" @click="goHome">
+        <span class="cart-brand__mark">云</span>
+        <span class="cart-brand__content">
+          <span class="cart-brand__title">云养殖助农平台</span>
+          <span class="cart-brand__hint">返回平台首页</span>
+        </span>
+      </button>
       <div class="cart-header">
         <div>
           <h1 class="cart-title">购物车</h1>
@@ -324,6 +331,10 @@ const goToProduct = (item) => {
   router.push(`/product/${item.spuId}`)
 }
 
+const goHome = () => {
+  router.push('/index')
+}
+
 const goShopping = () => {
   router.push('/product/list')
 }
@@ -343,6 +354,58 @@ onMounted(() => {
 .cart-shell {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.cart-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  margin-bottom: 18px;
+  border: none;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 30px rgba(18, 42, 30, 0.08);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cart-brand:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 34px rgba(18, 42, 30, 0.12);
+}
+
+.cart-brand__mark {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2f855a 0%, #57b26a 100%);
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.cart-brand__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.cart-brand__title {
+  color: #143226;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cart-brand__hint {
+  color: #688173;
+  font-size: 13px;
 }
 
 .cart-header {
@@ -602,6 +665,15 @@ onMounted(() => {
 @media (max-width: 640px) {
   .cart-container {
     padding: 18px 12px 156px;
+  }
+
+  .cart-brand {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .cart-brand__title {
+    font-size: 18px;
   }
 
   .cart-header,

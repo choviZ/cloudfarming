@@ -14,6 +14,7 @@
           </span>
         </div>
         <div class="right-links nav-group">
+          <a v-if="showHomeEntry" class="nav-item" @click="goToHome">平台首页</a>
           <a v-if="userStore.loginUser" class="nav-item flex-center" @click="goToOrders">
             <FileTextOutlined class="icon"/>
             我的订单
@@ -30,7 +31,8 @@
 </template>
 
 <script setup lang="ts">
-import {useRouter} from 'vue-router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   ShoppingCartOutlined,
   FileTextOutlined
@@ -39,11 +41,17 @@ import { useUserStore } from '@/stores/useUserStore'
 import {message} from 'ant-design-vue'
 import { userLogout } from '@/api/user'
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const showHomeEntry = computed(() => !['/', '/index'].includes(route.path))
 
 const handleLoginClick = () => {
   router.push('/user/login')
+}
+
+const goToHome = () => {
+  router.push('/index')
 }
 
 const goToCart = () => {
