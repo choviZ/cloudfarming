@@ -7,16 +7,18 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 购物车响应
+ * 购物车结算分组响应
  */
 @Data
-public class CartRespDTO implements Serializable {
+public class CartCheckoutGroupRespDTO implements Serializable {
 
-    private List<CartItemRespDTO> cartItems;
+    private Long shopId;
+
+    private String shopName;
+
+    private List<CartItemRespDTO> items;
 
     private Integer totalQuantity;
 
     private BigDecimal totalAmount;
-
-    private Boolean hasInvalidItems;
 }

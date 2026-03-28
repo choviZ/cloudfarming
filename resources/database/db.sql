@@ -73,6 +73,21 @@ create table t_shops
     constraint uk_farmer_id unique (farmer_id)
 ) COMMENT '店铺表' charset = utf8mb4;
 
+create table t_cart_item
+(
+    id          bigint auto_increment primary key,
+    user_id     bigint                               not null comment '用户ID',
+    sku_id      bigint                               not null comment 'SKU ID',
+    quantity    int                                  not null comment '购买数量',
+    selected    tinyint(1) default 1                 not null comment '是否选中',
+    create_time datetime   default CURRENT_TIMESTAMP not null comment '创建时间',
+    update_time datetime   default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    del_flag    tinyint(1) default 0                 not null comment '逻辑删除',
+    unique key uk_user_sku (user_id, sku_id),
+    key idx_user_update_time (user_id, update_time),
+    key idx_user_selected (user_id, selected)
+) COMMENT '购物车表' charset = utf8mb4;
+
 create table t_adopt_item
 (
     id              bigint auto_increment

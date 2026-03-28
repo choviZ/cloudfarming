@@ -7,16 +7,10 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 更新购物车项参数对象
+ * 更新购物车数量请求
  */
 @Data
 public class CartItemUpdateReqDTO implements Serializable {
-
-    /**
-     * 商品SKU ID
-     */
-    @NotNull(message = "商品SKU ID不能为空")
-    private Long skuId;
 
     /**
      * 商品数量
@@ -24,10 +18,4 @@ public class CartItemUpdateReqDTO implements Serializable {
     @NotNull(message = "商品数量不能为空")
     @Min(value = 1, message = "商品数量至少为1")
     private Integer quantity;
-
-    /**
-     * 是否选中
-     */
-    @NotNull(message = "是否选中不能为空")
-    private Boolean selected;
 }

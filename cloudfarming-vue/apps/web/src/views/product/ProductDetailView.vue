@@ -357,13 +357,20 @@ const addToCart = async () => {
         message.warning('请先选择规格');
         return;
     }
-    const res = await addToCartApi({
-        skuId: String(currentSku.value.id),
-        quantity: quantity.value,
-        selected: false
-    })
-    if (res.code === '0') message.success('已成功加入购物车')
-    else message.error('加入失败: ' + res.message)
+    try {
+        const res = await addToCartApi({
+            skuId: currentSku.value.id,
+            quantity: quantity.value,
+            selected: true
+        })
+        if (res.code === '0') {
+            message.success('已成功加入购物车')
+            return
+        }
+        message.error('加入失败: ' + (res.message || '未知错误'))
+    } catch (error) {
+        message.error('加入购物车失败，请稍后重试')
+    }
 }
 
 const buyNow = () => {
@@ -376,6 +383,7 @@ const buyNow = () => {
     router.push({
         path: '/order/create',
         query: {
+            source: 'buy-now',
             type: 'product',
             spuId: spuId,
             skuId: String(currentSku.value.id),
