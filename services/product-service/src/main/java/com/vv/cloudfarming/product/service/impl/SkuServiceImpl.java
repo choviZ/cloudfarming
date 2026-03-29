@@ -69,6 +69,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
             skuDO.setSpuId(spuId);
             skuDO.setPrice(skuItem.getPrice());
             skuDO.setStock(skuItem.getStock());
+            skuDO.setSkuImage(skuItem.getImage());
             skuDO.setStatus(0); // 默认下架
             boolean saved = this.save(skuDO);
             if (!saved) {
@@ -213,6 +214,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
         );
         if (CollUtil.isNotEmpty(attrValues)) {
             Map<String, String> saleAttrs = new HashMap<>();
+            Map<Long, String> saleAttrValues = new HashMap<>();
             List<Long> attrIds = attrValues.stream().map(SkuAttrValueDO::getAttrId).collect(Collectors.toList());
             if (CollUtil.isNotEmpty(attrIds)) {
                 List<AttributeDO> attributes = attributeService.listByIds(attrIds);
@@ -220,6 +222,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
                         .collect(Collectors.toMap(AttributeDO::getId, AttributeDO::getName));
 
                 for (SkuAttrValueDO av : attrValues) {
+                    saleAttrValues.put(av.getAttrId(), av.getAttrValue());
                     String attrName = attrNameMap.get(av.getAttrId());
                     if (attrName != null) {
                         saleAttrs.put(attrName, av.getAttrValue());
@@ -227,6 +230,7 @@ public class SkuServiceImpl extends ServiceImpl<SkuMapper, SkuDO> implements Sku
                 }
             }
             skuRespDTO.setSaleAttribute(JSONUtil.toJsonStr(saleAttrs));
+            skuRespDTO.setSaleAttrValues(saleAttrValues);
         }
         return skuRespDTO;
     }

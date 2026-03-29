@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Map;
 
 /**
  * SKU 详情响应对象
@@ -52,4 +53,9 @@ public class SkuRespDTO implements Serializable {
      * 销售属性 JSON
      */
     private String saleAttribute;
+
+    /**
+     * 销售属性明细（attrId -> value）
+     */
+    private Map<Long, String> saleAttrValues;
 }

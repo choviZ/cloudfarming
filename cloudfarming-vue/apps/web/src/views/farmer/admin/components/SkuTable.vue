@@ -38,7 +38,14 @@ import { computed, ref, watch } from 'vue'
  * 组件Props - 接收父组件传入的销售属性配置
  */
 const props = defineProps({
-  saleAttributes: Array
+  saleAttributes: {
+    type: Array,
+    default: () => []
+  },
+  initialSkus: {
+    type: Array,
+    default: () => []
+  }
 })
 
 /**
@@ -54,7 +61,20 @@ const emit = defineEmits(['change'])
  * 用于在不同地方唯一标识一个SKU组合
  */
 function generateSkuKey(specs) {
-  return specs.map(s => `${s.attrId}:${s.value}`).join('|')
+  return normalizeSpecs(specs)
+    .map(s => `${s.attrId}:${s.value}`)
+    .join('|')
+}
+
+function normalizeSpecs(specs = []) {
+  return [...specs]
+    .filter(spec => spec?.attrId !== undefined && spec?.attrId !== null && String(spec?.value ?? '').trim())
+    .map(spec => ({
+      attrId: String(spec.attrId),
+      attrName: spec.attrName,
+      value: String(spec.value).trim()
+    }))
+    .sort((left, right) => String(left.attrId).localeCompare(String(right.attrId)))
 }
 
 /**
@@ -109,8 +129,8 @@ const skuList = computed(() => {
 
   // 将每个属性的值转换为 SpecItem 数组
   const groups = attrs.map(attr =>
-    (attr.values || []).map(v => ({
-      attrId: attr.key,
+    [...new Set((attr.values || []).map(v => String(v ?? '').trim()).filter(Boolean))].map(v => ({
+      attrId: String(attr.key),
       attrName: attr.label,
       value: v
     }))
@@ -124,9 +144,10 @@ const skuList = computed(() => {
 
   // 为每个组合生成SKU对象
   return combos.map(specs => {
-    const key = generateSkuKey(specs)
+    const normalizedSpecs = normalizeSpecs(specs)
+    const key = generateSkuKey(normalizedSpecs)
     return {
-      specs,
+      specs: normalizedSpecs,
       stock: stockMap.value.get(key) ?? 0,
       price: priceMap.value.get(key) ?? 0,
       _key: key
@@ -195,12 +216,68 @@ const updatePrice = (skuKey, val) => {
 }
 
 /**
- * 监听销售属性变化
- * 当属性配置变化时，可能需要清空库存（可选）
+ * 回填已有SKU数据
  */
-watch(() => props.saleAttributes, () => {
-  // stockMap.value = {} // 可选：清空库存重新填写
-}, { deep: true })
+const applyInitialSkus = () => {
+  const nextStockMap = new Map()
+  const nextPriceMap = new Map()
+
+  ;(props.initialSkus || []).forEach((sku) => {
+    const key = generateSkuKey(sku?.specs || [])
+    if (!key) {
+      return
+    }
+    nextStockMap.set(key, Number(sku?.stock ?? 0))
+    nextPriceMap.set(key, Number(sku?.price ?? 0))
+  })
+
+  stockMap.value = nextStockMap
+  priceMap.value = nextPriceMap
+}
+
+const pruneValueMap = (sourceMap, validKeys) =>
+  new Map([...sourceMap.entries()].filter(([key]) => validKeys.has(key)))
+
+const collectValidSkuKeys = (saleAttributes = []) => {
+  if (!saleAttributes.length) {
+    return new Set()
+  }
+
+  const groups = saleAttributes.map(attr =>
+    [...new Set((attr.values || []).map(v => String(v ?? '').trim()).filter(Boolean))].map(v => ({
+      attrId: String(attr.key),
+      attrName: attr.label,
+      value: v
+    }))
+  )
+
+  if (groups.some(group => group.length === 0)) {
+    return new Set()
+  }
+
+  return new Set(
+    cartesian(groups).map(specs => generateSkuKey(specs)).filter(Boolean)
+  )
+}
+
+watch(
+  () => props.initialSkus,
+  () => {
+    applyInitialSkus()
+  },
+  { deep: true, immediate: true }
+)
+
+watch(
+  () => props.saleAttributes,
+  (saleAttributes) => {
+    const validKeys = collectValidSkuKeys(saleAttributes || [])
+    stockMap.value = pruneValueMap(stockMap.value, validKeys)
+    priceMap.value = pruneValueMap(priceMap.value, validKeys)
+    emit('change', skuList.value)
+  },
+  { deep: true, immediate: true }
+)
 </script>
 
 <style scoped>

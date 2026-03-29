@@ -18,13 +18,20 @@ import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.product.constant.CacheKeyConstant;
 import com.vv.cloudfarming.product.dao.entity.AttributeDO;
+import com.vv.cloudfarming.product.dao.entity.SkuAttrValueDO;
+import com.vv.cloudfarming.product.dao.entity.SkuDO;
 import com.vv.cloudfarming.product.dao.entity.SpuAttrValueDO;
 import com.vv.cloudfarming.product.dao.entity.SpuDO;
 import com.vv.cloudfarming.product.dao.mapper.ShopMapper;
+import com.vv.cloudfarming.product.dao.mapper.SkuAttrValueMapper;
 import com.vv.cloudfarming.product.dao.mapper.SkuMapper;
 import com.vv.cloudfarming.product.dao.mapper.SpuAttrValueMapper;
 import com.vv.cloudfarming.product.dao.mapper.SpuMapper;
+import com.vv.cloudfarming.product.dto.domain.SaleAttrDTO;
+import com.vv.cloudfarming.product.dto.domain.SkuItemDTO;
+import com.vv.cloudfarming.product.dto.domain.SpuAttrItemDTO;
 import com.vv.cloudfarming.product.dto.req.AuditSubmitReqDTO;
+import com.vv.cloudfarming.product.dto.req.SkuCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuAttrValueCreateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuAttrValueUpdateReqDTO;
 import com.vv.cloudfarming.product.dto.req.SpuCreateReqDTO;
@@ -49,10 +56,17 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -72,6 +86,7 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
     private final AuditService auditService;
     private final StringRedisTemplate stringRedisTemplate;
     private final RedissonClient redissonClient;
+    private final SkuAttrValueMapper skuAttrValueMapper;
     private final SkuMapper skuMapper;
     private final ShopMapper shopMapper;
 
@@ -125,6 +140,15 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         }
         validateOperatePermission(spuDO);
 
+        List<SpuAttrItemDTO> attrItems = normalizeSpuAttrItems(requestParam.getAttrItems());
+        List<SaleAttrDTO> saleAttrs = normalizeSaleAttrs(requestParam.getSaleAttrs());
+        List<SkuItemDTO> skuItems = normalizeSkuItems(requestParam.getSkuItems());
+        boolean shouldSyncAttrItems = requestParam.getAttrItems() != null;
+        boolean shouldSyncSkuItems = requestParam.getSaleAttrs() != null || requestParam.getSkuItems() != null;
+        if (shouldSyncSkuItems) {
+            validateSkuPayload(saleAttrs, skuItems);
+        }
+
         spuDO.setTitle(requestParam.getTitle());
         spuDO.setCategoryId(categoryId);
         spuDO.setImages(requestParam.getImages());
@@ -135,7 +159,15 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
             throw new ServiceException("Failed to update SPU.");
         }
 
-        syncSkuStatus(id, ShelfStatusEnum.OFFLINE.getCode());
+        if (shouldSyncAttrItems) {
+            rebuildSpuAttrValues(id, attrItems);
+        }
+
+        if (shouldSyncSkuItems) {
+            syncSpuSkus(id, saleAttrs, skuItems);
+        } else {
+            syncSkuStatus(id, ShelfStatusEnum.OFFLINE.getCode());
+        }
 
         AuditSubmitReqDTO auditSubmitReqDTO = new AuditSubmitReqDTO();
         auditSubmitReqDTO.setBizId(spuDO.getId());
@@ -569,6 +601,241 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
         for (Long skuId : skuIds) {
             skuService.updateSkuStatus(skuId, status);
         }
+    }
+
+    private List<SpuAttrItemDTO> normalizeSpuAttrItems(List<SpuAttrItemDTO> attrItems) {
+        if (attrItems == null) {
+            return null;
+        }
+        List<SpuAttrItemDTO> result = new ArrayList<>();
+        for (SpuAttrItemDTO attrItem : attrItems) {
+            if (attrItem == null) {
+                continue;
+            }
+            SpuAttrItemDTO normalized = new SpuAttrItemDTO();
+            normalized.setAttrId(attrItem.getAttrId());
+            normalized.setAttrValue(StrUtil.trim(attrItem.getAttrValue()));
+            result.add(normalized);
+        }
+        return result;
+    }
+
+    private List<SaleAttrDTO> normalizeSaleAttrs(List<SaleAttrDTO> saleAttrs) {
+        if (saleAttrs == null) {
+            return null;
+        }
+        List<SaleAttrDTO> result = new ArrayList<>();
+        for (SaleAttrDTO saleAttr : saleAttrs) {
+            if (saleAttr == null) {
+                continue;
+            }
+            SaleAttrDTO normalized = new SaleAttrDTO();
+            normalized.setAttrId(saleAttr.getAttrId());
+            List<String> values = saleAttr.getValues() == null
+                    ? Collections.emptyList()
+                    : saleAttr.getValues().stream()
+                    .map(StrUtil::trim)
+                    .filter(StrUtil::isNotBlank)
+                    .distinct()
+                    .collect(Collectors.toList());
+            normalized.setValues(values);
+            result.add(normalized);
+        }
+        return result;
+    }
+
+    private List<SkuItemDTO> normalizeSkuItems(List<SkuItemDTO> skuItems) {
+        if (skuItems == null) {
+            return null;
+        }
+        List<SkuItemDTO> result = new ArrayList<>();
+        for (SkuItemDTO skuItem : skuItems) {
+            if (skuItem == null) {
+                continue;
+            }
+            SkuItemDTO normalized = new SkuItemDTO();
+            normalized.setAttrValues(normalizeSkuAttrValues(skuItem.getAttrValues()));
+            normalized.setPrice(skuItem.getPrice());
+            normalized.setStock(skuItem.getStock());
+            normalized.setImage(StrUtil.trim(skuItem.getImage()));
+            result.add(normalized);
+        }
+        return result;
+    }
+
+    private LinkedHashMap<Long, String> normalizeSkuAttrValues(Map<Long, String> attrValues) {
+        LinkedHashMap<Long, String> result = new LinkedHashMap<>();
+        if (attrValues == null || attrValues.isEmpty()) {
+            return result;
+        }
+        List<Long> attrIds = attrValues.keySet().stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.naturalOrder())
+                .collect(Collectors.toList());
+        for (Long attrId : attrIds) {
+            String attrValue = StrUtil.trim(attrValues.get(attrId));
+            result.put(attrId, attrValue);
+        }
+        return result;
+    }
+
+    private void validateSkuPayload(List<SaleAttrDTO> saleAttrs, List<SkuItemDTO> skuItems) {
+        if (CollUtil.isEmpty(saleAttrs)) {
+            throw new ClientException("销售属性不能为空。");
+        }
+        if (CollUtil.isEmpty(skuItems)) {
+            throw new ClientException("SKU 列表不能为空。");
+        }
+
+        Set<Long> allowedAttrIds = new HashSet<>();
+        for (SaleAttrDTO saleAttr : saleAttrs) {
+            if (saleAttr.getAttrId() == null || saleAttr.getAttrId() <= 0) {
+                throw new ClientException("销售属性配置不完整。");
+            }
+            if (!allowedAttrIds.add(saleAttr.getAttrId())) {
+                throw new ClientException("销售属性不能重复。");
+            }
+            if (spuAttrValueMapper.checkAttributeExists(saleAttr.getAttrId()) == 0) {
+                throw new ClientException("销售属性不存在。");
+            }
+            if (CollUtil.isEmpty(saleAttr.getValues())) {
+                throw new ClientException("销售属性值不能为空。");
+            }
+        }
+
+        Set<String> skuKeys = new HashSet<>();
+        for (SkuItemDTO skuItem : skuItems) {
+            Map<Long, String> attrValues = normalizeSkuAttrValues(skuItem.getAttrValues());
+            if (CollUtil.isEmpty(attrValues)) {
+                throw new ClientException("SKU 规格不能为空。");
+            }
+            if (attrValues.size() != allowedAttrIds.size() || !allowedAttrIds.containsAll(attrValues.keySet())) {
+                throw new ClientException("SKU 规格与销售属性不匹配。");
+            }
+            if (attrValues.values().stream().anyMatch(StrUtil::isBlank)) {
+                throw new ClientException("SKU 规格值不能为空。");
+            }
+            if (skuItem.getPrice() == null || skuItem.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ClientException("SKU 价格必须大于 0。");
+            }
+            if (skuItem.getStock() == null || skuItem.getStock() < 0) {
+                throw new ClientException("SKU 库存不能小于 0。");
+            }
+            String skuKey = buildSkuKey(attrValues);
+            if (!skuKeys.add(skuKey)) {
+                throw new ClientException("SKU 规格组合不能重复。");
+            }
+        }
+    }
+
+    private void rebuildSpuAttrValues(Long spuId, List<SpuAttrItemDTO> attrItems) {
+        spuAttrValueMapper.delete(Wrappers.lambdaQuery(SpuAttrValueDO.class)
+                .eq(SpuAttrValueDO::getSpuId, spuId));
+        if (CollUtil.isEmpty(attrItems)) {
+            return;
+        }
+
+        Set<Long> attrIds = new HashSet<>();
+        for (SpuAttrItemDTO attrItem : attrItems) {
+            if (attrItem.getAttrId() == null || attrItem.getAttrId() <= 0) {
+                throw new ClientException("基础属性配置不完整。");
+            }
+            if (!attrIds.add(attrItem.getAttrId())) {
+                throw new ClientException("基础属性不能重复。");
+            }
+            if (spuAttrValueMapper.checkAttributeExists(attrItem.getAttrId()) == 0) {
+                throw new ClientException("基础属性不存在。");
+            }
+            if (StrUtil.isBlank(attrItem.getAttrValue())) {
+                throw new ClientException("基础属性值不能为空。");
+            }
+
+            SpuAttrValueDO spuAttrValueDO = new SpuAttrValueDO();
+            spuAttrValueDO.setSpuId(spuId);
+            spuAttrValueDO.setAttrId(attrItem.getAttrId());
+            spuAttrValueDO.setAttrValue(attrItem.getAttrValue());
+            if (spuAttrValueMapper.insert(spuAttrValueDO) < 1) {
+                throw new ServiceException("Failed to update SPU attributes.");
+            }
+        }
+    }
+
+    private void syncSpuSkus(Long spuId, List<SaleAttrDTO> saleAttrs, List<SkuItemDTO> skuItems) {
+        List<SkuDO> existingSkus = skuService.list(Wrappers.lambdaQuery(SkuDO.class)
+                .eq(SkuDO::getSpuId, spuId));
+        Map<String, SkuDO> existingSkuMap = new HashMap<>();
+        if (CollUtil.isNotEmpty(existingSkus)) {
+            List<Long> skuIds = existingSkus.stream().map(SkuDO::getId).collect(Collectors.toList());
+            Map<Long, List<SkuAttrValueDO>> existingSkuAttrMap = skuAttrValueMapper.selectList(
+                            Wrappers.lambdaQuery(SkuAttrValueDO.class).in(SkuAttrValueDO::getSkuId, skuIds))
+                    .stream()
+                    .collect(Collectors.groupingBy(SkuAttrValueDO::getSkuId));
+
+            for (SkuDO existingSku : existingSkus) {
+                List<SkuAttrValueDO> attrValues = existingSkuAttrMap.get(existingSku.getId());
+                if (CollUtil.isEmpty(attrValues)) {
+                    continue;
+                }
+                Map<Long, String> existingAttrValues = new HashMap<>();
+                for (SkuAttrValueDO attrValue : attrValues) {
+                    existingAttrValues.put(attrValue.getAttrId(), attrValue.getAttrValue());
+                }
+                existingSkuMap.put(buildSkuKey(normalizeSkuAttrValues(existingAttrValues)), existingSku);
+            }
+        }
+
+        Set<String> retainedSkuKeys = new HashSet<>();
+        List<SkuItemDTO> skuItemsToCreate = new ArrayList<>();
+        for (SkuItemDTO skuItem : skuItems) {
+            Map<Long, String> attrValues = normalizeSkuAttrValues(skuItem.getAttrValues());
+            String skuKey = buildSkuKey(attrValues);
+            retainedSkuKeys.add(skuKey);
+
+            SkuDO existingSku = existingSkuMap.get(skuKey);
+            if (existingSku == null) {
+                skuItemsToCreate.add(skuItem);
+                continue;
+            }
+
+            SkuDO updateSku = new SkuDO();
+            updateSku.setId(existingSku.getId());
+            updateSku.setPrice(skuItem.getPrice());
+            updateSku.setStock(skuItem.getStock());
+            updateSku.setSkuImage(skuItem.getImage());
+            updateSku.setStatus(ShelfStatusEnum.OFFLINE.getCode());
+            if (skuMapper.updateById(updateSku) < 1) {
+                throw new ServiceException("Failed to update SKU.");
+            }
+        }
+
+        List<Long> removedSkuIds = existingSkuMap.entrySet().stream()
+                .filter(entry -> !retainedSkuKeys.contains(entry.getKey()))
+                .map(entry -> entry.getValue().getId())
+                .collect(Collectors.toList());
+        if (CollUtil.isNotEmpty(removedSkuIds)) {
+            skuAttrValueMapper.delete(Wrappers.lambdaQuery(SkuAttrValueDO.class)
+                    .in(SkuAttrValueDO::getSkuId, removedSkuIds));
+            if (!skuService.removeByIds(removedSkuIds)) {
+                throw new ServiceException("Failed to remove outdated SKU.");
+            }
+        }
+
+        if (CollUtil.isNotEmpty(skuItemsToCreate)) {
+            SkuCreateReqDTO createReqDTO = new SkuCreateReqDTO();
+            createReqDTO.setSpuId(spuId);
+            createReqDTO.setSaleAttrs(saleAttrs);
+            createReqDTO.setSkuItems(skuItemsToCreate);
+            skuService.createSku(createReqDTO);
+        }
+
+        syncSkuStatus(spuId, ShelfStatusEnum.OFFLINE.getCode());
+    }
+
+    private String buildSkuKey(Map<Long, String> attrValues) {
+        return attrValues.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> entry.getKey() + ":" + StrUtil.trim(entry.getValue()))
+                .collect(Collectors.joining("|"));
     }
 
     private void clearProductCache(Long spuId) {

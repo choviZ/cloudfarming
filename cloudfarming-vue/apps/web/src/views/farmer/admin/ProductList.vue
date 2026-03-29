@@ -4,7 +4,7 @@
       <div>
         <h2 class="page-title">我的商品</h2>
         <p class="page-desc">
-          管理当前农户账号发布的商品，支持查询、上下架和修改基础信息。
+          管理当前农户账号发布的商品，支持查询、上下架以及修改商品规格、价格和库存。
         </p>
       </div>
       <a-button type="primary" @click="router.push('/farmer/spu/create')">
@@ -136,43 +136,102 @@
     <a-modal
       v-model:open="editVisible"
       title="修改商品"
+      :width="1040"
       ok-text="保存修改"
       cancel-text="取消"
       :confirm-loading="editSubmitting"
+      :mask-closable="false"
+      :body-style="{ maxHeight: '70vh', overflowY: 'auto', padding: '20px 24px' }"
       destroy-on-close
       @ok="handleEditSubmit"
     >
-      <a-form layout="vertical">
-        <a-form-item label="商品分类" required>
-          <CategorySelect v-model="editForm.categoryId" />
-        </a-form-item>
-        <a-form-item label="商品名称" required>
-          <a-input
-            v-model:value="editForm.title"
-            placeholder="请输入商品名称"
-            :maxlength="50"
-            show-count
+      <a-spin :spinning="editDetailLoading">
+        <a-form layout="vertical">
+          <a-form-item label="商品分类" required>
+            <CategorySelect v-model="editForm.categoryId" />
+          </a-form-item>
+          <a-form-item label="商品名称" required>
+            <a-input
+              v-model:value="editForm.title"
+              placeholder="请输入商品名称"
+              :maxlength="50"
+              show-count
+            />
+          </a-form-item>
+          <a-form-item label="商品主图">
+            <ImageUpload v-model:value="editForm.images" biz-code="PRODUCT_SPU_COVER" />
+          </a-form-item>
+
+          <a-divider>基础属性</a-divider>
+
+          <a-form-item label="商品基础属性">
+            <AttributeSelect
+              :attributes="attributeList"
+              :selected-attr-ids="selectedBaseAttributes.map(item => item.key)"
+              :type-filter="0"
+              @add="addEditBaseAttribute"
+            />
+          </a-form-item>
+          <DynamicAttribute
+            :attributes="selectedBaseAttributes"
+            :type="0"
+            @remove-attribute="removeEditAttribute"
           />
-        </a-form-item>
-        <a-form-item label="商品主图">
-          <ImageUpload v-model:value="editForm.images" biz-code="PRODUCT_SPU_COVER" />
-        </a-form-item>
-        <div class="edit-tip">
-          只有在保存了实际修改后，商品才会自动下架并重新进入审核流程。
-        </div>
-      </a-form>
+
+          <a-divider>销售属性与SKU</a-divider>
+
+          <a-form-item label="商品销售属性" required>
+            <AttributeSelect
+              :attributes="attributeList"
+              :selected-attr-ids="selectedSaleAttributes.map(item => item.key)"
+              :type-filter="1"
+              @add="addEditSaleAttribute"
+            />
+          </a-form-item>
+          <DynamicAttribute
+            :attributes="selectedSaleAttributes"
+            :type="1"
+            @remove-attribute="removeEditAttribute"
+          />
+
+          <a-form-item label="SKU明细" required>
+            <SkuTable
+              :sale-attributes="saleAttributesForTable"
+              :initial-skus="editSkuSeedList"
+              @change="handleEditSkuChange"
+            />
+          </a-form-item>
+
+          <a-alert
+            class="edit-form-alert"
+            type="info"
+            show-icon
+            message="只有在保存了实际修改后，商品才会自动下架并重新进入审核流程。"
+          />
+        </a-form>
+      </a-spin>
     </a-modal>
   </div>
 </template>
 
 <script setup>
-import { createVNode, onMounted, reactive, ref } from 'vue'
+import { computed, createVNode, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { useRouter } from 'vue-router'
+import { getAttributesByCategoryId } from '@/api/attribute'
 import { getCategoryTree } from '@/api/category'
-import { listMySpuByPage, updateSpu, updateSpuStatus } from '@/api/spu'
+import {
+  getSpuDetail,
+  listMySpuByPage,
+  listSpuAttrValuesBySpuId,
+  updateSpu,
+  updateSpuStatus
+} from '@/api/spu'
 import CategorySelect from './components/CategorySelect.vue'
+import AttributeSelect from './components/AttributeSelect.vue'
+import DynamicAttribute from './components/DynamicAttributeList.vue'
+import SkuTable from './components/SkuTable.vue'
 import ImageUpload from '@/components/Upload/ImageUpload.vue'
 
 const router = useRouter()
@@ -180,9 +239,16 @@ const router = useRouter()
 const loading = ref(false)
 const editVisible = ref(false)
 const editSubmitting = ref(false)
+const editDetailLoading = ref(false)
 const dataSource = ref([])
 const categoryNameMap = ref({})
-const editSnapshot = ref(null)
+const editSnapshot = ref('')
+const attributeList = ref([])
+const selectedBaseAttributes = ref([])
+const selectedSaleAttributes = ref([])
+const editSkuSeedList = ref([])
+const editSkuList = ref([])
+const hydratingEditData = ref(false)
 
 const searchForm = reactive({
   spuName: '',
@@ -271,23 +337,125 @@ const columns = [
 
 const normalizeEditValue = (value) => String(value ?? '').trim()
 
-const createEditSnapshot = (payload) => ({
-  title: normalizeEditValue(payload.title),
-  categoryId: payload.categoryId ? String(payload.categoryId) : '',
-  images: normalizeEditValue(payload.images)
+const normalizeTagValues = (values = []) =>
+  [...new Set(values.map(item => normalizeEditValue(item)).filter(Boolean))]
+
+const normalizeSkuSpecs = (specs = []) =>
+  [...specs]
+    .filter(spec => spec?.attrId !== undefined && spec?.attrId !== null && normalizeEditValue(spec?.value))
+    .map(spec => ({
+      attrId: String(spec.attrId),
+      attrName: spec.attrName || resolveAttributeLabel(spec.attrId),
+      value: normalizeEditValue(spec.value)
+    }))
+    .sort((left, right) => String(left.attrId).localeCompare(String(right.attrId)))
+
+const buildSkuKey = (specs = []) =>
+  normalizeSkuSpecs(specs)
+    .map(spec => `${spec.attrId}:${spec.value}`)
+    .join('|')
+
+const normalizeSkuDraftList = (skus = []) =>
+  skus
+    .map((sku) => ({
+      specs: normalizeSkuSpecs(sku?.specs || []),
+      stock: Number(sku?.stock ?? 0),
+      price: Number(sku?.price ?? 0)
+    }))
+    .filter(item => item.specs.length > 0)
+    .sort((left, right) => buildSkuKey(left.specs).localeCompare(buildSkuKey(right.specs)))
+
+const saleAttributesForTable = computed(() =>
+  selectedSaleAttributes.value.map(attr => ({
+    key: String(attr.key),
+    label: attr.label,
+    values: normalizeTagValues(attr.values)
+  }))
+)
+
+const attributeIdByNameMap = computed(() => {
+  const map = new Map()
+  attributeList.value.forEach((item) => {
+    map.set(item.name, String(item.id))
+  })
+  return map
 })
 
-const hasEditChanged = () => {
-  if (!editSnapshot.value) {
-    return true
-  }
+const createEditSnapshot = () => JSON.stringify({
+  title: normalizeEditValue(editForm.title),
+  categoryId: editForm.categoryId ? String(editForm.categoryId) : '',
+  images: normalizeEditValue(editForm.images),
+  baseAttributes: [...selectedBaseAttributes.value]
+    .map(item => ({
+      key: String(item.key),
+      value: normalizeEditValue(item.value)
+    }))
+    .sort((left, right) => left.key.localeCompare(right.key)),
+  saleAttributes: saleAttributesForTable.value
+    .map(item => ({
+      key: String(item.key),
+      values: [...item.values].sort((left, right) => left.localeCompare(right))
+    }))
+    .sort((left, right) => left.key.localeCompare(right.key)),
+  skus: normalizeSkuDraftList(editSkuList.value).map(item => ({
+    specs: item.specs,
+    stock: item.stock,
+    price: Number(item.price.toFixed(2))
+  }))
+})
 
-  const currentSnapshot = createEditSnapshot(editForm)
-  return (
-    currentSnapshot.title !== editSnapshot.value.title ||
-    currentSnapshot.categoryId !== editSnapshot.value.categoryId ||
-    currentSnapshot.images !== editSnapshot.value.images
-  )
+const hasEditChanged = () => createEditSnapshot() !== editSnapshot.value
+
+const resolveAttributeLabel = (attrId) =>
+  attributeList.value.find(item => String(item.id) === String(attrId))?.name || `属性${attrId}`
+
+const parseJsonObject = (value) => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value
+  }
+  if (typeof value !== 'string' || !value.trim()) {
+    return {}
+  }
+  try {
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch (error) {
+    return {}
+  }
+}
+
+const getCoverImage = (images) => {
+  if (!images) return ''
+  return String(images)
+    .split(',')
+    .map((item) => item.trim())
+    .find(Boolean) || ''
+}
+
+const resetEditSpecState = () => {
+  selectedBaseAttributes.value = []
+  selectedSaleAttributes.value = []
+  editSkuSeedList.value = []
+  editSkuList.value = []
+}
+
+const resetEditState = () => {
+  editForm.id = undefined
+  editForm.title = ''
+  editForm.categoryId = ''
+  editForm.images = ''
+  attributeList.value = []
+  editSnapshot.value = ''
+  resetEditSpecState()
+}
+
+const traverseCategories = (nodes, map) => {
+  nodes.forEach((node) => {
+    map[node.id] = node.name
+    if (Array.isArray(node.children) && node.children.length > 0) {
+      traverseCategories(node.children, map)
+    }
+  })
 }
 
 const fetchCategoryTree = async () => {
@@ -301,13 +469,122 @@ const fetchCategoryTree = async () => {
   }
 }
 
-const traverseCategories = (nodes, map) => {
-  nodes.forEach((node) => {
-    map[node.id] = node.name
-    if (Array.isArray(node.children) && node.children.length > 0) {
-      traverseCategories(node.children, map)
+const fetchEditAttributes = async (categoryId) => {
+  if (!categoryId) {
+    attributeList.value = []
+    return
+  }
+  const res = await getAttributesByCategoryId(Number(categoryId))
+  attributeList.value = Array.isArray(res?.data) ? res.data : []
+}
+
+const createBaseAttributeItem = (attrId, value = '') => ({
+  key: String(attrId),
+  label: resolveAttributeLabel(attrId),
+  value
+})
+
+const createSaleAttributeItem = (attrId, values = []) => ({
+  key: String(attrId),
+  label: resolveAttributeLabel(attrId),
+  values: normalizeTagValues(values)
+})
+
+const fallbackBaseAttributes = (productSpu) => {
+  const attrMap = parseJsonObject(productSpu?.attributes)
+  return Object.entries(attrMap)
+    .map(([attrName, attrValue]) => {
+      const attrId = attributeIdByNameMap.value.get(attrName)
+      if (!attrId) {
+        return null
+      }
+      return createBaseAttributeItem(attrId, normalizeEditValue(attrValue))
+    })
+    .filter(Boolean)
+}
+
+const normalizeSaleAttrValuesFromSku = (sku) => {
+  const directValues = parseJsonObject(sku?.saleAttrValues)
+  if (Object.keys(directValues).length > 0) {
+    return Object.fromEntries(
+      Object.entries(directValues)
+        .map(([attrId, value]) => [String(attrId), normalizeEditValue(value)])
+        .filter(([, value]) => value)
+    )
+  }
+
+  const attrByName = parseJsonObject(sku?.saleAttribute)
+  const attrValues = {}
+  Object.entries(attrByName).forEach(([attrName, attrValue]) => {
+    const attrId = attributeIdByNameMap.value.get(attrName)
+    const normalizedValue = normalizeEditValue(attrValue)
+    if (attrId && normalizedValue) {
+      attrValues[attrId] = normalizedValue
     }
   })
+  return attrValues
+}
+
+const buildEditSkuSeedList = (productSkus = []) =>
+  normalizeSkuDraftList(
+    productSkus.map((sku) => {
+      const attrValues = normalizeSaleAttrValuesFromSku(sku)
+      const specs = Object.entries(attrValues).map(([attrId, value]) => ({
+        attrId: String(attrId),
+        attrName: resolveAttributeLabel(attrId),
+        value
+      }))
+      return {
+        specs,
+        stock: Number(sku?.stock ?? 0),
+        price: Number(sku?.price ?? 0)
+      }
+    })
+  )
+
+const hydrateEditForm = async (record, detailData, attrValueList) => {
+  const productSpu = detailData?.productSpu || {}
+  const productSkus = Array.isArray(detailData?.productSkus) ? detailData.productSkus : []
+
+  hydratingEditData.value = true
+  try {
+    editForm.id = record.id
+    editForm.title = productSpu.title || record.title || ''
+    editForm.categoryId = productSpu.categoryId ? String(productSpu.categoryId) : String(record.categoryId || '')
+    editForm.images = getCoverImage(productSpu.images || record.images)
+
+    await fetchEditAttributes(editForm.categoryId)
+
+    if (Array.isArray(attrValueList) && attrValueList.length > 0) {
+      selectedBaseAttributes.value = attrValueList.map(item =>
+        createBaseAttributeItem(item.attrId, normalizeEditValue(item.attrValue))
+      )
+    } else {
+      selectedBaseAttributes.value = fallbackBaseAttributes(productSpu)
+    }
+
+    const saleAttrMap = new Map()
+    productSkus.forEach((sku) => {
+      const attrValues = normalizeSaleAttrValuesFromSku(sku)
+      Object.entries(attrValues).forEach(([attrId, attrValue]) => {
+        if (!saleAttrMap.has(attrId)) {
+          saleAttrMap.set(attrId, createSaleAttributeItem(attrId))
+        }
+        saleAttrMap.get(attrId).values.push(attrValue)
+      })
+    })
+    selectedSaleAttributes.value = [...saleAttrMap.values()].map(item =>
+      createSaleAttributeItem(item.key, item.values)
+    )
+
+    const nextSkuSeedList = buildEditSkuSeedList(productSkus)
+    await nextTick()
+    editSkuSeedList.value = nextSkuSeedList
+    editSkuList.value = nextSkuSeedList
+    editSnapshot.value = createEditSnapshot()
+  } finally {
+    hydratingEditData.value = false
+  }
 }
 
 const fetchData = async () => {
@@ -370,18 +647,61 @@ const handleToggleStatus = async (record, status) => {
   }
 }
 
-const openEditModal = (record) => {
-  const coverImage = getCoverImage(record.images)
-  editForm.id = record.id
-  editForm.title = record.title || ''
-  editForm.categoryId = record.categoryId ? String(record.categoryId) : ''
-  editForm.images = coverImage
-  editSnapshot.value = createEditSnapshot({
-    title: record.title || '',
-    categoryId: record.categoryId ? String(record.categoryId) : '',
-    images: coverImage
-  })
+const addEditBaseAttribute = (id) => {
+  if (selectedBaseAttributes.value.some(item => item.key === id)) {
+    return
+  }
+  selectedBaseAttributes.value.push(createBaseAttributeItem(id))
+}
+
+const addEditSaleAttribute = (id) => {
+  if (selectedSaleAttributes.value.some(item => item.key === id)) {
+    return
+  }
+  selectedSaleAttributes.value.push(createSaleAttributeItem(id))
+}
+
+const removeEditAttribute = (id, type) => {
+  if (type === 0) {
+    selectedBaseAttributes.value = selectedBaseAttributes.value.filter(item => item.key !== id)
+    return
+  }
+  selectedSaleAttributes.value = selectedSaleAttributes.value.filter(item => item.key !== id)
+}
+
+const handleEditSkuChange = (skus) => {
+  editSkuList.value = normalizeSkuDraftList(skus)
+}
+
+const openEditModal = async (record) => {
+  resetEditState()
   editVisible.value = true
+  editDetailLoading.value = true
+  try {
+    const detailRes = await getSpuDetail(record.id)
+    if (detailRes.code !== '0' || !detailRes.data) {
+      throw new Error(detailRes.message || '获取商品详情失败')
+    }
+
+    let attrValueList = []
+    try {
+      const attrValueRes = await listSpuAttrValuesBySpuId(record.id)
+      if (attrValueRes.code === '0' && Array.isArray(attrValueRes.data)) {
+        attrValueList = attrValueRes.data
+      }
+    } catch (error) {
+      console.warn('加载商品基础属性失败，使用详情回填兜底', error)
+    }
+
+    await hydrateEditForm(record, detailRes.data, attrValueList)
+  } catch (error) {
+    console.error('加载商品详情失败', error)
+    message.error('加载商品详情失败')
+    editVisible.value = false
+    resetEditState()
+  } finally {
+    editDetailLoading.value = false
+  }
 }
 
 const handleEdit = (record) => {
@@ -400,13 +720,56 @@ const handleEdit = (record) => {
   openEditModal(record)
 }
 
-const handleEditSubmit = async () => {
+const validateEditPayload = () => {
   if (!editForm.categoryId) {
     message.warning('请选择商品分类')
+    return false
+  }
+  if (!normalizeEditValue(editForm.title)) {
+    message.warning('请输入商品名称')
+    return false
+  }
+
+  const emptyBaseAttr = selectedBaseAttributes.value.find(item => !normalizeEditValue(item.value))
+  if (emptyBaseAttr) {
+    message.warning(`请填写基础属性“${emptyBaseAttr.label}”的值`)
+    return false
+  }
+
+  if (selectedSaleAttributes.value.length === 0) {
+    message.warning('请至少配置一个销售属性')
+    return false
+  }
+
+  const invalidSaleAttr = saleAttributesForTable.value.find(item => item.values.length === 0)
+  if (invalidSaleAttr) {
+    message.warning(`请至少为销售属性“${invalidSaleAttr.label}”填写一个可选值`)
+    return false
+  }
+
+  if (editSkuList.value.length === 0) {
+    message.warning('请至少配置一个 SKU')
+    return false
+  }
+
+  const invalidSku = editSkuList.value.find((sku) => {
+    const numericPrice = Number(sku.price)
+    const numericStock = Number(sku.stock)
+    return sku.specs.length === 0 || Number.isNaN(numericPrice) || numericPrice <= 0 || Number.isNaN(numericStock) || numericStock < 0
+  })
+  if (invalidSku) {
+    message.warning(`SKU [${invalidSku.specs.map(spec => `${spec.attrName}:${spec.value}`).join(' / ')}] 的价格和库存填写有误`)
+    return false
+  }
+
+  return true
+}
+
+const handleEditSubmit = async () => {
+  if (editDetailLoading.value) {
     return
   }
-  if (!editForm.title.trim()) {
-    message.warning('请输入商品名称')
+  if (!validateEditPayload()) {
     return
   }
   if (!hasEditChanged()) {
@@ -416,12 +779,28 @@ const handleEditSubmit = async () => {
 
   editSubmitting.value = true
   try {
-    const res = await updateSpu({
+    const payload = {
       id: editForm.id,
-      title: editForm.title.trim(),
+      title: normalizeEditValue(editForm.title),
       categoryId: Number(editForm.categoryId),
-      images: editForm.images
-    })
+      images: editForm.images,
+      attrItems: selectedBaseAttributes.value.map(item => ({
+        attrId: Number(item.key),
+        attrValue: normalizeEditValue(item.value)
+      })),
+      saleAttrs: saleAttributesForTable.value.map(item => ({
+        attrId: Number(item.key),
+        values: item.values
+      })),
+      skuItems: normalizeSkuDraftList(editSkuList.value).map(item => ({
+        price: Number(item.price),
+        stock: Number(item.stock),
+        image: '',
+        attrValues: Object.fromEntries(item.specs.map(spec => [Number(spec.attrId), spec.value]))
+      }))
+    }
+
+    const res = await updateSpu(payload)
 
     if (res.code === '0') {
       message.success('商品修改成功，已重新提交审核')
@@ -439,14 +818,6 @@ const handleEditSubmit = async () => {
   }
 }
 
-const getCoverImage = (images) => {
-  if (!images) return ''
-  return String(images)
-    .split(',')
-    .map((item) => item.trim())
-    .find(Boolean) || ''
-}
-
 const formatPrice = (price) => {
   if (price === null || price === undefined || price === '') {
     return '--'
@@ -459,6 +830,32 @@ const formatDateTime = (value) => {
   if (!value) return '--'
   return String(value).replace('T', ' ')
 }
+
+watch(
+  () => editForm.categoryId,
+  async (newValue, oldValue) => {
+    if (!editVisible.value || hydratingEditData.value || newValue === oldValue) {
+      return
+    }
+    try {
+      await fetchEditAttributes(newValue)
+      resetEditSpecState()
+      message.info('已切换商品分类，请重新选择基础属性、销售属性和 SKU')
+    } catch (error) {
+      console.error('加载分类属性失败', error)
+      message.error('加载分类属性失败')
+    }
+  }
+)
+
+watch(
+  () => editVisible.value,
+  (open) => {
+    if (!open) {
+      resetEditState()
+    }
+  }
+)
 
 onMounted(() => {
   fetchCategoryTree()
@@ -518,6 +915,10 @@ onMounted(() => {
   margin-top: 8px;
   color: #8c8c8c;
   font-size: 12px;
+}
+
+.edit-form-alert {
+  margin-top: 8px;
 }
 
 @media (max-width: 768px) {

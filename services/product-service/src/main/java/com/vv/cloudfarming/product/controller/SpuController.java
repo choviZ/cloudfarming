@@ -162,7 +162,7 @@ public class SpuController {
     }
 
     @Operation(summary = "根据SPU ID查询属性值列表")
-    @GetMapping("/v1/spu/attr/list")
+    @GetMapping("/api/spu/attr/list")
     public Result<List<SpuAttrValueRespDTO>> listSpuAttrValuesBySpuId(@RequestParam("spuId") Long spuId) {
         return Results.success(spuService.listSpuAttrValuesBySpuId(spuId));
     }

@@ -128,7 +128,7 @@ export const getSpuAttrValueById = (id) => {
  * @returns {Promise<Object>} Result<SpuAttrValueRespDTO[]>
  */
 export const listSpuAttrValuesBySpuId = (spuId) => {
-  return request.get('/v1/spu/attr/ list', { params: { spuId } })
+  return request.get('/api/spu/attr/list', { params: { spuId } })
 }
 
 /**
