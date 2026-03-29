@@ -15,4 +15,7 @@ public interface ShopRemoteService {
 
     @GetMapping("/api/shop/get")
     Result<ShopRespDTO> getShopById(@RequestParam("shopId") @NotNull Long shopId);
+
+    @GetMapping("/api/shop/my")
+    Result<ShopRespDTO> getMyShop();
 }

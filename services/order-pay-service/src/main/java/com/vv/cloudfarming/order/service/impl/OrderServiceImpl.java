@@ -22,12 +22,14 @@ import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dao.mapper.PayOrderMapper;
+import com.vv.cloudfarming.order.dto.common.FarmerOrderStatisticsAggDTO;
 import com.vv.cloudfarming.order.dto.common.ProductItemDTO;
 import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
+import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
@@ -68,6 +70,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -79,6 +82,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private static final String SECKILL_CLAIM_RECORD = "cloudfarming:seckill:record:";
     private static final String STOCK_DECREMENT_AND_SAVE_USER_RECEIVE_LUA_PATH = "lua/stock_decrement_and_save_user_receive.lua";
     private static final String STOCK_ROLLBACK_AND_REDUCE_USER_RECEIVE_LUA_PATH = "lua/stock_rollback_and_reduce_user_receive.lua";
+    private static final List<Integer> FARMER_STAT_ORDER_STATUSES = List.of(
+        OrderStatusEnum.PENDING_SHIPMENT.getCode(),
+        OrderStatusEnum.SHIPPED.getCode(),
+        OrderStatusEnum.COMPLETED.getCode(),
+        OrderStatusEnum.AFTER_SALE.getCode(),
+        OrderStatusEnum.BREEDING.getCode()
+    );
 
     private final ShopRemoteService shopRemoteService;
     private final OrderProductSummaryQueryService orderProductSummaryQueryService;
@@ -95,21 +105,24 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderCreateRespDTO createOrderV2(Long userId, OrderCreateReqDTO requestParam) {
-        orderChainContext.handler(requestParam);
-        Integer orderType = requestParam.getOrderType();
         List<ProductItemDTO> items = requestParam.getItems();
-        OrderCreateStrategy strategy = strategyFactory.get(orderType);
+        OrderCreateStrategy strategy = null;
 
         boolean lockStockInvoked = false;
+        orderContext.clear();
         try {
+            orderChainContext.handler(requestParam);
+            Integer orderType = requestParam.getOrderType();
+            OrderCreateStrategy resolvedStrategy = strategyFactory.get(orderType);
+            strategy = resolvedStrategy;
             lockStockInvoked = true;
             // 锁定库存
-            strategy.lockedStock(items);
+            resolvedStrategy.lockedStock(items);
 
             List<OrderDO> orders = new ArrayList<>();
             String paySN = redisIdWorker.generateId("PaySN").toString();
             Map<Long, List<ProductItemDTO>> shopGroup = items.stream()
-                .collect(Collectors.groupingBy(item -> strategy.resolveShopId(item, orderContext)));
+                .collect(Collectors.groupingBy(item -> resolvedStrategy.resolveShopId(item, orderContext)));
 
             // 根据店铺拆分
             for (Map.Entry<Long, List<ProductItemDTO>> entry : shopGroup.entrySet()) {
@@ -117,13 +130,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 List<ProductItemDTO> itemList = entry.getValue();
 
                 ReceiveAddressRespDTO receiveAddress = orderContext.getReceiveAddress();
-                BigDecimal amount = strategy.calculateOrderAmount(itemList, orderContext);
+                BigDecimal amount = resolvedStrategy.calculateOrderAmount(itemList, orderContext);
                 OrderDO order = OrderDO.builder()
                     .orderNo(generateOrderNo(userId))
                     .payOrderNo(paySN)
                     .userId(userId)
                     .shopId(shopId)
-                    .orderType(strategy.bizType())
+                    .orderType(resolvedStrategy.bizType())
                     .totalAmount(amount)
                     .actualPayAmount(amount)
                     .freightAmount(BigDecimal.ZERO)
@@ -138,9 +151,34 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                     .build();
                 orders.add(order);
                 // 创建订单详情
-                strategy.createOrderDetails(order, itemList, orderContext);
+                resolvedStrategy.createOrderDetails(order, itemList, orderContext);
             }
             boolean orderSaved = this.saveBatch(orders);
+            /*
+                BigDecimal payTotalAmount = orders.stream()
+                    .map(OrderDO::getActualPayAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                PayDO payDO = PayDO.builder()
+                    .payOrderNo(paySN)
+                    .buyerId(userId)
+                    .totalAmount(payTotalAmount)
+                    .payStatus(PayStatusEnum.UNPAID.getCode())
+                    .bizStatus(OrderStatusEnum.PENDING_PAYMENT.getCode())
+                    .payChannel(0)
+                    .expireTime(LocalDateTime.now().plusMinutes(15))
+                    .build();
+                int inserted = payOrderMapper.insert(payDO);
+                if (!SqlHelper.retBool(inserted)) {
+                    throw new ServiceException("创建支付单失败");
+                }
+                orders.forEach(order -> applicationEventPublisher.publishEvent(new OrderDelayCheckEvent(this, order.getOrderNo())));
+                return OrderCreateRespDTO.builder()
+                    .payOrderNo(payDO.getPayOrderNo())
+                    .payAmount(payTotalAmount)
+                    .expireTime(DateUtil.toInstant(payDO.getExpireTime()).toEpochMilli())
+                    .build();
+            }
+            */
             if (!orderSaved) {
                 throw new ServiceException("订单创建失败");
             }
@@ -185,7 +223,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 .expireTime(DateUtil.toInstant(payDO.getExpireTime()).toEpochMilli())
                 .build();
         } catch (Exception ex) {
-            if (lockStockInvoked) {
+            if (lockStockInvoked && strategy != null) {
                 try {
                     strategy.unlockStock(items);
                 } catch (Exception unlockEx) {
@@ -193,6 +231,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 }
             }
             throw ex;
+        } finally {
+            orderContext.clear();
         }
     }
 
@@ -338,9 +378,35 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         return orderDetailSkus.stream().map(each -> BeanUtil.toBean(each, SkuOrderDetailRespDTO.class)).toList();
     }
 
+    @Override
+    public FarmerOrderStatisticsRespDTO getFarmerOrderStatistics() {
+        ShopRespDTO shop = getCurrentFarmerShop();
+        FarmerOrderStatisticsAggDTO statistics = baseMapper.selectFarmerOrderStatistics(shop.getId(), FARMER_STAT_ORDER_STATUSES);
+        BigDecimal salesAmount = statistics == null || statistics.getSalesAmount() == null
+            ? BigDecimal.ZERO
+            : statistics.getSalesAmount();
+        Long orderCount = statistics == null || statistics.getOrderCount() == null
+            ? 0L
+            : statistics.getOrderCount();
+        return FarmerOrderStatisticsRespDTO.builder()
+            .shopId(shop.getId())
+            .shopName(shop.getShopName())
+            .salesAmount(salesAmount)
+            .orderCount(orderCount)
+            .build();
+    }
+
     private String generateOrderNo(Long userId) {
         long userTail = Math.floorMod(userId, 1_000_000L);
         return redisIdWorker.generateId("orderSN").toString() + String.format("%06d", userTail);
+    }
+
+    private ShopRespDTO getCurrentFarmerShop() {
+        var result = shopRemoteService.getMyShop();
+        if (result == null || !result.isSuccess() || Objects.isNull(result.getData())) {
+            throw new ServiceException("查询农户店铺信息失败");
+        }
+        return result.getData();
     }
 
     private SeckillActivityDO buildSeckillActivity(Map<String, String> map, DateTimeFormatter formatter) {

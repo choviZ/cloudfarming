@@ -3,29 +3,44 @@ package com.vv.cloudfarming.order.service.basics.chain;
 import com.vv.cloudfarming.product.dto.resp.AdoptItemRespDTO;
 import com.vv.cloudfarming.product.dto.resp.SkuRespDTO;
 import com.vv.cloudfarming.user.dto.resp.ReceiveAddressRespDTO;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
 @Component
-@Setter
-@Getter
 public class OrderContext {
 
-    /**
-     * 农产品SKU
-     */
-    private Map<Long, SkuRespDTO> skuMap;
+    private final ThreadLocal<Map<Long, SkuRespDTO>> skuMapHolder = new ThreadLocal<>();
+    private final ThreadLocal<Map<Long, AdoptItemRespDTO>> adoptItemMapHolder = new ThreadLocal<>();
+    private final ThreadLocal<ReceiveAddressRespDTO> receiveAddressHolder = new ThreadLocal<>();
 
-    /**
-     * 委托养殖项目
-     */
-    private Map<Long, AdoptItemRespDTO> adoptItemMap;
+    public Map<Long, SkuRespDTO> getSkuMap() {
+        return skuMapHolder.get();
+    }
 
-    /**
-     * 收货地址信息
-     */
-    private ReceiveAddressRespDTO receiveAddress;
+    public void setSkuMap(Map<Long, SkuRespDTO> skuMap) {
+        skuMapHolder.set(skuMap);
+    }
+
+    public Map<Long, AdoptItemRespDTO> getAdoptItemMap() {
+        return adoptItemMapHolder.get();
+    }
+
+    public void setAdoptItemMap(Map<Long, AdoptItemRespDTO> adoptItemMap) {
+        adoptItemMapHolder.set(adoptItemMap);
+    }
+
+    public ReceiveAddressRespDTO getReceiveAddress() {
+        return receiveAddressHolder.get();
+    }
+
+    public void setReceiveAddress(ReceiveAddressRespDTO receiveAddress) {
+        receiveAddressHolder.set(receiveAddress);
+    }
+
+    public void clear() {
+        skuMapHolder.remove();
+        adoptItemMapHolder.remove();
+        receiveAddressHolder.remove();
+    }
 }

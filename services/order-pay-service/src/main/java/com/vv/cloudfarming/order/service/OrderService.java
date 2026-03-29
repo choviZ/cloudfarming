@@ -44,4 +44,9 @@ public interface OrderService {
      * @param orderNo 订单号
      */
     List<SkuOrderDetailRespDTO> getSkuOrderDetail(String orderNo);
+
+    /**
+     * 获取农户订单统计
+     */
+    FarmerOrderStatisticsRespDTO getFarmerOrderStatistics();
 }

@@ -1,7 +1,6 @@
 package com.vv.cloudfarming.order.service.basics.chain;
 
 import org.springframework.beans.BeansException;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -14,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 上下文容器
+ * 责任链上下文容器
  */
 @Component
 public class OrderChainContext<T> implements ApplicationContextAware, CommandLineRunner {
@@ -22,28 +21,27 @@ public class OrderChainContext<T> implements ApplicationContextAware, CommandLin
     private ApplicationContext applicationContext;
     private final List<OrderAbstractChainHandler> abstractChainHandlerContainer = new ArrayList<>();
 
-    /**
-     * 责任链组件执行
-     *
-     * @param requestParam 请求参数
-     */
     public void handler(T requestParam) {
+        initChainHandlersIfNecessary();
         abstractChainHandlerContainer.forEach(handler -> handler.handler(requestParam));
     }
 
     @Override
-    public void run(String... args) throws Exception {
-        // 从 Spring IOC 容器中获取指定接口 Spring Bean 集合
-        Map<String, OrderAbstractChainHandler> chainFilterMap = applicationContext.getBeansOfType(OrderAbstractChainHandler.class);
-        chainFilterMap.forEach((beanName, bean) -> {
-            abstractChainHandlerContainer.add(bean);
-        });
-        // 排序
-        abstractChainHandlerContainer.sort(Comparator.comparing(Ordered::getOrder));
+    public void run(String... args) {
+        initChainHandlersIfNecessary();
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
+    }
+
+    private synchronized void initChainHandlersIfNecessary() {
+        if (!abstractChainHandlerContainer.isEmpty()) {
+            return;
+        }
+        Map<String, OrderAbstractChainHandler> chainFilterMap = applicationContext.getBeansOfType(OrderAbstractChainHandler.class);
+        chainFilterMap.forEach((beanName, bean) -> abstractChainHandlerContainer.add(bean));
+        abstractChainHandlerContainer.sort(Comparator.comparing(Ordered::getOrder));
     }
 }

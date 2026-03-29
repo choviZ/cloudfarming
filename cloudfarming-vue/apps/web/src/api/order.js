@@ -6,7 +6,9 @@ import request from "./request";
  * @returns {Promise<Object>} Result<OrderCreateResp>
  */
 export const createOrder = (data) => {
-  return request.post('/api/order/v1/create', data)
+  return request.post('/api/order/v1/create', data, {
+    timeout: 30000
+  })
 }
 
 export const ORDER_TYPE = {
@@ -40,4 +42,8 @@ export const getOrderList = (data) => {
 
 export const getPayOrderList = (data) => {
   return request.post('/api/pay/list', data)
+}
+
+export const getFarmerOrderStatistics = () => {
+  return request.get('/api/order/v1/farmer/statistics')
 }

@@ -10,6 +10,7 @@ import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
+import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
@@ -74,5 +75,12 @@ public class OrderController {
     @GetMapping("/api/order/v1/detail/sku")
     public Result<List<SkuOrderDetailRespDTO>> getSkuOrderDetail(@RequestParam @NotNull String orderNo) {
         return Results.success(orderService.getSkuOrderDetail(orderNo));
+    }
+
+    @Operation(summary = "查询农户订单统计")
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @GetMapping("/api/order/v1/farmer/statistics")
+    public Result<FarmerOrderStatisticsRespDTO> getFarmerOrderStatistics() {
+        return Results.success(orderService.getFarmerOrderStatistics());
     }
 }

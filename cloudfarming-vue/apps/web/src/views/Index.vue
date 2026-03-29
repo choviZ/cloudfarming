@@ -48,7 +48,7 @@
         </button>
       </div>
 
-      <a-skeleton :loading="productLoading" :rows="8" animated>
+      <a-skeleton :loading="productLoading" active :paragraph="{ rows: 8 }">
         <div v-if="productList.length" class="product-grid">
           <a-row :gutter="[20, 20]">
             <a-col
@@ -130,9 +130,26 @@ const pagination = ref({
   total: 0
 })
 
+const defaultProductPlaceholder = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="320" viewBox="0 0 420 320">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eef7ee" />
+      <stop offset="100%" stop-color="#d7ead8" />
+    </linearGradient>
+  </defs>
+  <rect width="420" height="320" rx="24" fill="url(#bg)" />
+  <circle cx="118" cy="126" r="46" fill="#b4d1b7" />
+  <rect x="170" y="90" width="148" height="18" rx="9" fill="#8db694" />
+  <rect x="170" y="124" width="118" height="14" rx="7" fill="#a8c8ad" />
+  <rect x="98" y="206" width="224" height="16" rx="8" fill="#8db694" opacity="0.85" />
+  <text x="210" y="270" text-anchor="middle" font-size="24" fill="#2d5a36" font-family="Microsoft YaHei, sans-serif">云养殖助农平台</text>
+</svg>
+`)}`
+
 const getFirstImage = (imageStr) => {
   if (!imageStr) {
-    return 'https://via.placeholder.com/420x320?text=Cloud+Farming'
+    return defaultProductPlaceholder
   }
   return imageStr.trim().split(',')[0].trim() || imageStr
 }
@@ -148,7 +165,7 @@ const fetchProducts = async () => {
     const response = await listSpuByPage(queryParam)
     if (response.code === '0' && response.data) {
       productList.value = response.data.records || []
-      pagination.value.total = response.data.total || 0
+      pagination.value.total = Number(response.data.total || 0)
       return
     }
     message.error(response.message || '获取商品数据失败')

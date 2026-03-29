@@ -17,6 +17,7 @@ import com.vv.cloudfarming.order.mq.constant.MqConstant;
 import com.vv.cloudfarming.order.mq.modal.MultiDelayMessage;
 import com.vv.cloudfarming.order.remote.AdoptItemRemoteService;
 import com.vv.cloudfarming.order.remote.SkuRemoteService;
+import com.vv.cloudfarming.order.service.OrderExpireService;
 import com.vv.cloudfarming.product.dto.req.LockStockReqDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,7 @@ public class OrderStatusCheckListener {
     private final OrderDetailAdoptMapper orderDetailAdoptMapper;
     private final OrderDetailSkuMapper orderDetailSkuMapper;
     private final SkuRemoteService skuRemoteService;
+    private final OrderExpireService orderExpireService;
 
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(value = MqConstant.DELAY_ORDER_QUEUE, durable = "true"),
@@ -71,6 +73,16 @@ public class OrderStatusCheckListener {
                 );
                 log.info("订单：{}未支付，发送延迟消息，延迟时间：{}秒", orderNo, delay / 1000);
             } else {
+                boolean useExpireService = true;
+                if (useExpireService) {
+                    boolean closed = orderExpireService.closeExpiredPayOrderByOrderNo(orderNo);
+                    if (closed) {
+                        log.info("订单超时未支付，已自动关闭，orderNo={}", orderNo);
+                    } else {
+                        log.info("订单超时关闭跳过，可能已支付或已处理，orderNo={}", orderNo);
+                    }
+                    return;
+                }
                 // 不存在-结束订单
                 LambdaUpdateWrapper<OrderDO> wrapper = Wrappers.lambdaUpdate(OrderDO.class)
                         .set(OrderDO::getOrderStatus, OrderStatusEnum.CANCEL.getCode())

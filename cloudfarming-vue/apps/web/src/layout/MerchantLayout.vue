@@ -50,7 +50,7 @@
             <span>我的发布</span>
           </a-menu-item>
         </a-sub-menu>
-        <a-menu-item key="5">
+        <a-menu-item key="5" @click="router.push('/farmer/statistics')">
           <bar-chart-outlined />
           <span>数据统计</span>
         </a-menu-item>
@@ -119,6 +119,9 @@ const selectedKeys = computed(() => {
   }
   if (route.path === '/farmer/adopt/my') {
     return ['4-2']
+  }
+  if (route.path === '/farmer/statistics') {
+    return ['5']
   }
   return []
 })

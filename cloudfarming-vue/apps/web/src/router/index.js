@@ -172,6 +172,11 @@ const router = createRouter({
           path: 'adopt/my',
           name: 'myAdopts',
           component: () => import('../views/farmer/adopt/MyAdopts.vue')
+        },
+        {
+          path: 'statistics',
+          name: 'farmerStatistics',
+          component: () => import('../views/farmer/statistics/StatisticsOverview.vue')
         }
       ]
     }
