@@ -8,7 +8,7 @@ spring:
     name: cloudfarming-order-pay
   datasource:
     driver-class-name: org.apache.shardingsphere.driver.ShardingSphereDriver
-    url: jdbc:shardingsphere:classpath:order-pay-shardingsphere-config.yaml
+    url: jdbc:shardingsphere:classpath:shardingsphere-config.yaml
     hikari:
       minimum-idle: 1
       maximum-pool-size: 10
