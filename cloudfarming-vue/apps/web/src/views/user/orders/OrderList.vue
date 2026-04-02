@@ -4,7 +4,6 @@
       <h2 class="page-title">我的订单</h2>
     </div>
 
-    <!-- Tab 切换 -->
     <div class="tabs-wrapper">
       <a-tabs v-model:activeKey="activeTab" @change="handleTabChange">
         <a-tab-pane key="all" tab="全部订单" />
@@ -14,7 +13,6 @@
       </a-tabs>
     </div>
 
-    <!-- 订单列表 -->
     <div class="orders-list">
       <a-spin :spinning="loading">
         <div v-if="currentOrders.length === 0" class="empty-state">
@@ -23,36 +21,44 @@
         </div>
         <div v-else class="order-items">
           <div v-for="order in currentOrders" :key="order.payOrderNo || order.id" class="order-card">
-            <!-- 订单头部 -->
             <div class="order-header">
               <span class="order-time">{{ formatDate(order.expireTime || order.createTime) }}</span>
               <span class="order-no">支付单号：{{ order.payOrderNo || order.orderNo }}</span>
-              <span class="order-shop">{{ order.shopName || order.shopName }}</span>
+              <span class="order-shop">{{ order.shopName || '--' }}</span>
               <span class="order-status" :class="getOrderStatusClass(order)">{{ getOrderStatusText(order) }}</span>
             </div>
-            <!-- 订单商品 -->
             <div class="order-body">
               <div class="order-products">
-                <div v-for="item in order.items" :key="item.productName" class="order-product">
+                <div v-for="item in order.items || []" :key="`${order.payOrderNo || order.id}-${item.productName}`" class="order-product">
                   <img :src="item.coverImage" :alt="item.productName" class="product-img" />
                   <div class="product-info">
                     <div class="product-title">{{ item.productName }}</div>
                   </div>
                   <div class="product-price">
-                    <span class="price">¥{{ item.price }}</span>
+                    <span class="price">￥{{ item.price }}</span>
                     <span class="quantity">x{{ item.quantity }}</span>
                   </div>
                 </div>
               </div>
             </div>
-            <!-- 订单底部 -->
             <div class="order-footer">
               <div class="order-total">
                 <span class="label">合计：</span>
-                <span class="amount">¥{{ order.totalAmount || order.totalPrice }}</span>
+                <span class="amount">￥{{ order.totalAmount || order.totalPrice }}</span>
               </div>
             </div>
           </div>
+        </div>
+
+        <div v-if="currentOrders.length > 0" class="pagination-wrapper">
+          <a-pagination
+            v-model:current="pagination.current"
+            :total="displayTotal"
+            :page-size="pagination.pageSize"
+            :show-size-changer="false"
+            :show-total="(total) => `共 ${total} 条订单`"
+            @change="handlePageChange"
+          />
         </div>
       </a-spin>
     </div>
@@ -60,24 +66,67 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { message } from 'ant-design-vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getOrderList, getPayOrderList, ORDER_STATUS, ORDER_STATUS_TEXT } from '@/api/order'
 import { useUserStore } from '@/stores/useUserStore'
 
+const PAGE_SIZE = 20
+const DEFAULT_TAB = 'all'
+const VALID_TAB_KEYS = ['all', 'pending', 'pendingShip', 'shipped']
+
 const loading = ref(false)
 const activeTab = ref('all')
-const orderList = ref({ records: [] })
+const orderList = ref({
+  records: [],
+  total: 0,
+  current: 1,
+  size: PAGE_SIZE
+})
+const pagination = reactive({
+  current: 1,
+  pageSize: PAGE_SIZE,
+  total: 0
+})
 const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
 
 const TAB_ORDER_STATUS = {
   pendingShip: ORDER_STATUS.PENDING_SHIPMENT,
   shipped: ORDER_STATUS.SHIPPED
 }
 
-const userId = computed(() => {
-  return userStore.loginUser?.id
-})
+const normalizeTabKey = (tabKey) => {
+  const resolvedTabKey = Array.isArray(tabKey) ? tabKey[0] : tabKey
+  return VALID_TAB_KEYS.includes(resolvedTabKey) ? resolvedTabKey : DEFAULT_TAB
+}
+
+const syncTabToRoute = (tabKey) => {
+  const normalizedTab = normalizeTabKey(tabKey)
+  const nextQuery = { ...route.query }
+
+  if (normalizedTab === DEFAULT_TAB) {
+    delete nextQuery.tab
+  } else {
+    nextQuery.tab = normalizedTab
+  }
+
+  const currentRouteTab = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab
+  const nextRouteTab = nextQuery.tab
+  if ((currentRouteTab || undefined) === (nextRouteTab || undefined)) {
+    return
+  }
+
+  router.replace({
+    path: route.path,
+    query: nextQuery
+  })
+}
+
+const userId = computed(() => userStore.loginUser?.id)
 
 const currentOrders = computed(() => {
   if (Array.isArray(orderList.value)) {
@@ -89,13 +138,43 @@ const currentOrders = computed(() => {
   return []
 })
 
+const displayTotal = computed(() => {
+  return Math.max(Number(pagination.total) || 0, currentOrders.value.length)
+})
+
 const normalizePageData = (pageData) => {
   if (Array.isArray(pageData)) {
-    return { records: pageData }
+    return {
+      records: pageData,
+      total: pageData.length,
+      current: 1,
+      size: PAGE_SIZE
+    }
   }
+
   return {
-    records: Array.isArray(pageData?.records) ? pageData.records : []
+    records: Array.isArray(pageData?.records) ? pageData.records : [],
+    total: Number(pageData?.total) || 0,
+    current: Number(pageData?.current) || pagination.current,
+    size: Number(pageData?.size) || PAGE_SIZE
   }
+}
+
+const resetOrderList = () => {
+  orderList.value = {
+    records: [],
+    total: 0,
+    current: pagination.current,
+    size: PAGE_SIZE
+  }
+  pagination.total = 0
+}
+
+const applyPageData = (pageData) => {
+  const normalizedPage = normalizePageData(pageData)
+  orderList.value = normalizedPage
+  pagination.current = normalizedPage.current
+  pagination.total = normalizedPage.total
 }
 
 const resolveOrderStatus = (order) => {
@@ -131,43 +210,63 @@ const getOrderStatusClass = (order) => {
 }
 
 const handleTabChange = (key) => {
-  activeTab.value = key
+  activeTab.value = normalizeTabKey(key)
+  pagination.current = 1
+  syncTabToRoute(activeTab.value)
+  fetchOrders()
+}
+
+const handlePageChange = (page) => {
+  pagination.current = page
   fetchOrders()
 }
 
 const fetchOrders = async () => {
   if (!userId.value) {
-    console.warn('用户未登录')
+    resetOrderList()
     return
   }
-  
+
   loading.value = true
-  orderList.value = { records: [] }
+  resetOrderList()
+
   try {
     if (activeTab.value === 'pending') {
-      const response = await getPayOrderList({ 
+      const response = await getPayOrderList({
         buyerId: userId.value,
         bizStatus: 0,
-        payStatus: ORDER_STATUS.PENDING_PAYMENT
+        payStatus: ORDER_STATUS.PENDING_PAYMENT,
+        current: pagination.current,
+        size: PAGE_SIZE
       })
+
       if (response.code === '0' && response.data) {
-        orderList.value = normalizePageData(response.data)
+        applyPageData(response.data)
       } else {
-        console.error('获取待支付订单列表失败:', response.message)
+        message.error(response.message || '获取待支付订单列表失败')
       }
-    } else {
-      const payload = { userId: userId.value }
-      const orderStatus = TAB_ORDER_STATUS[activeTab.value]
-      if (orderStatus !== undefined) {
-        payload.orderStatus = orderStatus
-      }
-      const response = await getOrderList(payload)
-      if (response.code === '0' && response.data) {
-        orderList.value = normalizePageData(response.data)
-      } else {
-        console.error('获取订单列表失败:', response.message)
-      }
+      return
     }
+
+    const payload = {
+      userId: userId.value,
+      current: pagination.current,
+      size: PAGE_SIZE
+    }
+    const orderStatus = TAB_ORDER_STATUS[activeTab.value]
+    if (orderStatus !== undefined) {
+      payload.orderStatus = orderStatus
+    }
+
+    const response = await getOrderList(payload)
+    if (response.code === '0' && response.data) {
+      applyPageData(response.data)
+    } else {
+      message.error(response.message || '获取订单列表失败')
+    }
+  } catch (error) {
+    console.error('fetchOrders error:', error)
+    message.error('获取订单列表失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -182,19 +281,9 @@ const formatDate = (timestamp) => {
   return `${year}-${month}-${day}`
 }
 
-const formatTime = (timestamp) => {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
 onMounted(() => {
+  activeTab.value = normalizeTabKey(route.query.tab)
+  syncTabToRoute(activeTab.value)
   fetchOrders()
 })
 </script>
@@ -351,11 +440,6 @@ onMounted(() => {
   margin-bottom: 4px;
 }
 
-.product-spec {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
 .product-price {
   text-align: right;
 }
@@ -391,5 +475,11 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   color: #059669;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
 }
 </style>
