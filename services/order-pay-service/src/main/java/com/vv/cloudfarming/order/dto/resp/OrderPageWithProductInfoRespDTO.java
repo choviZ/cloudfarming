@@ -45,6 +45,11 @@ public class OrderPageWithProductInfoRespDTO {
     private BigDecimal totalPrice;
 
     /**
+     * 订单状态
+     */
+    private Integer orderStatus;
+
+    /**
      * 创建时间
      */
     private Date createTime;

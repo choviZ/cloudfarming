@@ -323,7 +323,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         LambdaQueryWrapper<OrderDO> wrapper = Wrappers.lambdaQuery(OrderDO.class)
             .eq(ObjectUtil.isNotNull(id), OrderDO::getId, id)
             .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
-            .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId);
+            .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId)
+            .orderByDesc(OrderDO::getCreateTime)
+            .orderByDesc(OrderDO::getId);
 
         IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
         Map<String, List<ProductSummaryDTO>> productSummariesByOrderNo =
@@ -338,6 +340,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 .shopName(shop.getShopName())
                 .items(productSummariesByOrderNo.getOrDefault(each.getOrderNo(), Collections.emptyList()))
                 .totalPrice(each.getTotalAmount())
+                .orderStatus(each.getOrderStatus())
                 .createTime(each.getCreateTime())
                 .build();
         });
@@ -356,7 +359,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             .eq(ObjectUtil.isNotNull(payOrderNo), OrderDO::getPayOrderNo, payOrderNo)
             .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
             .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId)
-            .eq(ObjectUtil.isNotNull(shopId), OrderDO::getShopId, shopId);
+            .eq(ObjectUtil.isNotNull(shopId), OrderDO::getShopId, shopId)
+            .orderByDesc(OrderDO::getCreateTime)
+            .orderByDesc(OrderDO::getId);
 
         IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
         return orderPage.convert(each -> BeanUtil.toBean(each, OrderPageRespDTO.class));

@@ -17,17 +17,18 @@
     <!-- 订单列表 -->
     <div class="orders-list">
       <a-spin :spinning="loading">
-        <div v-if="orderList.length === 0" class="empty-state">
+        <div v-if="currentOrders.length === 0" class="empty-state">
           <InboxOutlined class="empty-icon" />
           <p>暂无相关订单</p>
         </div>
         <div v-else class="order-items">
-          <div v-for="order in activeTab.value === 'pending' ? orderList : orderList.records" :key="order.payOrderNo || order.id" class="order-card">
+          <div v-for="order in currentOrders" :key="order.payOrderNo || order.id" class="order-card">
             <!-- 订单头部 -->
             <div class="order-header">
               <span class="order-time">{{ formatDate(order.expireTime || order.createTime) }}</span>
               <span class="order-no">支付单号：{{ order.payOrderNo || order.orderNo }}</span>
               <span class="order-shop">{{ order.shopName || order.shopName }}</span>
+              <span class="order-status" :class="getOrderStatusClass(order)">{{ getOrderStatusText(order) }}</span>
             </div>
             <!-- 订单商品 -->
             <div class="order-body">
@@ -61,18 +62,73 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
-import { getOrderList, getPayOrderList } from '@/api/order'
+import { getOrderList, getPayOrderList, ORDER_STATUS, ORDER_STATUS_TEXT } from '@/api/order'
 import { useUserStore } from '@/stores/useUserStore'
 
 const loading = ref(false)
 const activeTab = ref('all')
-const orderList = ref([])
-const payOrderList = ref([])
+const orderList = ref({ records: [] })
 const userStore = useUserStore()
+
+const TAB_ORDER_STATUS = {
+  pendingShip: ORDER_STATUS.PENDING_SHIPMENT,
+  shipped: ORDER_STATUS.SHIPPED
+}
 
 const userId = computed(() => {
   return userStore.loginUser?.id
 })
+
+const currentOrders = computed(() => {
+  if (Array.isArray(orderList.value)) {
+    return orderList.value
+  }
+  if (Array.isArray(orderList.value?.records)) {
+    return orderList.value.records
+  }
+  return []
+})
+
+const normalizePageData = (pageData) => {
+  if (Array.isArray(pageData)) {
+    return { records: pageData }
+  }
+  return {
+    records: Array.isArray(pageData?.records) ? pageData.records : []
+  }
+}
+
+const resolveOrderStatus = (order) => {
+  if (order?.orderStatus !== undefined && order?.orderStatus !== null) {
+    return order.orderStatus
+  }
+  if (activeTab.value === 'pending') {
+    return ORDER_STATUS.PENDING_PAYMENT
+  }
+  return undefined
+}
+
+const getOrderStatusText = (order) => {
+  const status = resolveOrderStatus(order)
+  return status !== undefined ? (ORDER_STATUS_TEXT[status] || '未知状态') : '未知状态'
+}
+
+const getOrderStatusClass = (order) => {
+  const status = resolveOrderStatus(order)
+  if (status === ORDER_STATUS.PENDING_PAYMENT) {
+    return 'status-pending'
+  }
+  if (status === ORDER_STATUS.PENDING_SHIPMENT) {
+    return 'status-shipping'
+  }
+  if (status === ORDER_STATUS.SHIPPED) {
+    return 'status-shipped'
+  }
+  if (status === ORDER_STATUS.CANCEL) {
+    return 'status-closed'
+  }
+  return 'status-default'
+}
 
 const handleTabChange = (key) => {
   activeTab.value = key
@@ -86,21 +142,28 @@ const fetchOrders = async () => {
   }
   
   loading.value = true
+  orderList.value = { records: [] }
   try {
     if (activeTab.value === 'pending') {
       const response = await getPayOrderList({ 
         buyerId: userId.value,
-        bizStatus: 0
+        bizStatus: 0,
+        payStatus: ORDER_STATUS.PENDING_PAYMENT
       })
       if (response.code === '0' && response.data) {
-        orderList.value = response.data
+        orderList.value = normalizePageData(response.data)
       } else {
         console.error('获取待支付订单列表失败:', response.message)
       }
     } else {
-      const response = await getOrderList({ userId: userId.value })
+      const payload = { userId: userId.value }
+      const orderStatus = TAB_ORDER_STATUS[activeTab.value]
+      if (orderStatus !== undefined) {
+        payload.orderStatus = orderStatus
+      }
+      const response = await getOrderList(payload)
       if (response.code === '0' && response.data) {
-        orderList.value = response.data
+        orderList.value = normalizePageData(response.data)
       } else {
         console.error('获取订单列表失败:', response.message)
       }
@@ -219,6 +282,39 @@ onMounted(() => {
 .order-shop {
   color: #1f2937;
   font-weight: 500;
+}
+
+.order-status {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pending {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.status-shipping {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.status-shipped {
+  background: #ecfeff;
+  color: #0891b2;
+}
+
+.status-closed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.status-default {
+  background: #f4f4f5;
+  color: #52525b;
 }
 
 .order-body {

@@ -76,7 +76,9 @@ public class PayServiceImpl extends ServiceImpl<PayOrderMapper, PayDO> implement
             .eq(StrUtil.isNotBlank(payOrderNo), PayDO::getPayOrderNo, payOrderNo)
             .eq(ObjectUtil.isNotNull(buyerId), PayDO::getBuyerId, buyerId)
             .eq(ObjectUtil.isNotNull(bizStatus), PayDO::getBizStatus, bizStatus)
-            .eq(ObjectUtil.isNotNull(payStatus), PayDO::getPayStatus, payStatus);
+            .eq(ObjectUtil.isNotNull(payStatus), PayDO::getPayStatus, payStatus)
+            .orderByDesc(PayDO::getCreateTime)
+            .orderByDesc(PayDO::getId);
         IPage<PayDO> payOrderPage = baseMapper.selectPage(requestParam, wrapper);
 
         List<String> payOrderNos = payOrderPage.getRecords().stream()
