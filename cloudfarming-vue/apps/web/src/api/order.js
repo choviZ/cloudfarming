@@ -11,6 +11,10 @@ export const createOrder = (data) => {
   })
 }
 
+export const getCurrentAdoptAgreement = () => {
+  return request.get('/api/order/v1/agreement/adopt/current')
+}
+
 export const ORDER_TYPE = {
   ADOPT: 0,
   GOODS: 1

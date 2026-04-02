@@ -6,10 +6,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
+import com.vv.cloudfarming.order.config.AdoptAgreementProperties;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
+import com.vv.cloudfarming.order.dto.resp.AdoptAgreementRespDTO;
 import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
@@ -35,6 +37,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderController {
 
+    private final AdoptAgreementProperties adoptAgreementProperties;
     private final OrderService orderService;
 
     @Operation(summary = "创建订单")
@@ -50,6 +53,16 @@ public class OrderController {
     @PostMapping("/api/order/v1/seckill/create")
     public Result<String> createSeckillOrder(@RequestBody @Valid SeckillCreateReqDTO requestParam) {
         return Results.success(orderService.createSeckillOrder(requestParam));
+    }
+
+    @Operation(summary = "获取当前认养协议")
+    @GetMapping("/api/order/v1/agreement/adopt/current")
+    public Result<AdoptAgreementRespDTO> getCurrentAdoptAgreement() {
+        return Results.success(AdoptAgreementRespDTO.builder()
+            .version(adoptAgreementProperties.getVersion())
+            .title(adoptAgreementProperties.getTitle())
+            .content(adoptAgreementProperties.getContent())
+            .build());
     }
 
     @Operation(summary = "查询订单列表")

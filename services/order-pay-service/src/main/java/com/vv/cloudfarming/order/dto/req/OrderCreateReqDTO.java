@@ -28,4 +28,14 @@ public class OrderCreateReqDTO {
      * 下单的商品
      */
     private List<ProductItemDTO> items;
+
+    /**
+     * 是否已同意认养协议
+     */
+    private Boolean adoptAgreementAccepted;
+
+    /**
+     * 下单时确认的认养协议版本
+     */
+    private String adoptAgreementVersion;
 }

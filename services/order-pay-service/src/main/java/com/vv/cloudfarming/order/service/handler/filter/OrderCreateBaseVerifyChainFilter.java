@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.order.service.handler.filter;
 
+import com.vv.cloudfarming.order.config.AdoptAgreementProperties;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.common.result.Result;
@@ -22,6 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderCreateBaseVerifyChainFilter implements OrderAbstractChainHandler<OrderCreateReqDTO> {
 
+    private final AdoptAgreementProperties adoptAgreementProperties;
     private final ReceiveAddressRemoteService receiveAddressRemoteService;
     private final OrderContext orderContext;
 
@@ -30,6 +32,9 @@ public class OrderCreateBaseVerifyChainFilter implements OrderAbstractChainHandl
         Integer orderType = requestParam.getOrderType();
         if (!orderType.equals(OrderTypeConstant.ADOPT) && !orderType.equals(OrderTypeConstant.GOODS)) {
             throw new ClientException("不支持的订单类型");
+        }
+        if (orderType.equals(OrderTypeConstant.ADOPT)) {
+            verifyAdoptAgreement(requestParam);
         }
         List<ProductItemDTO> items = requestParam.getItems();
         if (items == null || items.isEmpty()) {
@@ -41,6 +46,20 @@ public class OrderCreateBaseVerifyChainFilter implements OrderAbstractChainHandl
             throw new ServiceException("收货地址不存在");
         }
         orderContext.setReceiveAddress(address.getData());
+    }
+
+    private void verifyAdoptAgreement(OrderCreateReqDTO requestParam) {
+        if (!Boolean.TRUE.equals(requestParam.getAdoptAgreementAccepted())) {
+            throw new ClientException("请先阅读并同意认养协议");
+        }
+        String currentVersion = adoptAgreementProperties.getVersion();
+        String confirmedVersion = requestParam.getAdoptAgreementVersion();
+        if (confirmedVersion == null || confirmedVersion.isBlank()) {
+            throw new ClientException("请先阅读并同意认养协议");
+        }
+        if (currentVersion == null || currentVersion.isBlank() || !currentVersion.equals(confirmedVersion)) {
+            throw new ClientException("认养协议已更新，请重新确认");
+        }
     }
 
     @Override

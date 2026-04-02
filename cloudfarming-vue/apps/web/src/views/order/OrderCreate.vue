@@ -157,14 +157,47 @@
               >
                 提交订单
               </a-button>
+              <div v-if="isAdoptOrder" class="agreement-confirm">
+                <a-checkbox
+                  v-model:checked="adoptAgreement.accepted"
+                  :disabled="adoptAgreement.loading || adoptAgreement.loadFailed"
+                >
+                  我已阅读并同意
+                </a-checkbox>
+                <span class="agreement-link" @click="openAgreementModal">
+                  《{{ adoptAgreement.title || '云农场认养异常处置协议' }}》
+                </span>
+              </div>
+              <div v-if="isAdoptOrder && adoptAgreement.loadFailed" class="agreement-error">
+                <span>协议加载失败，请稍后重试</span>
+                <span class="agreement-retry" @click="retryLoadAgreement">重新加载</span>
+              </div>
               <div class="agreement-text">
-                {{ isCartSource && cartPreview.invalidItems.length ? '请先处理失效商品后再提交订单' : '提交订单即表示同意《云农场用户协议》' }}
+                {{
+                  isCartSource && cartPreview.invalidItems.length
+                    ? '请先处理失效商品后再提交订单'
+                    : isAdoptOrder
+                      ? '认养项目下单前需确认异常处置协议'
+                      : '提交订单即表示同意《云农场用户协议》'
+                }}
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <a-modal
+      :open="adoptAgreement.visible"
+      :title="adoptAgreement.title || '云农场认养异常处置协议'"
+      :footer="null"
+      width="720px"
+      @cancel="adoptAgreement.visible = false"
+    >
+      <div class="agreement-modal-content">
+        {{ adoptAgreement.content }}
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -175,7 +208,7 @@ import { message } from 'ant-design-vue'
 import AddressSelector from '../../components/address/AddressSelector.vue'
 import { getAdoptItemDetail } from '@/api/adopt'
 import { batchRemoveFromCart, getCartCheckoutPreview } from '@/api/cart'
-import { createOrder, ORDER_TYPE } from '@/api/order'
+import { createOrder, getCurrentAdoptAgreement, ORDER_TYPE } from '@/api/order'
 import { getSpuDetail } from '@/api/spu'
 
 const route = useRoute()
@@ -193,6 +226,15 @@ const cartPreview = reactive({
   canSubmit: false,
   signature: ''
 })
+const adoptAgreement = reactive({
+  loading: false,
+  loadFailed: false,
+  accepted: false,
+  visible: false,
+  version: '',
+  title: '',
+  content: ''
+})
 
 const isCartSource = computed(() => route.query.source === 'cart')
 const orderType = computed(() => {
@@ -201,6 +243,7 @@ const orderType = computed(() => {
   }
   return route.query.type === 'product' ? ORDER_TYPE.GOODS : ORDER_TYPE.ADOPT
 })
+const isAdoptOrder = computed(() => orderType.value === ORDER_TYPE.ADOPT)
 const quantity = computed(() => {
   const parsed = Number(route.query.quantity || 1)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
@@ -218,10 +261,19 @@ const buyNowQuantity = computed(() => {
   return displayItem.value ? displayItem.value.quantity : 0
 })
 const canSubmitOrder = computed(() => {
-  if (isCartSource.value) {
-    return cartPreview.canSubmit && cartPreview.groups.length > 0
+  const baseReady = isCartSource.value
+    ? cartPreview.canSubmit && cartPreview.groups.length > 0
+    : !!displayItem.value
+  if (!baseReady) {
+    return false
   }
-  return !!displayItem.value
+  if (!isAdoptOrder.value) {
+    return true
+  }
+  return !adoptAgreement.loading
+    && !adoptAgreement.loadFailed
+    && !!adoptAgreement.version
+    && adoptAgreement.accepted
 })
 const submitItems = computed(() => {
   if (isCartSource.value) {
@@ -371,6 +423,49 @@ const fetchBuyNowDetail = async () => {
   }
 }
 
+const fetchAdoptAgreement = async ({ silent = false } = {}) => {
+  adoptAgreement.loading = true
+  adoptAgreement.loadFailed = false
+  adoptAgreement.accepted = false
+  try {
+    const response = await getCurrentAdoptAgreement()
+    if (response.code !== '0' || !response.data) {
+      throw new Error(response.message || '协议加载失败，请稍后重试')
+    }
+    adoptAgreement.version = response.data.version || ''
+    adoptAgreement.title = response.data.title || '云农场认养异常处置协议'
+    adoptAgreement.content = response.data.content || ''
+    if (!adoptAgreement.version || !adoptAgreement.content) {
+      throw new Error('协议加载失败，请稍后重试')
+    }
+  } catch (error) {
+    adoptAgreement.version = ''
+    adoptAgreement.title = '云农场认养异常处置协议'
+    adoptAgreement.content = ''
+    adoptAgreement.loadFailed = true
+    if (!silent) {
+      message.error(error.message || '协议加载失败，请稍后重试')
+    }
+  } finally {
+    adoptAgreement.loading = false
+  }
+}
+
+const openAgreementModal = () => {
+  if (adoptAgreement.loading) {
+    return
+  }
+  if (adoptAgreement.loadFailed || !adoptAgreement.content) {
+    message.warning('协议加载失败，请稍后重试')
+    return
+  }
+  adoptAgreement.visible = true
+}
+
+const retryLoadAgreement = async () => {
+  await fetchAdoptAgreement()
+}
+
 const navigateToPay = (data) => {
   if (!data.payOrderNo) {
     message.error('订单创建异常：返回数据缺少订单号')
@@ -394,6 +489,16 @@ const handleSubmit = async () => {
     message.warning('暂无可提交的商品')
     return
   }
+  if (isAdoptOrder.value) {
+    if (adoptAgreement.loadFailed || !adoptAgreement.version) {
+      message.warning('协议加载失败，请稍后重试')
+      return
+    }
+    if (!adoptAgreement.accepted) {
+      message.warning('请先阅读并同意认养协议')
+      return
+    }
+  }
 
   submitting.value = true
   try {
@@ -411,11 +516,16 @@ const handleSubmit = async () => {
       }
     }
 
-    const response = await createOrder({
+    const payload = {
       orderType: orderType.value,
       receiveId: selectedAddressId.value,
       items: submitItems.value
-    })
+    }
+    if (isAdoptOrder.value) {
+      payload.adoptAgreementAccepted = adoptAgreement.accepted
+      payload.adoptAgreementVersion = adoptAgreement.version
+    }
+    const response = await createOrder(payload)
 
     if (response.code !== '0' || !response.data) {
       message.error(response.message || '创建订单失败')
@@ -448,7 +558,14 @@ const initPage = async () => {
     if (isCartSource.value) {
       await fetchCartPreview({ syncSignature: true, redirectIfEmpty: true })
     } else {
-      await fetchBuyNowDetail()
+      const tasks = [fetchBuyNowDetail()]
+      if (isAdoptOrder.value) {
+        tasks.push(fetchAdoptAgreement({ silent: true }))
+      }
+      await Promise.all(tasks)
+      if (isAdoptOrder.value && adoptAgreement.loadFailed) {
+        message.error('协议加载失败，请稍后重试')
+      }
     }
   } catch (error) {
     message.error(error.message || '页面加载失败')
@@ -748,12 +865,54 @@ onMounted(() => {
   border-color: #187447;
 }
 
+.agreement-confirm {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #173524;
+  font-size: 13px;
+}
+
+.agreement-link,
+.agreement-retry {
+  color: #1f8f56;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.agreement-link:hover,
+.agreement-retry:hover {
+  color: #187447;
+}
+
+.agreement-error {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #ad6800;
+  font-size: 12px;
+}
+
 .agreement-text {
   margin-top: 12px;
   color: #90a194;
   font-size: 12px;
   line-height: 1.6;
   text-align: center;
+}
+
+.agreement-modal-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  color: #2d3d34;
+  font-size: 14px;
+  line-height: 1.9;
 }
 
 @media (max-width: 900px) {
