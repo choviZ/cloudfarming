@@ -1,43 +1,46 @@
 <template>
   <div class="pay-success">
-    <!-- 支付成功主容器 -->
     <div class="success-card">
-      <!-- 成功图标区域 -->
-      <div class="success-icon">
+      <div class="success-icon" :class="{ pending: !paid }">
         <svg viewBox="0 0 100 100" class="check-icon">
-          <circle cx="50" cy="50" r="45" fill="#f0f9f0" stroke="#4CAF50" stroke-width="2"/>
+          <circle cx="50" cy="50" r="45" fill="#f0f9f0" stroke="#4CAF50" stroke-width="2" />
           <path
-              d="M30,50 L45,65 L75,35"
-              fill="none"
-              stroke="#4CAF50"
-              stroke-width="6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+            d="M30,50 L45,65 L75,35"
+            fill="none"
+            stroke="#4CAF50"
+            stroke-width="6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           />
         </svg>
       </div>
 
-      <!-- 成功提示文本 -->
       <div class="success-text">
-        <h2 class="title">支付成功</h2>
-        <p class="desc">您的农资订单已支付完成，感谢您的购买</p>
+        <h2 class="title">{{ paid ? '支付成功' : '支付结果确认中' }}</h2>
+        <p class="desc">{{ statusMessage }}</p>
       </div>
 
-      <!-- 订单信息（示例） -->
+      <div class="status-tip" v-if="loading">
+        正在同步支付结果，请稍候...
+      </div>
+
       <div class="order-info">
         <div class="info-item">
-          <span class="label">订单编号：</span>
-          <span class="value">AG20260209{{ Math.floor(Math.random() * 10000) }}</span>
+          <span class="label">支付单号：</span>
+          <span class="value">{{ payOrderNo || '--' }}</span>
         </div>
         <div class="info-item">
           <span class="label">支付金额：</span>
-          <span class="value">¥{{ (Math.random() * 1000 + 100).toFixed(2) }}</span>
+          <span class="value">¥{{ displayAmount }}</span>
+        </div>
+        <div class="info-item" v-if="tradeStatus">
+          <span class="label">交易状态：</span>
+          <span class="value">{{ tradeStatus }}</span>
         </div>
       </div>
 
-      <!-- 操作按钮 -->
       <div class="btn-group">
-        <button class="btn btn-primary" @click="goToOrder">查看订单详情</button>
+        <button class="btn btn-primary" @click="goToOrder">查看订单列表</button>
         <button class="btn btn-secondary" @click="goToHome">返回首页</button>
       </div>
     </div>
@@ -45,25 +48,73 @@
 </template>
 
 <script setup>
-import {ref} from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
+import { confirmPayOrder } from '@/api/order'
 
-// 模拟跳转订单详情
+const route = useRoute()
+const router = useRouter()
+
+const loading = ref(false)
+const paid = ref(false)
+const payOrderNo = ref('')
+const amount = ref('')
+const tradeStatus = ref('')
+const statusMessage = ref('正在为您确认支付结果，请稍候...')
+
+const displayAmount = computed(() => amount.value || '--')
+
 const goToOrder = () => {
-  // 实际项目中替换为路由跳转逻辑
-  console.log('跳转到订单详情页')
-  // 示例：router.push('/order/detail')
+  router.push('/usercenter/orders')
 }
 
-// 模拟返回首页
 const goToHome = () => {
-  // 实际项目中替换为路由跳转逻辑
-  console.log('返回首页')
-  // 示例：router.push('/home')
+  router.push('/index')
 }
+
+const initQuery = () => {
+  payOrderNo.value = String(route.query.out_trade_no || route.query.payOrderNo || '')
+  amount.value = String(route.query.total_amount || route.query.amount || '')
+}
+
+const loadPayResult = async () => {
+  if (!payOrderNo.value) {
+    statusMessage.value = '未获取到支付单号，请到订单列表查看支付结果'
+    return
+  }
+
+  loading.value = true
+  try {
+    const res = await confirmPayOrder(payOrderNo.value)
+    if (res.code === '0' && res.data) {
+      paid.value = !!res.data.paid
+      payOrderNo.value = res.data.payOrderNo || payOrderNo.value
+      amount.value = res.data.totalAmount ?? amount.value
+      tradeStatus.value = res.data.tradeStatus || ''
+      statusMessage.value = res.data.message || (paid.value ? '您的订单已支付完成' : '支付结果确认中，请稍后刷新订单列表')
+      if (!paid.value) {
+        message.warning(statusMessage.value)
+      }
+      return
+    }
+    statusMessage.value = res.message || '支付结果确认失败，请稍后到订单列表查看'
+    message.error(statusMessage.value)
+  } catch (error) {
+    statusMessage.value = '支付结果确认失败，请稍后到订单列表查看'
+    message.error(error?.message || statusMessage.value)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  initQuery()
+  loadPayResult()
+})
 </script>
 
 <style scoped>
-/* 页面整体样式 */
 .pay-success {
   min-height: 100vh;
   background-color: #f8fbf8;
@@ -74,7 +125,6 @@ const goToHome = () => {
   box-sizing: border-box;
 }
 
-/* 成功卡片容器 */
 .success-card {
   width: 100%;
   max-width: 500px;
@@ -86,9 +136,12 @@ const goToHome = () => {
   box-sizing: border-box;
 }
 
-/* 成功图标样式 */
 .success-icon {
   margin-bottom: 24px;
+}
+
+.success-icon.pending {
+  opacity: 0.8;
 }
 
 .check-icon {
@@ -97,26 +150,33 @@ const goToHome = () => {
   margin: 0 auto;
 }
 
-/* 文本样式 */
 .success-text .title {
   font-size: 24px;
-  color: #2e7d32; /* 深绿色，贴合农业主题 */
-  margin: 0 0 12px 0;
+  color: #2e7d32;
+  margin: 0 0 12px;
   font-weight: 600;
 }
 
 .success-text .desc {
   font-size: 16px;
-  color: #558b2f; /* 橄榄绿，辅助色 */
+  color: #558b2f;
   margin: 0;
   line-height: 1.5;
 }
 
-/* 订单信息区域 */
+.status-tip {
+  margin-top: 18px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background-color: #f0f9f0;
+  color: #2e7d32;
+  font-size: 14px;
+}
+
 .order-info {
   margin: 30px 0;
   padding: 20px;
-  background-color: #f0f9f0; /* 浅绿背景 */
+  background-color: #f0f9f0;
   border-radius: 8px;
   text-align: left;
 }
@@ -124,6 +184,7 @@ const goToHome = () => {
 .info-item {
   display: flex;
   justify-content: space-between;
+  gap: 16px;
   margin-bottom: 12px;
   font-size: 14px;
 }
@@ -132,17 +193,18 @@ const goToHome = () => {
   margin-bottom: 0;
 }
 
-.info-item .label {
-  color: #388e3c; /* 中绿色 */
+.label {
+  color: #388e3c;
   font-weight: 500;
 }
 
-.info-item .value {
+.value {
   color: #212121;
   font-family: monospace;
+  text-align: right;
+  word-break: break-all;
 }
 
-/* 按钮组样式 */
 .btn-group {
   display: flex;
   gap: 16px;
@@ -160,17 +222,15 @@ const goToHome = () => {
   transition: all 0.3s ease;
 }
 
-/* 主按钮（查看订单） */
 .btn-primary {
-  background-color: #4CAF50; /* 主绿色 */
+  background-color: #4CAF50;
   color: #ffffff;
 }
 
 .btn-primary:hover {
-  background-color: #388e3c; /* 加深绿色，hover效果 */
+  background-color: #388e3c;
 }
 
-/* 次要按钮（返回首页） */
 .btn-secondary {
   background-color: #ffffff;
   color: #4CAF50;
@@ -181,7 +241,6 @@ const goToHome = () => {
   background-color: #f0f9f0;
 }
 
-/* 响应式适配 */
 @media (max-width: 480px) {
   .success-card {
     padding: 30px 20px;

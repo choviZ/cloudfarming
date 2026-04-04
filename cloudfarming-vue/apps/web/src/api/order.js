@@ -48,6 +48,12 @@ export const getPayOrderList = (data) => {
   return request.post('/api/pay/list', data)
 }
 
+export const confirmPayOrder = (payOrderNo) => {
+  return request.get('/api/alipay/confirm', {
+    params: { payOrderNo }
+  })
+}
+
 export const getFarmerOrderStatistics = () => {
   return request.get('/api/order/v1/farmer/statistics')
 }
