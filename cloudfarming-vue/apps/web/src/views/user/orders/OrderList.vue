@@ -66,7 +66,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -213,7 +213,6 @@ const handleTabChange = (key) => {
   activeTab.value = normalizeTabKey(key)
   pagination.current = 1
   syncTabToRoute(activeTab.value)
-  fetchOrders()
 }
 
 const handlePageChange = (page) => {
@@ -281,11 +280,36 @@ const formatDate = (timestamp) => {
   return `${year}-${month}-${day}`
 }
 
-onMounted(() => {
-  activeTab.value = normalizeTabKey(route.query.tab)
-  syncTabToRoute(activeTab.value)
-  fetchOrders()
-})
+watch(
+  () => route.query.tab,
+  (tabKey) => {
+    const normalizedTab = normalizeTabKey(tabKey)
+    const previousTab = activeTab.value
+    activeTab.value = normalizedTab
+    if (previousTab !== normalizedTab) {
+      pagination.current = 1
+    }
+    syncTabToRoute(normalizedTab)
+    if (userId.value) {
+      fetchOrders()
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => userId.value,
+  (currentUserId, previousUserId) => {
+    if (!currentUserId) {
+      resetOrderList()
+      return
+    }
+    if (currentUserId !== previousUserId) {
+      pagination.current = 1
+    }
+    fetchOrders()
+  }
+)
 </script>
 
 <style scoped>
