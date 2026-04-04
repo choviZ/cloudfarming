@@ -23,6 +23,7 @@
             <ShoppingCartOutlined class="icon" />
             购物车
           </a>
+          <a class="nav-item" @click="goToFarmers">优质农户</a>
           <a class="nav-item" @click="handleSellerCenterClick">卖家中心</a>
           <a-dropdown placement="bottomRight" :trigger="['hover']">
             <a class="nav-item nav-item--dropdown" @click.prevent>
@@ -73,6 +74,10 @@ const goToHome = () => {
 
 const goToCart = () => {
   router.push('/cart')
+}
+
+const goToFarmers = () => {
+  router.push('/farmers')
 }
 
 const goToOrders = () => {

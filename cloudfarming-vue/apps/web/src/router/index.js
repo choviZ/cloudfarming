@@ -93,6 +93,16 @@ const router = createRouter({
           path: 'farmer/join',
           name: 'joinFarmer',
           component: () => import('../views/farmer/JoinFarmer.vue')
+        },
+        {
+          path: 'farmers',
+          name: 'farmerList',
+          component: () => import('../views/farmer/public/FarmerList.vue')
+        },
+        {
+          path: 'farmers/:id',
+          name: 'farmerDetail',
+          component: () => import('../views/farmer/public/FarmerDetail.vue')
         }
       ]
     },
@@ -177,6 +187,11 @@ const router = createRouter({
           path: 'statistics',
           name: 'farmerStatistics',
           component: () => import('../views/farmer/statistics/StatisticsOverview.vue')
+        },
+        {
+          path: 'showcase',
+          name: 'farmerShowcase',
+          component: () => import('../views/farmer/showcase/FarmerShowcaseManage.vue')
         }
       ]
     }

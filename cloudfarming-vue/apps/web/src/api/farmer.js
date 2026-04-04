@@ -1,19 +1,27 @@
-/**
- * 农户相关请求
- */
 import request from './request'
 
-/**
- * 农户入驻申请
- * @param {Object} data - 农户申请信息
- */
 export const submitFarmerApply = (data) => {
-  return request.post('/v1/farmer', data);
-};
+  return request.post('/api/farmer/apply', data)
+}
 
-/**
- * 获取农户审核状态
- */
 export const getFarmerReviewStatus = () => {
-  return request.get('/v1/farmer/status');
-};
+  return request.get('/api/farmer/status')
+}
+
+export const pageFarmerShowcase = (data) => {
+  return request.post('/api/farmer/showcase/page', data)
+}
+
+export const getFarmerShowcaseDetail = (id) => {
+  return request.get('/api/farmer/showcase/detail', {
+    params: { id }
+  })
+}
+
+export const getMyFarmerShowcase = () => {
+  return request.get('/api/farmer/showcase/my')
+}
+
+export const updateMyFarmerShowcase = (data) => {
+  return request.post('/api/farmer/showcase/update', data)
+}

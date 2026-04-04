@@ -17,7 +17,7 @@
         <a-sub-menu key="1">
           <template #title>
             <appstore-outlined />
-            <span>管理商品</span>
+            <span>商品管理</span>
           </template>
           <a-menu-item key="1-1" @click="router.push('/farmer/spu/list')">
             <unordered-list-outlined />
@@ -54,6 +54,10 @@
           <bar-chart-outlined />
           <span>数据统计</span>
         </a-menu-item>
+        <a-menu-item key="6" @click="router.push('/farmer/showcase')">
+          <picture-outlined />
+          <span>展示资料</span>
+        </a-menu-item>
       </a-menu>
     </a-layout-sider>
     <a-layout>
@@ -87,6 +91,7 @@ import {
   BarChartOutlined,
   DashboardOutlined,
   OrderedListOutlined,
+  PictureOutlined,
   PlusOutlined,
   ProjectOutlined,
   RollbackOutlined,
@@ -122,6 +127,9 @@ const selectedKeys = computed(() => {
   }
   if (route.path === '/farmer/statistics') {
     return ['5']
+  }
+  if (route.path === '/farmer/showcase') {
+    return ['6']
   }
   return []
 })

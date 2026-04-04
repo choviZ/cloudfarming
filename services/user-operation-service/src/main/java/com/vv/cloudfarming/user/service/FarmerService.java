@@ -1,32 +1,39 @@
 package com.vv.cloudfarming.user.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.vv.cloudfarming.user.dao.entity.FarmerDO;
+import com.vv.cloudfarming.user.dto.req.FarmerAdminPageReqDTO;
 import com.vv.cloudfarming.user.dto.req.FarmerApplyReqDO;
+import com.vv.cloudfarming.user.dto.req.FarmerFeatureUpdateReqDTO;
+import com.vv.cloudfarming.user.dto.req.FarmerShowcasePageReqDTO;
+import com.vv.cloudfarming.user.dto.req.FarmerShowcaseUpdateReqDTO;
 import com.vv.cloudfarming.user.dto.req.UpdateReviewStatusReqDTO;
+import com.vv.cloudfarming.user.dto.resp.FarmerAdminPageRespDTO;
+import com.vv.cloudfarming.user.dto.resp.FarmerMyShowcaseRespDTO;
 import com.vv.cloudfarming.user.dto.resp.FarmerReviewRespDTO;
-import jakarta.servlet.http.HttpServletRequest;
+import com.vv.cloudfarming.user.dto.resp.FarmerShowcaseRespDTO;
 
 /**
- * 农户操作服务层
+ * Farmer service.
  */
 public interface FarmerService extends IService<FarmerDO> {
 
-    /**
-     * 提交农户入住申请
-     * @param requestParam 请求参数
-     */
     void submitApply(FarmerApplyReqDO requestParam);
 
-    /**
-     * 获取审核状态
-     * @return 审核状态
-     */
     FarmerReviewRespDTO getReviewStatus();
 
-    /**
-     * 修改审核状态
-     * @param requestParam 请求参数
-     */
     void updateReviewState(UpdateReviewStatusReqDTO requestParam);
+
+    IPage<FarmerShowcaseRespDTO> pageShowcase(FarmerShowcasePageReqDTO requestParam);
+
+    FarmerShowcaseRespDTO getShowcaseDetail(Long id);
+
+    FarmerMyShowcaseRespDTO getMyShowcase();
+
+    Boolean updateMyShowcase(FarmerShowcaseUpdateReqDTO requestParam);
+
+    IPage<FarmerAdminPageRespDTO> pageAdminFarmers(FarmerAdminPageReqDTO requestParam);
+
+    Boolean updateFeaturedFlag(FarmerFeatureUpdateReqDTO requestParam);
 }

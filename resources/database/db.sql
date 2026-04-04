@@ -30,6 +30,8 @@ create table t_farmer
     breeding_type        varchar(255) null comment '养殖品类',
     business_license_no  bigint(18)   null comment '营业执照编号',
     business_license_pic varchar(255) null comment '营业执照图片',
+    environment_images   text         null comment '农场环境图片，多个地址使用英文逗号分隔',
+    featured_flag        tinyint(1) default 0 not null comment '是否精选：0-否 1-是',
     remark               varchar(255) null comment '申请审核备注',
     review_status        tinyint(1)   null comment '审核状态 0-待审核 1-已通过 2-未通过',
     review_user_id       varchar(255) null comment '审核人id',

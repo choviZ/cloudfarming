@@ -1,6 +1,6 @@
 <template>
   <div class="home-user-card">
-    <div class="user-card-inner">
+    <section class="user-card-inner surface-card">
       <div class="card-bg">
         <div class="bg-circle"></div>
         <div class="bg-gradient"></div>
@@ -40,9 +40,9 @@
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="platform-notice">
+    <section class="notice-card surface-card">
       <div class="notice-header">
         <h4 class="notice-title">
           <span class="title-indicator"></span>
@@ -69,14 +69,35 @@
           暂无平台公告
         </li>
       </ul>
-    </div>
+    </section>
+
+    <section class="showcase-card" @click="goToFarmerList">
+      <div class="showcase-header">
+        <h4 class="notice-title">
+          <span class="title-indicator"></span>
+          优质农户
+        </h4>
+        <span class="showcase-entry">
+          <TeamOutlined class="showcase-icon" />
+          去看看
+        </span>
+      </div>
+      <p class="showcase-copy">
+        查看平台精选农户的农场环境、资质与基础信息，挑选更安心的认养对象。
+      </p>
+      <div class="showcase-tags">
+        <span class="showcase-tag">环境实拍</span>
+        <span class="showcase-tag">资质可查</span>
+        <span class="showcase-tag">平台精选</span>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { EnvironmentOutlined, RightOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { EnvironmentOutlined, RightOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { getCurrentUserDefaultReceiveAddress } from '@/api/address'
 import { pagePublishedArticles } from '@/api/article'
 import { useUserStore } from '@/stores/useUserStore'
@@ -99,6 +120,10 @@ const goToArticleList = () => {
     name: 'articleList',
     query: { type: '1' }
   })
+}
+
+const goToFarmerList = () => {
+  router.push('/farmers')
 }
 
 const goToArticleDetail = (id) => {
@@ -153,7 +178,7 @@ const loadNotices = async () => {
   try {
     const res = await pagePublishedArticles({
       current: 1,
-      size: 3,
+      size: 2,
       articleType: 1
     })
     if (res.code === '0' && res.data) {
@@ -172,22 +197,27 @@ onMounted(async () => {
 <style scoped>
 .home-user-card {
   width: 300px;
-  height: 460px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 220px 118px 94px;
+  gap: 14px;
 }
 
-.user-card-inner {
+.surface-card {
   background-color: #ffffff;
   border-radius: 16px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
+}
+
+.user-card-inner {
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .card-bg {
-  height: 96px;
+  height: 78px;
   background: linear-gradient(135deg, #15803d 0%, #14532d 100%);
   position: relative;
   overflow: hidden;
@@ -214,31 +244,35 @@ onMounted(async () => {
 }
 
 .user-info-section {
-  padding: 0 20px 20px;
-  margin-top: -48px;
+  flex: 1;
+  padding: 0 16px 14px;
+  margin-top: -34px;
   position: relative;
   text-align: center;
+  display: flex;
+  flex-direction: column;
 }
 
 .avatar-wrapper {
   display: inline-block;
-  padding: 6px;
+  width: fit-content;
+  margin: 0 auto 8px;
+  padding: 5px;
   background-color: #ffffff;
   border-radius: 50%;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  margin-bottom: 12px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
 }
 
 .avatar-img {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background-color: #f8fafc;
 }
 
 .avatar-placeholder {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background-color: #e2e8f0;
   display: flex;
@@ -247,32 +281,30 @@ onMounted(async () => {
 }
 
 .avatar-icon {
-  font-size: 32px;
+  font-size: 28px;
   color: #94a3b8;
 }
 
 .user-name {
+  margin: 0 0 10px;
   font-weight: 700;
   color: #0f172a;
   font-size: 18px;
-  margin-bottom: 12px;
+  line-height: 1.2;
 }
 
 .address-box {
-  margin-top: 12px;
-  margin-bottom: 24px;
+  margin: 0 0 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 12px;
   color: #64748b;
   background-color: #f8fafc;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 7px 10px;
+  border-radius: 10px;
   border: 1px solid #f1f5f9;
-  margin-left: 16px;
-  margin-right: 16px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -290,7 +322,7 @@ onMounted(async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 150px;
+  max-width: 176px;
 }
 
 .address-arrow {
@@ -299,11 +331,12 @@ onMounted(async () => {
 }
 
 .stats-grid {
+  margin-top: auto;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  border-top: 1px solid #f8fafc;
-  padding-top: 20px;
+  gap: 6px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 14px;
 }
 
 .stat-item {
@@ -313,7 +346,7 @@ onMounted(async () => {
 .stat-value {
   font-weight: 700;
   color: #0f172a;
-  font-size: 18px;
+  font-size: 16px;
   transition: color 0.2s;
 }
 
@@ -322,29 +355,27 @@ onMounted(async () => {
 }
 
 .stat-label {
-  font-size: 10px;
+  font-size: 11px;
   color: #94a3b8;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
-.platform-notice {
-  background-color: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
-  padding: 20px;
-  flex: 1;
+.notice-card {
+  padding: 14px 16px 12px;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
-.notice-header {
+.notice-header,
+.showcase-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f8fafc;
+  gap: 12px;
+}
+
+.notice-header {
+  margin-bottom: 8px;
 }
 
 .notice-title {
@@ -355,6 +386,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   margin: 0;
+  flex-shrink: 0;
 }
 
 .title-indicator {
@@ -382,14 +414,16 @@ onMounted(async () => {
   list-style: none;
   padding: 0;
   margin: 0;
-  flex: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
 }
 
 .notice-item {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
+  align-items: flex-start;
+  gap: 8px;
   cursor: pointer;
 }
 
@@ -399,7 +433,7 @@ onMounted(async () => {
   padding: 1px 6px;
   border-radius: 4px;
   height: fit-content;
-  margin-top: 2px;
+  margin-top: 1px;
   flex-shrink: 0;
 }
 
@@ -424,9 +458,9 @@ onMounted(async () => {
 .notice-text {
   font-size: 12px;
   color: #475569;
-  line-height: 1.6;
+  line-height: 1.4;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   transition: color 0.2s;
@@ -439,9 +473,98 @@ onMounted(async () => {
 .notice-empty {
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 84px;
+  min-height: 36px;
   color: #94a3b8;
   font-size: 12px;
+}
+
+.showcase-card {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top right, rgba(101, 184, 113, 0.18), transparent 30%),
+    linear-gradient(135deg, #f7fcf6 0%, #eef8ef 100%);
+  border: 1px solid #d9ecd9;
+  box-shadow: 0 8px 20px rgba(34, 115, 55, 0.08);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.showcase-card:hover {
+  transform: translateY(-1px);
+  border-color: #b9ddb9;
+  box-shadow: 0 10px 20px rgba(34, 115, 55, 0.1);
+}
+
+.showcase-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #eef8ef 0%, #dff2e2 100%);
+  border: 1px solid #cce8d0;
+  color: #1f7a42;
+  font-size: 11px;
+  font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.showcase-card:hover .showcase-entry {
+  transform: translateY(-1px);
+  border-color: #9fd3a8;
+  box-shadow: 0 8px 16px rgba(31, 122, 66, 0.12);
+}
+
+.showcase-icon {
+  font-size: 13px;
+}
+
+.showcase-copy {
+  margin: 6px 0 8px;
+  color: #4e6a56;
+  font-size: 12px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.showcase-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.showcase-tag {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(26, 127, 58, 0.08);
+  color: #1f7a42;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+@media (max-width: 1200px) {
+  .home-user-card {
+    width: 100%;
+    height: auto;
+    grid-template-rows: none;
+  }
+
+  .user-card-inner {
+    min-height: 220px;
+  }
+
+  .notice-card {
+    min-height: 118px;
+  }
+
+  .showcase-card {
+    min-height: 94px;
+  }
 }
 </style>

@@ -45,6 +45,11 @@ const router = createRouter({
           component: () => import('@/views/admin/product/index.vue'),
         },
         {
+          path: '/admin/farmer',
+          name: 'admin-farmer',
+          component: () => import('@/views/admin/farmer/index.vue'),
+        },
+        {
           path: '/admin/article',
           name: 'admin-article',
           component: () => import('@/views/admin/article/index.vue'),

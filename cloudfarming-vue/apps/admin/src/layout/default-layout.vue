@@ -42,6 +42,7 @@ import {
   NotificationOutlined,
   ShopOutlined,
   TagsOutlined,
+  TeamOutlined,
   UserOutlined
 } from '@ant-design/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -89,6 +90,12 @@ const items = ref([
     title: '商品管理',
     key: 'admin/product',
     icon: () => h(ShopOutlined),
+  },
+  {
+    label: '农户管理',
+    title: '农户管理',
+    key: 'admin/farmer',
+    icon: () => h(TeamOutlined),
   },
   {
     label: '文章资讯',
