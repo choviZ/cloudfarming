@@ -50,7 +50,7 @@
 
       <a-skeleton :loading="productLoading" active :paragraph="{ rows: 8 }">
         <div v-if="productList.length" class="product-grid">
-          <a-row :gutter="[20, 20]">
+          <a-row :gutter="[12, 20]">
             <a-col
               v-for="product in productList"
               :key="product.id"
@@ -58,7 +58,7 @@
               :sm="12"
               :md="8"
               :lg="6"
-              :xl="6"
+              :xl="4"
             >
               <a-card class="product-card" hoverable @click="goToProductDetail(product.id)">
                 <template #cover>
@@ -216,9 +216,7 @@ onMounted(() => {
 .index-page {
   min-height: 100vh;
   padding-bottom: 40px;
-  background:
-    radial-gradient(circle at top left, rgba(163, 230, 53, 0.15), transparent 24%),
-    linear-gradient(180deg, #f8fbf5 0%, #ffffff 100%);
+  background: #ffffff;
 }
 
 .hero-header {
@@ -382,23 +380,34 @@ onMounted(() => {
 }
 
 .product-card {
+  width: 253px;
+  height: 335px;
+  margin: 0 auto;
   border: none;
-  border-radius: 18px;
+  border-radius: 8px;
   overflow: hidden;
   background: #fff;
   box-shadow: 0 10px 26px rgba(33, 53, 39, 0.08);
+  transition: all 0.3s;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .product-image-wrap {
-  width: 100%;
-  height: 240px;
+  width: 253px;
+  height: 253px;
   background: #eef3ea;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
 }
 
 .product-image {
-  width: 100%;
-  height: 100%;
+  width: 253px;
+  height: 253px;
   object-fit: cover;
   display: block;
   transition: transform 0.3s ease;
@@ -409,38 +418,51 @@ onMounted(() => {
 }
 
 .product-card :deep(.ant-card-body) {
-  padding: 16px;
+  padding: 8px 12px;
+  height: 82px;
+  display: flex;
+  flex-direction: column;
 }
 
 .product-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
+  height: 100%;
+  min-height: 0;
 }
 
 .product-title {
+  display: block;
+  width: 100%;
   margin: 0;
-  font-size: 16px;
-  color: #17212b;
-  line-height: 1.5;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f1f1f;
+  line-height: 20px;
+  min-height: 20px;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .product-tag-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  min-height: 18px;
+  flex-shrink: 0;
 }
 
 .product-tag {
-  padding: 3px 8px;
-  border-radius: 999px;
+  padding: 1px 6px;
+  border-radius: 4px;
   background: #eef8ef;
   color: #24713f;
   font-size: 12px;
+  line-height: 16px;
   font-weight: 600;
+  width: fit-content;
 }
 
 .product-footer {
@@ -448,17 +470,26 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-top: auto;
+  min-height: 20px;
 }
 
 .product-price {
-  font-size: 22px;
-  font-weight: 800;
-  color: #c2410c;
+  display: flex;
+  align-items: flex-end;
+  color: #ff5000;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 20px;
 }
 
 .product-extra {
   font-size: 12px;
-  color: #7a8a7d;
+  color: #999;
+  background-color: #f5f5f5;
+  padding: 1px 6px;
+  line-height: 16px;
+  border-radius: 4px;
 }
 
 .pagination-wrap {
