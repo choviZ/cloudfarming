@@ -35,8 +35,17 @@ const router = createRouter({
         },
         {
           path: 'search',
-          name: 'search',
-          component: () => import('../views/SearchResult.vue')
+          redirect: (to) => {
+            const rawKeyword = Array.isArray(to.query.q) ? to.query.q[0] : to.query.q
+            const rawType = Array.isArray(to.query.type) ? to.query.type[0] : to.query.type
+            return {
+              name: 'productList',
+              query: {
+                ...(rawKeyword ? { keyword: rawKeyword } : {}),
+                mode: rawType === '0' ? 'adopt' : 'product'
+              }
+            }
+          }
         },
         {
           path: 'article/list',

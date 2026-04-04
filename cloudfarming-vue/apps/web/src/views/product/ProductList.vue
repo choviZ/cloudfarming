@@ -7,7 +7,7 @@
             <i class="fas fa-leaf"></i>
           </div>
           <div class="brand__content">
-            <h1>云农场</h1>
+            <h1>云养殖助农平台</h1>
             <span>Cloud Farming Market</span>
           </div>
         </div>
@@ -213,9 +213,6 @@
 
                   <div class="result-card__footer-actions">
                     <span class="result-tag result-tag--adopt-accent">{{ getAdoptCycleTag(item) }}</span>
-                    <button type="button" class="detail-button" @click.stop="goToAdoptDetail(item.id)">
-                      查看详情
-                    </button>
                   </div>
                 </div>
               </div>
@@ -823,9 +820,7 @@ watch(
 
 .product-list-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(230, 239, 222, 0.72), transparent 22%),
-    linear-gradient(180deg, #f8faf7 0%, #f3f5ef 100%);
+  background: #ffffff;
   color: #17212b;
 }
 
@@ -984,13 +979,11 @@ watch(
 
 .filter-panel {
   margin-top: 28px;
-  padding: 28px 32px 30px;
+  padding: 24px 28px 26px;
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(233, 237, 228, 0.92);
-  box-shadow:
-    0 20px 50px rgba(23, 33, 43, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  background: #ffffff;
+  border: 1px solid #edf1f4;
+  box-shadow: 0 14px 32px rgba(23, 33, 43, 0.05);
 }
 
 .mode-tabs {
@@ -999,8 +992,8 @@ watch(
   gap: 8px;
   padding: 6px;
   border-radius: 999px;
-  background: #eef3ec;
-  border: 1px solid rgba(53, 82, 65, 0.08);
+  background: #f5f7f8;
+  border: 1px solid #edf1f4;
 }
 
 .mode-tab {
@@ -1020,9 +1013,9 @@ watch(
 }
 
 .mode-tab.active {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fbf8 100%);
+  background: #ffffff;
   color: #1f6d3d;
-  box-shadow: 0 10px 22px rgba(53, 82, 65, 0.12);
+  box-shadow: 0 8px 18px rgba(23, 33, 43, 0.08);
 }
 
 .filter-panel__header {
@@ -1109,8 +1102,8 @@ watch(
   margin-top: 20px;
   padding: 18px 20px;
   border-radius: 22px;
-  background: linear-gradient(180deg, #f7faf6 0%, #fdfefd 100%);
-  border: 1px solid rgba(83, 108, 93, 0.08);
+  background: #fafbfc;
+  border: 1px solid #edf1f4;
 }
 
 .sub-category-panel__label {
@@ -1157,8 +1150,8 @@ watch(
   height: 40px;
   padding: 0 16px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(83, 108, 93, 0.12);
+  background: #ffffff;
+  border: 1px solid #e9eef1;
   color: #355241;
   font-size: 14px;
   font-weight: 700;
@@ -1166,19 +1159,20 @@ watch(
 
 .result-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 240px));
+  justify-content: start;
+  gap: 18px 16px;
 }
 
 .result-card {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border-radius: 26px;
+  border-radius: 20px;
   overflow: hidden;
   background: #fff;
-  border: 1px solid rgba(233, 237, 228, 0.96);
-  box-shadow: 0 16px 36px rgba(23, 33, 43, 0.06);
+  border: 1px solid #edf1f4;
+  box-shadow: 0 10px 24px rgba(23, 33, 43, 0.05);
   transition:
     transform 0.22s ease,
     box-shadow 0.22s ease,
@@ -1187,20 +1181,20 @@ watch(
 }
 
 .result-card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(47, 139, 73, 0.16);
-  box-shadow: 0 20px 44px rgba(23, 33, 43, 0.09);
+  transform: translateY(-3px);
+  border-color: rgba(47, 139, 73, 0.14);
+  box-shadow: 0 14px 30px rgba(23, 33, 43, 0.08);
 }
 
 .result-card__image-wrap {
   position: relative;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 1 / 0.9;
   overflow: hidden;
-  background: linear-gradient(180deg, #edf3ea 0%, #f7faf5 100%);
+  background: #f6f7f8;
 }
 
 .result-card__image-wrap--adopt {
-  background: linear-gradient(180deg, #fff4e4 0%, #fffaf3 100%);
+  background: #f8f4ef;
 }
 
 .result-card__image {
@@ -1218,9 +1212,9 @@ watch(
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px 18px 20px;
-  min-height: 198px;
+  gap: 10px;
+  padding: 14px 14px 16px;
+  min-height: 158px;
 }
 
 .result-card__meta,
@@ -1243,11 +1237,11 @@ watch(
 
 .result-card__title {
   margin: 0;
-  font-size: 18px;
-  line-height: 1.5;
+  font-size: 16px;
+  line-height: 1.45;
   font-weight: 700;
   color: #17212b;
-  min-height: 54px;
+  min-height: 46px;
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -1257,10 +1251,10 @@ watch(
 
 .result-card__desc {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.6;
   color: #6b7a71;
-  min-height: 48px;
+  min-height: 42px;
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -1293,7 +1287,7 @@ watch(
 }
 
 .amount {
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.6px;
@@ -1325,13 +1319,13 @@ watch(
 
 .detail-button {
   flex-shrink: 0;
-  height: 38px;
-  padding: 0 18px;
+  height: 34px;
+  padding: 0 14px;
   border-radius: 999px;
   border: 1px solid rgba(47, 139, 73, 0.18);
   background: #fff;
   color: #1f6d3d;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   transition:
     border-color 0.2s ease,
@@ -1371,9 +1365,9 @@ watch(
 
 .empty-wrap {
   padding: 72px 0 84px;
-  background: rgba(255, 255, 255, 0.66);
+  background: #ffffff;
   border-radius: 26px;
-  border: 1px solid rgba(233, 237, 228, 0.88);
+  border: 1px solid #edf1f4;
 }
 
 .pagination-wrap {
@@ -1435,7 +1429,7 @@ watch(
   }
 
   .result-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
 

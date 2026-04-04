@@ -10,11 +10,33 @@
         <div class="hero-search">
           <div class="hero-search-box">
             <SearchOutlined class="search-icon" />
+            <div ref="searchModeRef" class="search-mode">
+              <button type="button" class="search-mode-trigger" @click="toggleSearchModeMenu">
+                <span>{{ currentSearchModeLabel }}</span>
+                <DownOutlined class="search-mode-arrow" :class="{ open: isSearchModeMenuOpen }" />
+              </button>
+              <transition name="search-mode-fade">
+                <div v-if="isSearchModeMenuOpen" class="search-mode-menu">
+                  <button
+                    v-for="option in SEARCH_MODE_OPTIONS"
+                    :key="option.value"
+                    type="button"
+                    class="search-mode-option"
+                    :class="{ active: searchMode === option.value }"
+                    @click="handleSearchModeSelect(option.value)"
+                  >
+                    <span>{{ option.label }}</span>
+                    <CheckOutlined v-if="searchMode === option.value" class="search-mode-check" />
+                  </button>
+                </div>
+              </transition>
+            </div>
+            <span class="search-divider"></span>
             <input
               v-model="searchKeyword"
               type="text"
               class="search-input"
-              placeholder="搜索农产品 / 认养项目"
+              :placeholder="searchPlaceholder"
               @keyup.enter="handleGlobalSearch"
             >
           </div>
@@ -112,9 +134,15 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { RightOutlined, SearchOutlined, ShoppingOutlined } from '@ant-design/icons-vue'
+import {
+  CheckOutlined,
+  DownOutlined,
+  RightOutlined,
+  SearchOutlined,
+  ShoppingOutlined
+} from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { listSpuByPage } from '@/api/spu'
 import AdoptFeaturedSection from '@/components/adopt/AdoptFeaturedSection.vue'
@@ -122,8 +150,21 @@ import HomeBanner from '@/components/home/HomeBanner.vue'
 import HomeCategory from '@/components/home/HomeCategory.vue'
 import HomeUserCard from '@/components/home/HomeUserCard.vue'
 
+const SEARCH_MODE = Object.freeze({
+  PRODUCT: 'product',
+  ADOPT: 'adopt'
+})
+
+const SEARCH_MODE_OPTIONS = [
+  { value: SEARCH_MODE.PRODUCT, label: '农产品' },
+  { value: SEARCH_MODE.ADOPT, label: '认养项目' }
+]
+
 const router = useRouter()
 const searchKeyword = ref('')
+const searchMode = ref(SEARCH_MODE.PRODUCT)
+const isSearchModeMenuOpen = ref(false)
+const searchModeRef = ref(null)
 const productList = ref([])
 const productLoading = ref(false)
 
@@ -157,6 +198,16 @@ const getFirstImage = (imageStr) => {
   return imageStr.trim().split(',')[0].trim() || imageStr
 }
 
+const searchPlaceholder = computed(() =>
+  searchMode.value === SEARCH_MODE.ADOPT
+    ? '搜索认养项目，例如：生态黑猪、散养土鸡'
+    : '搜索农产品，例如：有机草莓、生态鲜蛋'
+)
+
+const currentSearchModeLabel = computed(() => {
+  return SEARCH_MODE_OPTIONS.find((item) => item.value === searchMode.value)?.label || '农产品'
+})
+
 const fetchProducts = async () => {
   productLoading.value = true
   try {
@@ -187,9 +238,36 @@ const handleGlobalSearch = () => {
     return
   }
   router.push({
-    name: 'search',
-    query: { q: keyword }
+    name: 'productList',
+    query: {
+      mode: searchMode.value,
+      keyword
+    }
   })
+}
+
+const closeSearchModeMenu = () => {
+  isSearchModeMenuOpen.value = false
+}
+
+const toggleSearchModeMenu = () => {
+  isSearchModeMenuOpen.value = !isSearchModeMenuOpen.value
+}
+
+const handleSearchModeSelect = (mode) => {
+  searchMode.value = mode
+  closeSearchModeMenu()
+}
+
+const handleDocumentClick = (event) => {
+  if (!searchModeRef.value) {
+    return
+  }
+
+  const target = event.target
+  if (target instanceof Node && !searchModeRef.value.contains(target)) {
+    closeSearchModeMenu()
+  }
 }
 
 const handlePageChange = (page) => {
@@ -212,6 +290,11 @@ const goToProductDetail = (productId) => {
 
 onMounted(() => {
   fetchProducts()
+  document.addEventListener('mousedown', handleDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleDocumentClick)
 })
 </script>
 
@@ -273,7 +356,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 18px;
+  padding: 0 12px 0 18px;
   border-radius: 999px;
   border: 2px solid #dbe5dd;
   background: #f8fbf7;
@@ -289,10 +372,128 @@ onMounted(() => {
 .search-icon {
   color: #8aa08f;
   font-size: 18px;
+  flex-shrink: 0;
+}
+
+.search-mode {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.search-mode-trigger {
+  min-width: 118px;
+  height: 36px;
+  padding: 0 12px 0 14px;
+  border: 1px solid #e3ebe5;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6faf7 100%);
+  color: #355241;
+  font-size: 14px;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 6px 16px rgba(31, 109, 61, 0.08);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.search-mode-trigger:hover {
+  border-color: #c8d8cd;
+  box-shadow: 0 10px 24px rgba(31, 109, 61, 0.12);
+}
+
+.search-mode-trigger:focus-visible {
+  box-shadow:
+    0 0 0 4px rgba(47, 139, 73, 0.12),
+    0 10px 24px rgba(31, 109, 61, 0.12);
+}
+
+.search-mode-arrow {
+  font-size: 12px;
+  color: #7e8f84;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.search-mode-arrow.open {
+  transform: rotate(180deg);
+  color: #2f8b49;
+}
+
+.search-mode-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 156px;
+  padding: 8px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e7eeea;
+  box-shadow: 0 22px 44px rgba(23, 33, 43, 0.12);
+  z-index: 20;
+}
+
+.search-mode-option {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #40544a;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.search-mode-option:hover {
+  background: #f4f8f5;
+  color: #1f6d3d;
+  transform: translateX(2px);
+}
+
+.search-mode-option.active {
+  background: linear-gradient(135deg, rgba(47, 139, 73, 0.12) 0%, rgba(47, 139, 73, 0.08) 100%);
+  color: #1f6d3d;
+}
+
+.search-mode-check {
+  font-size: 14px;
+}
+
+.search-mode-fade-enter-active,
+.search-mode-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.search-mode-fade-enter-from,
+.search-mode-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.search-divider {
+  width: 1px;
+  height: 24px;
+  background: #dbe5dd;
+  flex-shrink: 0;
 }
 
 .search-input {
-  width: 100%;
+  flex: 1;
+  width: auto;
   border: none;
   outline: none;
   background: transparent;
@@ -523,6 +724,10 @@ onMounted(() => {
   .brand-block {
     width: auto;
   }
+
+  .hero-search-box {
+    width: 100%;
+  }
 }
 
 @media (max-width: 640px) {
@@ -536,6 +741,16 @@ onMounted(() => {
 
   .hero-search {
     flex-direction: column;
+  }
+
+  .hero-search-box {
+    padding-right: 14px;
+  }
+
+  .search-mode-trigger {
+    min-width: 102px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .search-button,
