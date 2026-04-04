@@ -42,7 +42,10 @@
           </h2>
           <p class="section-subtitle">原产地直供，支持从认养到采购的一体化选购</p>
         </div>
-        <button class="view-all-button" @click="router.push('/product/list')">
+        <button
+          class="view-all-button"
+          @click="router.push({ name: 'productList', query: { mode: 'product' } })"
+        >
           查看全部
           <RightOutlined />
         </button>

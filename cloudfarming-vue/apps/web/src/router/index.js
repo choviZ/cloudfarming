@@ -20,8 +20,13 @@ const router = createRouter({
         },
         {
           path: 'adopt/list',
-          name: 'adoptList',
-          component: () => import('../views/adopt/AdoptList.vue')
+          redirect: (to) => ({
+            name: 'productList',
+            query: {
+              ...to.query,
+              mode: 'adopt'
+            }
+          })
         },
         {
           path: 'product/list',

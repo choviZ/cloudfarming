@@ -80,7 +80,10 @@ const fetchFeaturedItems = async () => {
 };
 
 const goToAdoptList = () => {
-  router.push('/adopt/list');
+  router.push({
+    name: 'productList',
+    query: { mode: 'adopt' }
+  });
 };
 
 const goToDetail = (id) => {

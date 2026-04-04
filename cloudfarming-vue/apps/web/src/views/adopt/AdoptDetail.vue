@@ -6,7 +6,7 @@
         <nav class="breadcrumb">
           <span class="crumb-item hover-text" @click="router.push('/')">首页</span>
           <span class="separator">/</span>
-          <span class="crumb-item hover-text" @click="router.push('/adopt/list')">认养列表</span>
+          <span class="crumb-item hover-text" @click="goBackToAdoptList">认养列表</span>
           <span class="separator">/</span>
           <span class="crumb-item active">{{ detail.title }}</span>
         </nav>
@@ -106,7 +106,7 @@
 
       <div v-else-if="!loading" class="empty-state">
         <a-empty description="该认养项目不存在或已被删除" />
-        <a-button type="primary" @click="router.push('/adopt/list')">返回列表</a-button>
+        <a-button type="primary" @click="goBackToAdoptList">返回列表</a-button>
       </div>
     </a-spin>
   </div>
@@ -177,6 +177,13 @@ const handleChat = () => {
   message.info('正在连接客服系统...（功能待开发）');
 };
 
+const goBackToAdoptList = () => {
+  router.push({
+    name: 'productList',
+    query: { mode: 'adopt' }
+  });
+};
+
 const getRouteId = () => {
   const id = route.params.id;
   return Array.isArray(id) ? id[0] : id;
@@ -189,7 +196,7 @@ onMounted(() => {
     fetchCategories();
   } else {
     message.error('参数错误');
-    router.push('/adopt/list');
+    goBackToAdoptList();
   }
 });
 </script>
