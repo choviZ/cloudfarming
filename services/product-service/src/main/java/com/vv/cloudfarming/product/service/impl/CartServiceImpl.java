@@ -36,14 +36,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-/**
- * 购物车服务实现
- */
 @Service
 @RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
 
     private static final Integer SHOP_STATUS_NORMAL = 1;
+    private static final Integer DEL_FLAG_DELETED = 1;
 
     private final CartItemMapper cartItemMapper;
     private final SkuService skuService;
@@ -54,25 +52,37 @@ public class CartServiceImpl implements CartService {
     public Boolean addToCart(CartItemAddReqDTO requestParam) {
         Long userId = StpUtil.getLoginIdAsLong();
         Long skuId = requestParam.getSkuId();
-        CartItemDO existed = getCartItem(userId, skuId);
-        int targetQuantity = requestParam.getQuantity() + (existed == null ? 0 : existed.getQuantity());
-        validateCartItemForWrite(skuId, targetQuantity);
+        Boolean selected = requestParam.getSelected() == null ? Boolean.TRUE : requestParam.getSelected();
 
-        if (existed == null) {
-            CartItemDO cartItem = new CartItemDO();
-            cartItem.setUserId(userId);
-            cartItem.setSkuId(skuId);
-            cartItem.setQuantity(targetQuantity);
-            cartItem.setSelected(requestParam.getSelected() == null ? Boolean.TRUE : requestParam.getSelected());
-            if (cartItemMapper.insert(cartItem) != 1) {
+        CartItemDO existed = getCartItem(userId, skuId);
+        if (existed != null) {
+            int targetQuantity = requestParam.getQuantity() + existed.getQuantity();
+            validateCartItemForWrite(skuId, targetQuantity);
+            existed.setQuantity(targetQuantity);
+            existed.setSelected(selected);
+            if (cartItemMapper.updateById(existed) != 1) {
                 throw new ServiceException("加入购物车失败");
             }
             return true;
         }
 
-        existed.setQuantity(targetQuantity);
-        existed.setSelected(requestParam.getSelected() == null ? Boolean.TRUE : requestParam.getSelected());
-        if (cartItemMapper.updateById(existed) != 1) {
+        CartItemDO deleted = getDeletedCartItem(userId, skuId);
+        if (deleted != null) {
+            validateCartItemForWrite(skuId, requestParam.getQuantity());
+            if (cartItemMapper.restoreDeletedById(deleted.getId(), requestParam.getQuantity(), selected) != 1) {
+                throw new ServiceException("加入购物车失败");
+            }
+            return true;
+        }
+
+        int targetQuantity = requestParam.getQuantity();
+        validateCartItemForWrite(skuId, targetQuantity);
+        CartItemDO cartItem = new CartItemDO();
+        cartItem.setUserId(userId);
+        cartItem.setSkuId(skuId);
+        cartItem.setQuantity(targetQuantity);
+        cartItem.setSelected(selected);
+        if (cartItemMapper.insert(cartItem) != 1) {
             throw new ServiceException("加入购物车失败");
         }
         return true;
@@ -98,8 +108,8 @@ public class CartServiceImpl implements CartService {
     public Boolean removeFromCart(Long skuId) {
         Long userId = StpUtil.getLoginIdAsLong();
         int deleted = cartItemMapper.delete(Wrappers.lambdaQuery(CartItemDO.class)
-                .eq(CartItemDO::getUserId, userId)
-                .eq(CartItemDO::getSkuId, skuId));
+            .eq(CartItemDO::getUserId, userId)
+            .eq(CartItemDO::getSkuId, skuId));
         return deleted > 0;
     }
 
@@ -110,8 +120,8 @@ public class CartServiceImpl implements CartService {
         }
         Long userId = StpUtil.getLoginIdAsLong();
         cartItemMapper.delete(Wrappers.lambdaQuery(CartItemDO.class)
-                .eq(CartItemDO::getUserId, userId)
-                .in(CartItemDO::getSkuId, skuIds));
+            .eq(CartItemDO::getUserId, userId)
+            .in(CartItemDO::getSkuId, skuIds));
         return true;
     }
 
@@ -119,7 +129,7 @@ public class CartServiceImpl implements CartService {
     public Boolean clearCart() {
         Long userId = StpUtil.getLoginIdAsLong();
         cartItemMapper.delete(Wrappers.lambdaQuery(CartItemDO.class)
-                .eq(CartItemDO::getUserId, userId));
+            .eq(CartItemDO::getUserId, userId));
         return true;
     }
 
@@ -134,13 +144,13 @@ public class CartServiceImpl implements CartService {
         CartRespDTO respDTO = new CartRespDTO();
         respDTO.setCartItems(itemRespList);
         respDTO.setTotalQuantity(itemRespList.stream()
-                .filter(item -> Boolean.TRUE.equals(item.getSelected()) && Boolean.TRUE.equals(item.getCanCheckout()))
-                .map(CartItemRespDTO::getQuantity)
-                .reduce(0, Integer::sum));
+            .filter(item -> Boolean.TRUE.equals(item.getSelected()) && Boolean.TRUE.equals(item.getCanCheckout()))
+            .map(CartItemRespDTO::getQuantity)
+            .reduce(0, Integer::sum));
         respDTO.setTotalAmount(itemRespList.stream()
-                .filter(item -> Boolean.TRUE.equals(item.getSelected()) && Boolean.TRUE.equals(item.getCanCheckout()))
-                .map(CartItemRespDTO::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+            .filter(item -> Boolean.TRUE.equals(item.getSelected()) && Boolean.TRUE.equals(item.getCanCheckout()))
+            .map(CartItemRespDTO::getTotalPrice)
+            .reduce(BigDecimal.ZERO, BigDecimal::add));
         respDTO.setHasInvalidItems(itemRespList.stream().anyMatch(item -> !Boolean.TRUE.equals(item.getCanCheckout())));
         return respDTO;
     }
@@ -169,14 +179,14 @@ public class CartServiceImpl implements CartService {
 
         if (!Boolean.TRUE.equals(selected)) {
             cartItemMapper.update(null, Wrappers.lambdaUpdate(CartItemDO.class)
-                    .eq(CartItemDO::getUserId, userId)
-                    .set(CartItemDO::getSelected, false));
+                .eq(CartItemDO::getUserId, userId)
+                .set(CartItemDO::getSelected, false));
             return true;
         }
 
         List<CartItemRespDTO> itemRespList = buildCartItemRespList(cartItems);
         Map<Long, Boolean> selectableMap = itemRespList.stream()
-                .collect(Collectors.toMap(CartItemRespDTO::getSkuId, CartItemRespDTO::getCanCheckout));
+            .collect(Collectors.toMap(CartItemRespDTO::getSkuId, CartItemRespDTO::getCanCheckout));
         for (CartItemDO cartItem : cartItems) {
             cartItem.setSelected(Boolean.TRUE.equals(selectableMap.get(cartItem.getSkuId())));
             if (cartItemMapper.updateById(cartItem) != 1) {
@@ -195,11 +205,11 @@ public class CartServiceImpl implements CartService {
 
         List<CartItemRespDTO> itemRespList = buildCartItemRespList(selectedItems);
         List<CartItemRespDTO> invalidItems = itemRespList.stream()
-                .filter(item -> !Boolean.TRUE.equals(item.getCanCheckout()))
-                .collect(Collectors.toList());
+            .filter(item -> !Boolean.TRUE.equals(item.getCanCheckout()))
+            .collect(Collectors.toList());
         List<CartItemRespDTO> validItems = itemRespList.stream()
-                .filter(item -> Boolean.TRUE.equals(item.getCanCheckout()))
-                .collect(Collectors.toList());
+            .filter(item -> Boolean.TRUE.equals(item.getCanCheckout()))
+            .collect(Collectors.toList());
 
         Map<Long, CartCheckoutGroupRespDTO> groupMap = new LinkedHashMap<>();
         for (CartItemRespDTO item : validItems) {
@@ -222,34 +232,42 @@ public class CartServiceImpl implements CartService {
         respDTO.setGroups(new ArrayList<>(groupMap.values()));
         respDTO.setInvalidItems(invalidItems);
         respDTO.setTotalQuantity(validItems.stream()
-                .map(CartItemRespDTO::getQuantity)
-                .reduce(0, Integer::sum));
+            .map(CartItemRespDTO::getQuantity)
+            .reduce(0, Integer::sum));
         respDTO.setTotalAmount(validItems.stream()
-                .map(CartItemRespDTO::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+            .map(CartItemRespDTO::getTotalPrice)
+            .reduce(BigDecimal.ZERO, BigDecimal::add));
         respDTO.setCanSubmit(CollUtil.isNotEmpty(validItems) && CollUtil.isEmpty(invalidItems));
         return respDTO;
     }
 
     private List<CartItemDO> listCartItems(Long userId, Boolean selected) {
         LambdaQueryWrapper<CartItemDO> queryWrapper = Wrappers.lambdaQuery(CartItemDO.class)
-                .eq(CartItemDO::getUserId, userId)
-                .eq(selected != null, CartItemDO::getSelected, selected)
-                .orderByDesc(CartItemDO::getUpdateTime)
-                .orderByDesc(CartItemDO::getId);
+            .eq(CartItemDO::getUserId, userId)
+            .eq(selected != null, CartItemDO::getSelected, selected)
+            .orderByDesc(CartItemDO::getUpdateTime)
+            .orderByDesc(CartItemDO::getId);
         return cartItemMapper.selectList(queryWrapper);
     }
 
     private CartItemDO getCartItem(Long userId, Long skuId) {
         return cartItemMapper.selectOne(Wrappers.lambdaQuery(CartItemDO.class)
-                .eq(CartItemDO::getUserId, userId)
-                .eq(CartItemDO::getSkuId, skuId)
-                .last("limit 1"));
+            .eq(CartItemDO::getUserId, userId)
+            .eq(CartItemDO::getSkuId, skuId)
+            .last("limit 1"));
+    }
+
+    private CartItemDO getDeletedCartItem(Long userId, Long skuId) {
+        CartItemDO cartItem = cartItemMapper.selectAnyByUserIdAndSkuId(userId, skuId);
+        if (cartItem == null || !Objects.equals(cartItem.getDelFlag(), DEL_FLAG_DELETED)) {
+            return null;
+        }
+        return cartItem;
     }
 
     private void validateCartItemForWrite(Long skuId, Integer quantity) {
         if (quantity == null || quantity <= 0) {
-            throw new ClientException("商品数量至少为1");
+            throw new ClientException("商品数量至少为 1");
         }
 
         SkuRespDTO sku = skuService.getSkuDetail(skuId);
@@ -268,7 +286,7 @@ public class CartServiceImpl implements CartService {
             throw new ClientException("商品暂不可购买");
         }
         if (!ShelfStatusEnum.ONLINE.getCode().equals(spu.getStatus())
-                || !ShelfStatusEnum.ONLINE.getCode().equals(sku.getStatus())) {
+            || !ShelfStatusEnum.ONLINE.getCode().equals(sku.getStatus())) {
             throw new ClientException("商品已下架");
         }
         if (!SHOP_STATUS_NORMAL.equals(shop.getStatus())) {
@@ -285,30 +303,30 @@ public class CartServiceImpl implements CartService {
         }
 
         List<Long> skuIds = cartItems.stream()
-                .map(CartItemDO::getSkuId)
-                .distinct()
-                .collect(Collectors.toList());
+            .map(CartItemDO::getSkuId)
+            .distinct()
+            .collect(Collectors.toList());
         Map<Long, SkuRespDTO> skuMap = skuService.listSkuDetailsByIds(skuIds).stream()
-                .collect(Collectors.toMap(SkuRespDTO::getId, item -> item));
+            .collect(Collectors.toMap(SkuRespDTO::getId, item -> item));
 
         List<Long> spuIds = skuMap.values().stream()
-                .map(SkuRespDTO::getSpuId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
+            .map(SkuRespDTO::getSpuId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
         Map<Long, SpuDO> spuMap = CollUtil.isEmpty(spuIds)
-                ? Collections.emptyMap()
-                : spuMapper.selectBatchIds(spuIds).stream()
+            ? Collections.emptyMap()
+            : spuMapper.selectBatchIds(spuIds).stream()
                 .collect(Collectors.toMap(SpuDO::getId, item -> item));
 
         List<Long> shopIds = spuMap.values().stream()
-                .map(SpuDO::getShopId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
+            .map(SpuDO::getShopId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
         Map<Long, Shop> shopMap = CollUtil.isEmpty(shopIds)
-                ? Collections.emptyMap()
-                : shopMapper.selectBatchIds(shopIds).stream()
+            ? Collections.emptyMap()
+            : shopMapper.selectBatchIds(shopIds).stream()
                 .collect(Collectors.toMap(Shop::getId, item -> item));
 
         List<CartItemRespDTO> result = new ArrayList<>(cartItems.size());
@@ -373,7 +391,7 @@ public class CartServiceImpl implements CartService {
             return AuditStatusEnum.PENDING.getCode().equals(spu.getAuditStatus()) ? "商品审核中" : "商品审核未通过";
         }
         if (!ShelfStatusEnum.ONLINE.getCode().equals(spu.getStatus())
-                || !ShelfStatusEnum.ONLINE.getCode().equals(sku.getStatus())) {
+            || !ShelfStatusEnum.ONLINE.getCode().equals(sku.getStatus())) {
             return "商品已下架";
         }
         if (sku.getStock() == null || sku.getStock() < cartItem.getQuantity()) {

@@ -61,11 +61,12 @@ public class SkuOrderCreateStrategy implements OrderCreateStrategy {
         ArrayList<OrderDetailSkuDO> orderDetails = new ArrayList<>();
         for (ProductItemDTO item : items) {
             SkuRespDTO skuRespDTO = requireSku(item, ctx);
+            ProductRespDTO productRespDTO = spuRemoteService.getSpuById(skuRespDTO.getSpuId()).getData();
             OrderDetailSkuDO orderDetailSkuDO = OrderDetailSkuDO.builder()
                 .orderNo(order.getOrderNo())
                 .skuId(item.getBizId())
                 .spuId(skuRespDTO.getSpuId())
-                .skuName("默认商品名称")
+                .skuName(productRespDTO.getProductSpu().getTitle())
                 .skuImage(skuRespDTO.getSkuImage())
                 .skuSpecs(JSONUtil.toJsonStr(skuRespDTO.getSaleAttribute()))
                 .price(skuRespDTO.getPrice())
