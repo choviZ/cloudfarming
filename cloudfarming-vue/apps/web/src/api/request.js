@@ -39,4 +39,18 @@ request.interceptors.response.use(
     }
 )
 
+export const buildGatewayUrl = (path, params = {}) => {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    const prefix = import.meta.env.DEV ? (request.defaults.baseURL || '') : ''
+    const url = new URL(`${prefix}${normalizedPath}`, window.location.origin)
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            url.searchParams.set(key, value)
+        }
+    })
+
+    return url.toString()
+}
+
 export default request

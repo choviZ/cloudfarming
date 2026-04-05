@@ -22,6 +22,7 @@
 
         <div class="payment-methods">
           <h3 class="section-title">选择支付方式</h3>
+          <p class="section-hint">支付将在当前页面跳转到支付宝沙箱，完成后自动回到支付结果页。</p>
 
           <a-radio-group v-model:value="paymentMethod" class="method-group">
             <div class="method-item" :class="{ active: paymentMethod === 'alipay' }" @click="paymentMethod = 'alipay'">
@@ -50,6 +51,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
+import { buildGatewayUrl } from '@/api/request';
 
 const route = useRoute();
 const router = useRouter();
@@ -59,6 +61,12 @@ const amount = ref('0.00');
 const paymentMethod = ref('alipay');
 const paying = ref(false);
 
+const buildPayUrl = () => {
+  return buildGatewayUrl('/api/alipay/pay', {
+    payOrderNo: payOrderNo.value
+  });
+};
+
 const handlePay = async () => {
   if (!payOrderNo.value) {
     message.error('订单信息无效');
@@ -67,11 +75,16 @@ const handlePay = async () => {
 
   paying.value = true;
   try {
-    window.open('http://localhost:8000/api/alipay/pay?payOrderNo=' + payOrderNo.value);
+    message.loading({
+      content: '正在前往支付宝沙箱...',
+      key: 'pay-redirect',
+      duration: 0
+    });
+    window.location.assign(buildPayUrl());
   } catch (error) {
-    message.error('支付请求失败'+error.message);
-  } finally {
+    message.destroy('pay-redirect');
     paying.value = false;
+    message.error('支付请求失败'+error.message);
   }
 };
 
@@ -152,8 +165,15 @@ onMounted(() => {
 .section-title {
   font-size: 18px;
   font-weight: 500;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   color: #333;
+}
+
+.section-hint {
+  margin: 0 0 18px;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .method-group {

@@ -1,227 +1,406 @@
 <template>
-    <div class="address-selector">
-        <!-- Loading State -->
-        <div v-if="loading" class="loading-wrapper">
-            <a-spin />
-        </div>
-
-        <!-- Selected Address View (Prototype Style) -->
-        <div v-else-if="selectedAddress" class="address-summary-card">
-            <div class="summary-content">
-                <div class="summary-header">
-                    <h2 class="section-title">
-                        <environment-filled class="title-icon" /> 收货地址
-                    </h2>
-                    <span class="switch-btn" @click.stop="goToManage">管理地址</span>
-                </div>
-
-                <div class="info-block">
-                    <div class="user-row">
-                        <span class="user-name">{{ selectedAddress.receiverName }}</span>
-                        <span class="user-phone">{{ formatPhone(selectedAddress.receiverPhone) }}</span>
-                        <span v-if="selectedAddress.isDefault === 1" class="default-badge">默认</span>
-                    </div>
-                    <p class="address-detail">
-                        {{ selectedAddress.provinceName }} {{ selectedAddress.cityName }} {{ selectedAddress.districtName }}
-                        <br>
-                        {{ selectedAddress.detailAddress }}
-                    </p>
-                </div>
-            </div>
-            <!-- Airmail Border -->
-            <div class="airmail-border"></div>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else class="empty-state">
-            <a-empty description="暂无收货地址" />
-            <a-button type="primary" @click="goToManage">去添加地址</a-button>
-        </div>
+  <div class="address-selector">
+    <div v-if="loading" class="loading-wrapper">
+      <a-spin />
     </div>
+
+    <template v-else-if="addressList.length">
+      <div class="address-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <EnvironmentFilled class="title-icon" />
+            <div>
+              <h2>收货地址</h2>
+              <p>请选择本次订单使用的收货地址</p>
+            </div>
+          </div>
+
+          <div class="panel-actions">
+            <button type="button" class="action-link" @click="goToCreate">
+              <PlusOutlined />
+              使用新地址
+            </button>
+            <button type="button" class="action-link" @click="goToManage">管理地址</button>
+          </div>
+        </div>
+
+        <div class="address-grid">
+          <button
+            v-for="address in addressList"
+            :key="address.id"
+            type="button"
+            class="address-card"
+            :class="{ active: isSelected(address.id) }"
+            :aria-pressed="isSelected(address.id)"
+            :aria-label="`选择收货地址：${address.receiverName}，${formatPhone(address.receiverPhone)}`"
+            @click="handleSelect(address)"
+          >
+            <div class="card-top">
+              <div class="card-badges">
+                <span v-if="address.isDefault === 1" class="badge badge-default">默认</span>
+                <span v-if="isSelected(address.id)" class="badge badge-selected">当前使用</span>
+              </div>
+              <CheckCircleFilled v-if="isSelected(address.id)" class="selected-mark" />
+            </div>
+
+            <p class="card-region" :title="buildRegion(address)">
+              {{ buildRegion(address) }}
+            </p>
+            <p class="card-detail" :title="address.detailAddress">
+              {{ address.detailAddress }}
+            </p>
+
+            <div class="card-contact">
+              <strong>{{ address.receiverName }}</strong>
+              <span>{{ formatPhone(address.receiverPhone) }}</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <div v-else class="empty-state">
+      <a-empty description="暂无收货地址" />
+      <a-button type="primary" @click="goToCreate">去新增地址</a-button>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { EnvironmentFilled } from '@ant-design/icons-vue';
-import { getCurrentUserReceiveAddresses } from '@/api/address';
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { CheckCircleFilled, EnvironmentFilled, PlusOutlined } from '@ant-design/icons-vue'
+import { getCurrentUserReceiveAddresses } from '@/api/address'
 
-// 定义 Props 和 Emits
 const props = defineProps({
-    modelValue: String // 当前选中的地址 ID
-});
+  modelValue: [String, Number]
+})
 
-const emit = defineEmits(['update:modelValue', 'change']);
+const emit = defineEmits(['update:modelValue', 'change'])
 
-const router = useRouter();
-const loading = ref(false);
-const addressList = ref([]);
+const router = useRouter()
+const loading = ref(false)
+const addressList = ref([])
 
-const selectedAddress = computed(() => {
-    return addressList.value.find(addr => addr.id === props.modelValue);
-});
+const normalizeId = (value) => String(value ?? '')
 
-// 获取地址列表
-const fetchAddresses = async () => {
-    loading.value = true;
-    try {
-        const res = await getCurrentUserReceiveAddresses();
-        if (res.code === '0' && res.data) {
-            addressList.value = res.data;
+const isSelected = (id) => normalizeId(id) === normalizeId(props.modelValue)
 
-            // 如果没有选中值且有默认地址，自动选中默认地址
-            if (!props.modelValue && addressList.value.length > 0) {
-                const defaultAddr = addressList.value.find(a => a.isDefault === 1);
-                if (defaultAddr) {
-                    emit('update:modelValue', defaultAddr.id);
-                    emit('change', defaultAddr);
-                } else {
-                    emit('update:modelValue', addressList.value[0].id);
-                    emit('change', addressList.value[0]);
-                }
-            }
-        }
-    } finally {
-        loading.value = false;
-    }
-};
-
-// 格式化手机号
 const formatPhone = (phone) => {
-    if (!phone) return '';
-    return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
-};
+  if (!phone) {
+    return ''
+  }
+  return String(phone).replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
+}
 
-// 跳转管理页面
+const buildRegion = (address) => {
+  return [
+    address.provinceName,
+    address.cityName,
+    address.districtName,
+    address.townName
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
+const applySelectedAddress = (address) => {
+  if (!address) {
+    return
+  }
+  emit('update:modelValue', address.id)
+  emit('change', address)
+}
+
+const ensureSelectedAddress = () => {
+  if (!addressList.value.length) {
+    emit('update:modelValue', '')
+    emit('change', null)
+    return
+  }
+
+  const matched = addressList.value.find((item) => isSelected(item.id))
+  if (matched) {
+    emit('change', matched)
+    return
+  }
+
+  const defaultAddress = addressList.value.find((item) => Number(item.isDefault) === 1)
+  applySelectedAddress(defaultAddress || addressList.value[0])
+}
+
+const fetchAddresses = async () => {
+  loading.value = true
+  try {
+    const res = await getCurrentUserReceiveAddresses()
+    if (res.code === '0' && res.data) {
+      addressList.value = res.data
+    } else {
+      addressList.value = []
+    }
+    ensureSelectedAddress()
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSelect = (address) => {
+  if (isSelected(address.id)) {
+    return
+  }
+  applySelectedAddress(address)
+}
+
 const goToManage = () => {
-    router.push('/user/info/address');
-};
+  router.push('/user/info/address')
+}
+
+const goToCreate = () => {
+  router.push('/user/info/address?mode=create')
+}
 
 onMounted(() => {
-    fetchAddresses();
-});
+  fetchAddresses()
+})
 </script>
 
 <style scoped>
 .address-selector {
-    width: 100%;
+  width: 100%;
 }
 
 .loading-wrapper {
-    text-align: center;
-    padding: 20px 0;
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
 }
 
-/* --- Summary Card Style (Prototype Match) --- */
-.address-summary-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    border: 1px solid #f3f4f6;
-    overflow: hidden;
-    position: relative;
-    transition: all 0.2s;
+.address-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.address-summary-card:hover {
-    border-color: #6ee7b7; /* brand-300 */
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
 }
 
-.summary-content {
-    padding: 24px;
-}
-
-.summary-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.section-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #111827; /* gray-900 */
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0;
+.panel-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .title-icon {
-    color: #10b981; /* brand-500 */
-    font-size: 20px;
+  margin-top: 4px;
+  color: #1f8f56;
+  font-size: 20px;
 }
 
-.switch-btn {
-    font-size: 14px;
-    color: #059669; /* brand-600 */
-    cursor: pointer;
+.panel-title h2 {
+  margin: 0;
+  color: #173524;
+  font-size: 18px;
+  font-weight: 800;
 }
 
-.switch-btn:hover {
-    text-decoration: underline;
+.panel-title p {
+  margin: 6px 0 0;
+  color: #74867b;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
-.info-block {
-    padding-left: 28px; /* Align with text start of title */
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
 }
 
-.user-row {
-    display: flex;
-    align-items: baseline;
-    gap: 16px;
-    margin-bottom: 8px;
+.action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #1f8f56;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.user-name {
-    font-size: 20px;
-    font-weight: 700;
-    color: #111827;
+.action-link:hover {
+  color: #157347;
 }
 
-.user-phone {
-    font-size: 14px;
-    font-weight: 500;
-    color: #6b7280;
+.action-link:focus-visible {
+  outline: 2px solid rgba(31, 143, 86, 0.22);
+  outline-offset: 4px;
+  border-radius: 8px;
 }
 
-.default-badge {
-    background-color: #ecfdf5; /* brand-50 */
-    color: #059669; /* brand-600 */
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    border: 1px solid #a7f3d0; /* brand-200 */
+.address-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
 }
 
-.address-detail {
-    font-size: 14px;
-    color: #4b5563; /* gray-600 */
-    line-height: 1.6;
-    margin: 0;
+.address-card {
+  position: relative;
+  min-height: 152px;
+  padding: 16px;
+  border: 1px solid #e7ece8;
+  border-radius: 16px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
-.airmail-border {
-    height: 4px;
-    width: 100%;
-    background: repeating-linear-gradient(
-        -45deg,
-        #ef4444 0,
-        #ef4444 12px,
-        transparent 12px,
-        transparent 25px,
-        #3b82f6 25px,
-        #3b82f6 37px,
-        transparent 37px,
-        transparent 50px
-    );
+.address-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(31, 143, 86, 0.22);
+  box-shadow: 0 14px 28px rgba(18, 42, 30, 0.06);
+}
+
+.address-card.active {
+  border-color: #1f8f56;
+  box-shadow:
+    0 0 0 2px rgba(31, 143, 86, 0.08),
+    0 14px 28px rgba(18, 42, 30, 0.08);
+}
+
+.address-card:focus-visible {
+  outline: none;
+  border-color: #1f8f56;
+  box-shadow:
+    0 0 0 3px rgba(31, 143, 86, 0.16),
+    0 14px 28px rgba(18, 42, 30, 0.08);
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge-default {
+  background: #fff4ea;
+  color: #d4661f;
+}
+
+.badge-selected {
+  background: #eef8f2;
+  color: #1f8f56;
+}
+
+.selected-mark {
+  color: #1f8f56;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.card-region,
+.card-detail {
+  margin: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+.card-region {
+  min-height: 42px;
+  color: #173524;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  -webkit-line-clamp: 2;
+}
+
+.card-detail {
+  margin-top: 8px;
+  min-height: 40px;
+  color: #6f8276;
+  font-size: 13px;
+  line-height: 1.55;
+  -webkit-line-clamp: 2;
+}
+
+.card-contact {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  color: #405147;
+  font-size: 13px;
+}
+
+.card-contact strong {
+  color: #173524;
+  font-size: 14px;
 }
 
 .empty-state {
-    display: flex;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 0;
+}
+
+@media (max-width: 900px) {
+  .panel-header {
     flex-direction: column;
-    align-items: center;
-    padding: 20px 0;
+  }
+
+  .panel-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  .address-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .address-card {
+    min-height: 0;
+  }
 }
 </style>

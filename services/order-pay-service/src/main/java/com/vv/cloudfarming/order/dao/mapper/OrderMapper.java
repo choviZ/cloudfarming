@@ -17,5 +17,5 @@ public interface OrderMapper extends BaseMapper<OrderDO> {
                              @Param("orderNos") List<String> orderNos);
 
     FarmerOrderStatisticsAggDTO selectFarmerOrderStatistics(@Param("shopId") Long shopId,
-                                                            @Param("orderStatuses") List<Integer> orderStatuses);
+                                                            @Param("excludedStatuses") List<Integer> excludedStatuses);
 }

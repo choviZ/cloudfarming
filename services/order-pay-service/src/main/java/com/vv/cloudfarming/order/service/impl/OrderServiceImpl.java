@@ -82,14 +82,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private static final String SECKILL_CLAIM_RECORD = "cloudfarming:seckill:record:";
     private static final String STOCK_DECREMENT_AND_SAVE_USER_RECEIVE_LUA_PATH = "lua/stock_decrement_and_save_user_receive.lua";
     private static final String STOCK_ROLLBACK_AND_REDUCE_USER_RECEIVE_LUA_PATH = "lua/stock_rollback_and_reduce_user_receive.lua";
-    private static final List<Integer> FARMER_STAT_ORDER_STATUSES = List.of(
-        OrderStatusEnum.PENDING_SHIPMENT.getCode(),
-        OrderStatusEnum.SHIPPED.getCode(),
-        OrderStatusEnum.COMPLETED.getCode(),
-        OrderStatusEnum.AFTER_SALE.getCode(),
-        OrderStatusEnum.BREEDING.getCode()
+    private static final List<Integer> FARMER_STAT_EXCLUDED_ORDER_STATUSES = List.of(
+        OrderStatusEnum.PENDING_PAYMENT.getCode(),
+        OrderStatusEnum.CANCEL.getCode()
     );
-
     private final ShopRemoteService shopRemoteService;
     private final OrderProductSummaryQueryService orderProductSummaryQueryService;
     private final RedisIdWorker redisIdWorker;
@@ -386,7 +382,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     @Override
     public FarmerOrderStatisticsRespDTO getFarmerOrderStatistics() {
         ShopRespDTO shop = getCurrentFarmerShop();
-        FarmerOrderStatisticsAggDTO statistics = baseMapper.selectFarmerOrderStatistics(shop.getId(), FARMER_STAT_ORDER_STATUSES);
+        FarmerOrderStatisticsAggDTO statistics = baseMapper.selectFarmerOrderStatistics(
+            shop.getId(),
+            FARMER_STAT_EXCLUDED_ORDER_STATUSES
+        );
         BigDecimal salesAmount = statistics == null || statistics.getSalesAmount() == null
             ? BigDecimal.ZERO
             : statistics.getSalesAmount();

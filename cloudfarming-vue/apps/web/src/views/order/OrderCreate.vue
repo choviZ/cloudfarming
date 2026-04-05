@@ -584,7 +584,7 @@ onMounted(() => {
   width: 100%;
   min-height: 100vh;
   padding: 24px 16px 40px;
-  background: linear-gradient(180deg, #f6f8f6 0%, #f2f4f6 100%);
+  background: transparent;
   display: flex;
   justify-content: center;
 }
@@ -623,7 +623,7 @@ onMounted(() => {
 
 .section-card,
 .checkout-card {
-  background: rgba(255, 255, 255, 0.94);
+  background: #ffffff;
   border: 1px solid rgba(24, 55, 40, 0.08);
   border-radius: 20px;
   box-shadow: 0 16px 36px rgba(18, 42, 30, 0.08);

@@ -64,6 +64,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { InfoCircleOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { 
@@ -77,6 +78,8 @@ const loading = ref(false);
 const list = ref([]);
 const modalVisible = ref(false);
 const currentEdit = ref(null);
+const route = useRoute();
+const router = useRouter();
 
 const columns = [
   {
@@ -168,6 +171,10 @@ const handleSetDefault = async (record) => {
 
 onMounted(() => {
   fetchList();
+  if (route.query.mode === 'create') {
+    handleAdd();
+    router.replace({ path: route.path, query: {} });
+  }
 });
 </script>
 

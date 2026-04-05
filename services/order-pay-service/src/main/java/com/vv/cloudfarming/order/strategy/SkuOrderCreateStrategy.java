@@ -67,7 +67,7 @@ public class SkuOrderCreateStrategy implements OrderCreateStrategy {
                 .skuId(item.getBizId())
                 .spuId(skuRespDTO.getSpuId())
                 .skuName(productRespDTO.getProductSpu().getTitle())
-                .skuImage(skuRespDTO.getSkuImage())
+                .skuImage(productRespDTO.getProductSpu().getImages())
                 .skuSpecs(JSONUtil.toJsonStr(skuRespDTO.getSaleAttribute()))
                 .price(skuRespDTO.getPrice())
                 .quantity(item.getQuantity())

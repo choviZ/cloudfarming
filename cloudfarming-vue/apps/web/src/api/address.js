@@ -18,7 +18,7 @@ export function addReceiveAddress(data) {
  * @returns {Promise<Object>} Result<boolean>
  */
 export function updateReceiveAddress(data) {
-    return request.put(
+    return request.post(
         '/api/receive-address/update',
         data
     )
@@ -42,9 +42,9 @@ export function setDefaultReceiveAddress(data) {
  * @returns {Promise<Object>} Result<boolean>
  */
 export function deleteReceiveAddress(id) {
-    return request.post(
-        `/api/receive-address/delete/${id}`
-    )
+    return request.post('/api/receive-address/delete', null, {
+        params: { id }
+    })
 }
 
 /**
