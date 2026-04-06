@@ -188,6 +188,11 @@ const router = createRouter({
           component: () => import('../views/farmer/shop/ShopManage.vue')
         },
         {
+          path: 'orders',
+          name: 'farmerOrders',
+          component: () => import('../views/farmer/order/OrderManage.vue')
+        },
+        {
           path: 'adopt/create',
           name: 'createAdopt',
           component: () => import('../views/farmer/adopt/CreateAdopt.vue')
@@ -196,6 +201,11 @@ const router = createRouter({
           path: 'adopt/my',
           name: 'myAdopts',
           component: () => import('../views/farmer/adopt/MyAdopts.vue')
+        },
+        {
+          path: 'adopt/instances',
+          name: 'farmerAdoptInstances',
+          component: () => import('../views/farmer/adopt/InstanceManage.vue')
         },
         {
           path: 'statistics',

@@ -7,11 +7,13 @@ import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.config.AdoptAgreementProperties;
+import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderShipReqDTO;
 import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
-import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptAgreementRespDTO;
+import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
 import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
@@ -76,6 +78,29 @@ public class OrderController {
     @PostMapping("/api/order/v1/list/admin")
     public Result<IPage<OrderPageRespDTO>> listOrders(@RequestBody OrderPageReqDTO requestParam) {
         return Results.success(orderService.listOrders(requestParam));
+    }
+
+    @Operation(summary = "查询农户订单列表")
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @PostMapping("/api/order/v1/farmer/list")
+    public Result<IPage<OrderPageRespDTO>> listCurrentFarmerOrders(@RequestBody OrderPageReqDTO requestParam) {
+        return Results.success(orderService.listCurrentFarmerOrders(requestParam));
+    }
+
+    @Operation(summary = "农户订单发货")
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @PostMapping("/api/order/v1/farmer/ship")
+    public Result<Void> shipCurrentFarmerOrder(@RequestBody @Valid OrderShipReqDTO requestParam) {
+        orderService.shipCurrentFarmerOrder(requestParam);
+        return Results.success();
+    }
+
+    @Operation(summary = "农户分配认养牲畜")
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @PostMapping("/api/order/v1/farmer/adopt/assign")
+    public Result<Void> assignCurrentFarmerAdoptOrder(@RequestBody @Valid OrderAssignAdoptReqDTO requestParam) {
+        orderService.assignCurrentFarmerAdoptOrder(requestParam);
+        return Results.success();
     }
 
     @Operation(summary = "查询订单详情（委托养殖）")

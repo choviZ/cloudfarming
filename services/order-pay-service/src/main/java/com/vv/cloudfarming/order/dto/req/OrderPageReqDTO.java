@@ -18,7 +18,7 @@ public class OrderPageReqDTO extends Page<OrderDO> {
     /**
      * 订单号
      */
-    private String OrderNo;
+    private String orderNo;
 
     /**
      * 订单状态

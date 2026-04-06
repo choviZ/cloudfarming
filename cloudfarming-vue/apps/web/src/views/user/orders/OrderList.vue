@@ -197,11 +197,17 @@ const getOrderStatusClass = (order) => {
   if (status === ORDER_STATUS.PENDING_PAYMENT) {
     return 'status-pending'
   }
+  if (status === ORDER_STATUS.PENDING_ASSIGNMENT) {
+    return 'status-assignment'
+  }
   if (status === ORDER_STATUS.PENDING_SHIPMENT) {
     return 'status-shipping'
   }
   if (status === ORDER_STATUS.SHIPPED) {
     return 'status-shipped'
+  }
+  if (status === ORDER_STATUS.BREEDING) {
+    return 'status-breeding'
   }
   if (status === ORDER_STATUS.CANCEL) {
     return 'status-closed'
@@ -415,9 +421,19 @@ watch(
   color: #2563eb;
 }
 
+.status-assignment {
+  background: #fffbeb;
+  color: #d97706;
+}
+
 .status-shipped {
   background: #ecfeff;
   color: #0891b2;
+}
+
+.status-breeding {
+  background: #f2fce7;
+  color: #4d7c0f;
 }
 
 .status-closed {

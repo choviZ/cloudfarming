@@ -27,7 +27,8 @@ export const ORDER_STATUS = {
   COMPLETED: 3,
   CANCEL: 4,
   AFTER_SALE: 5,
-  BREEDING: 6
+  BREEDING: 6,
+  PENDING_ASSIGNMENT: 7
 }
 
 export const ORDER_STATUS_TEXT = {
@@ -37,7 +38,8 @@ export const ORDER_STATUS_TEXT = {
   3: '已完成',
   4: '已关闭',
   5: '售后中',
-  6: '养殖中'
+  6: '养殖中',
+  7: '待分配'
 }
 
 export const getOrderList = (data) => {
@@ -56,4 +58,22 @@ export const confirmPayOrder = (payOrderNo) => {
 
 export const getFarmerOrderStatistics = () => {
   return request.get('/api/order/v1/farmer/statistics')
+}
+
+export const getFarmerOrderList = (data) => {
+  return request.post('/api/order/v1/farmer/list', data)
+}
+
+export const shipFarmerOrder = (data) => {
+  return request.post('/api/order/v1/farmer/ship', data)
+}
+
+export const getAdoptOrderDetail = (orderNo) => {
+  return request.get('/api/order/v1/detail/adopt', {
+    params: { orderNo }
+  })
+}
+
+export const assignFarmerAdoptOrder = (data) => {
+  return request.post('/api/order/v1/farmer/adopt/assign', data)
 }

@@ -6,6 +6,7 @@ import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,7 +32,10 @@ public class OrderProductSummaryQueryService {
         if (distinctOrderNos.isEmpty()) {
             return Collections.emptyMap();
         }
-        return orderProductSummaryMapper.selectByOrderNos(distinctOrderNos).stream()
+        List<OrderProductSummaryRecordDTO> productSummaryRecords = new ArrayList<>();
+        productSummaryRecords.addAll(orderProductSummaryMapper.selectAdoptByOrderNos(distinctOrderNos));
+        productSummaryRecords.addAll(orderProductSummaryMapper.selectSkuByOrderNos(distinctOrderNos));
+        return productSummaryRecords.stream()
             .collect(Collectors.groupingBy(
                 OrderProductSummaryRecordDTO::getOrderNo,
                 LinkedHashMap::new,

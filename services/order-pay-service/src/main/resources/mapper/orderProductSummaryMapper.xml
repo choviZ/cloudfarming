@@ -2,36 +2,31 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.vv.cloudfarming.order.dao.mapper.OrderProductSummaryMapper">
 
-    <select id="selectByOrderNos" resultType="com.vv.cloudfarming.order.dto.common.OrderProductSummaryRecordDTO">
+    <select id="selectAdoptByOrderNos" resultType="com.vv.cloudfarming.order.dto.common.OrderProductSummaryRecordDTO">
         SELECT order_no AS orderNo,
-               product_name AS productName,
-               cover_image AS coverImage,
+               item_name AS productName,
+               item_image AS coverImage,
                price,
                quantity
-        FROM (
-            SELECT order_no,
-                   item_name AS product_name,
-                   item_image AS cover_image,
-                   price,
-                   quantity
-            FROM t_order_detail_adopt
-            WHERE del_flag = 0
-              AND order_no IN
-              <foreach collection="orderNos" item="orderNo" open="(" separator="," close=")">
-                  #{orderNo}
-              </foreach>
-            UNION ALL
-            SELECT order_no,
-                   sku_name AS product_name,
-                   sku_image AS cover_image,
-                   price,
-                   quantity
-            FROM t_order_detail_sku
-            WHERE del_flag = 0
-              AND order_no IN
-              <foreach collection="orderNos" item="orderNo" open="(" separator="," close=")">
-                  #{orderNo}
-              </foreach>
-        ) product_summary
+        FROM t_order_detail_adopt
+        WHERE del_flag = 0
+          AND order_no IN
+          <foreach collection="orderNos" item="orderNo" open="(" separator="," close=")">
+              #{orderNo}
+          </foreach>
+    </select>
+
+    <select id="selectSkuByOrderNos" resultType="com.vv.cloudfarming.order.dto.common.OrderProductSummaryRecordDTO">
+        SELECT order_no AS orderNo,
+               sku_name AS productName,
+               sku_image AS coverImage,
+               price,
+               quantity
+        FROM t_order_detail_sku
+        WHERE del_flag = 0
+          AND order_no IN
+          <foreach collection="orderNos" item="orderNo" open="(" separator="," close=")">
+              #{orderNo}
+          </foreach>
     </select>
 </mapper>

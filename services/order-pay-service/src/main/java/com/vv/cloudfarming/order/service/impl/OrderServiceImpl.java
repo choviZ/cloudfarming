@@ -7,6 +7,7 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Singleton;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -14,6 +15,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
+import com.vv.cloudfarming.order.constant.OrderTypeConstant;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailAdoptDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailSkuDO;
@@ -25,8 +27,11 @@ import com.vv.cloudfarming.order.dao.mapper.PayOrderMapper;
 import com.vv.cloudfarming.order.dto.common.FarmerOrderStatisticsAggDTO;
 import com.vv.cloudfarming.order.dto.common.ProductItemDTO;
 import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
+import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptItemReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderShipReqDTO;
 import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
 import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
@@ -40,6 +45,7 @@ import com.vv.cloudfarming.order.mq.DelayMessageProcessor;
 import com.vv.cloudfarming.order.mq.constant.MqConstant;
 import com.vv.cloudfarming.order.mq.modal.MultiDelayMessage;
 import com.vv.cloudfarming.order.mq.modal.SeckillOrderMessage;
+import com.vv.cloudfarming.order.remote.AdoptItemRemoteService;
 import com.vv.cloudfarming.order.remote.ShopRemoteService;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.order.service.basics.chain.OrderChainContext;
@@ -48,6 +54,8 @@ import com.vv.cloudfarming.order.service.query.OrderProductSummaryQueryService;
 import com.vv.cloudfarming.order.strategy.OrderCreateStrategy;
 import com.vv.cloudfarming.order.strategy.StrategyFactory;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
+import com.vv.cloudfarming.product.dto.req.AdoptInstanceAssignReqDTO;
+import com.vv.cloudfarming.product.dto.req.AdoptInstanceCreateReqDTO;
 import com.vv.cloudfarming.product.dao.entity.SeckillActivityDO;
 import com.vv.cloudfarming.product.dto.resp.ShopRespDTO;
 import com.vv.cloudfarming.user.dto.resp.ReceiveAddressRespDTO;
@@ -68,10 +76,14 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -97,6 +109,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private final PayOrderMapper payOrderMapper;
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate stringRedisTemplate;
+    private final AdoptItemRemoteService adoptItemRemoteService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -345,14 +358,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     @Override
     public IPage<OrderPageRespDTO> listOrders(OrderPageReqDTO requestParam) {
         Long id = requestParam.getId();
-        String payOrderNo = requestParam.getOrderNo();
+        String orderNo = requestParam.getOrderNo();
         Integer orderStatus = requestParam.getOrderStatus();
         Long userId = requestParam.getUserId();
         Long shopId = requestParam.getShopId();
 
         LambdaQueryWrapper<OrderDO> wrapper = Wrappers.lambdaQuery(OrderDO.class)
             .eq(ObjectUtil.isNotNull(id), OrderDO::getId, id)
-            .eq(ObjectUtil.isNotNull(payOrderNo), OrderDO::getPayOrderNo, payOrderNo)
+            .eq(StrUtil.isNotBlank(orderNo), OrderDO::getOrderNo, orderNo)
             .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
             .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId)
             .eq(ObjectUtil.isNotNull(shopId), OrderDO::getShopId, shopId)
@@ -360,7 +373,117 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             .orderByDesc(OrderDO::getId);
 
         IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
-        return orderPage.convert(each -> BeanUtil.toBean(each, OrderPageRespDTO.class));
+        return orderPage.convert(this::buildOrderPageResp);
+    }
+
+    @Override
+    public IPage<OrderPageRespDTO> listCurrentFarmerOrders(OrderPageReqDTO requestParam) {
+        ShopRespDTO shop = getCurrentFarmerShop();
+        requestParam.setShopId(shop.getId());
+        return listOrders(requestParam);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void shipCurrentFarmerOrder(OrderShipReqDTO requestParam) {
+        ShopRespDTO shop = getCurrentFarmerShop();
+        String orderNo = StrUtil.trim(requestParam.getOrderNo());
+        OrderDO order = baseMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class)
+            .eq(OrderDO::getOrderNo, orderNo)
+            .eq(OrderDO::getShopId, shop.getId()));
+        if (order == null) {
+            throw new ClientException("订单不存在或无权操作");
+        }
+        if (!Objects.equals(order.getOrderType(), OrderTypeConstant.GOODS)) {
+            throw new ClientException("当前订单无需发货");
+        }
+        if (!Objects.equals(order.getOrderStatus(), OrderStatusEnum.PENDING_SHIPMENT.getCode())) {
+            throw new ClientException("当前订单状态不支持发货");
+        }
+
+        int updated = baseMapper.update(null, Wrappers.lambdaUpdate(OrderDO.class)
+            .eq(OrderDO::getId, order.getId())
+            .eq(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_SHIPMENT.getCode())
+            .set(OrderDO::getLogisticsCompany, StrUtil.trim(requestParam.getLogisticsCompany()))
+            .set(OrderDO::getLogisticsNo, StrUtil.trim(requestParam.getLogisticsNo()))
+            .set(OrderDO::getDeliveryTime, LocalDateTime.now())
+            .set(OrderDO::getOrderStatus, OrderStatusEnum.SHIPPED.getCode()));
+        if (!SqlHelper.retBool(updated)) {
+            throw new ServiceException("订单发货失败，请刷新后重试");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignCurrentFarmerAdoptOrder(OrderAssignAdoptReqDTO requestParam) {
+        ShopRespDTO shop = getCurrentFarmerShop();
+        String orderNo = StrUtil.trim(requestParam.getOrderNo());
+        OrderDO order = baseMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class)
+            .eq(OrderDO::getOrderNo, orderNo)
+            .eq(OrderDO::getShopId, shop.getId()));
+        if (order == null) {
+            throw new ClientException("订单不存在或无权操作");
+        }
+        if (!Objects.equals(order.getOrderType(), OrderTypeConstant.ADOPT)) {
+            throw new ClientException("当前订单无需分配牲畜");
+        }
+        if (!Objects.equals(order.getOrderStatus(), OrderStatusEnum.PENDING_ASSIGNMENT.getCode())) {
+            throw new ClientException("当前订单状态不支持分配牲畜");
+        }
+
+        List<OrderDetailAdoptDO> orderDetails = orderDetailAdoptMapper.selectList(
+            Wrappers.lambdaQuery(OrderDetailAdoptDO.class)
+                .eq(OrderDetailAdoptDO::getOrderNo, orderNo)
+        );
+        if (CollUtil.isEmpty(orderDetails)) {
+            throw new ClientException("认养订单明细不存在");
+        }
+
+        Map<Long, Integer> requiredQuantityMap = orderDetails.stream()
+            .collect(Collectors.groupingBy(
+                OrderDetailAdoptDO::getAdoptItemId,
+                Collectors.summingInt(OrderDetailAdoptDO::getQuantity)
+            ));
+        Map<Long, String> itemNameMap = orderDetails.stream()
+            .collect(Collectors.toMap(
+                OrderDetailAdoptDO::getAdoptItemId,
+                OrderDetailAdoptDO::getItemName,
+                (left, right) -> left
+            ));
+        Map<Long, List<Long>> assignedEarTagMap = buildAssignedEarTagMap(requestParam.getItems());
+
+        validateAssignedEarTags(requiredQuantityMap, assignedEarTagMap, itemNameMap);
+
+        List<AdoptInstanceCreateReqDTO> instanceList = assignedEarTagMap.entrySet().stream()
+            .flatMap(entry -> entry.getValue().stream().map(earTagNo -> {
+                AdoptInstanceCreateReqDTO instance = new AdoptInstanceCreateReqDTO();
+                instance.setItemId(entry.getKey());
+                instance.setEarTagNo(earTagNo);
+                return instance;
+            }))
+            .toList();
+
+        AdoptInstanceAssignReqDTO assignReqDTO = new AdoptInstanceAssignReqDTO();
+        assignReqDTO.setFarmerId(shop.getFarmerId());
+        assignReqDTO.setOwnerUserId(order.getUserId());
+        assignReqDTO.setOwnerOrderId(order.getId());
+        assignReqDTO.setInstances(instanceList);
+
+        var assignResult = adoptItemRemoteService.assignAdoptInstances(assignReqDTO);
+        if (assignResult == null || !assignResult.isSuccess() || assignResult.getData() == null) {
+            throw new ServiceException("创建养殖实例失败");
+        }
+        if (!Objects.equals(assignResult.getData(), instanceList.size())) {
+            throw new ServiceException("养殖实例创建数量异常");
+        }
+
+        int updated = baseMapper.update(null, Wrappers.lambdaUpdate(OrderDO.class)
+            .eq(OrderDO::getId, order.getId())
+            .eq(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_ASSIGNMENT.getCode())
+            .set(OrderDO::getOrderStatus, OrderStatusEnum.BREEDING.getCode()));
+        if (!SqlHelper.retBool(updated)) {
+            throw new ServiceException("更新订单状态失败，请刷新后重试");
+        }
     }
 
     @Override
@@ -411,6 +534,86 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             throw new ServiceException("查询农户店铺信息失败");
         }
         return result.getData();
+    }
+
+    private Map<Long, List<Long>> buildAssignedEarTagMap(List<OrderAssignAdoptItemReqDTO> requestItems) {
+        Map<Long, List<Long>> assignedEarTagMap = new HashMap<>();
+        Set<Long> uniqueEarTags = new HashSet<>();
+        for (OrderAssignAdoptItemReqDTO requestItem : requestItems) {
+            Long adoptItemId = requestItem.getAdoptItemId();
+            if (adoptItemId == null || adoptItemId <= 0) {
+                throw new ClientException("认养项目不能为空");
+            }
+            List<String> rawEarTagNos = requestItem.getEarTagNos();
+            if (CollUtil.isEmpty(rawEarTagNos)) {
+                throw new ClientException("耳标号不能为空");
+            }
+            List<Long> normalizedEarTags = new ArrayList<>();
+            for (String rawEarTagNo : rawEarTagNos) {
+                String normalizedEarTagNo = StrUtil.trim(rawEarTagNo);
+                if (StrUtil.isBlank(normalizedEarTagNo)) {
+                    continue;
+                }
+                if (!normalizedEarTagNo.matches("\\d+")) {
+                    throw new ClientException("耳标号只能填写数字");
+                }
+                Long earTagNo;
+                try {
+                    earTagNo = Long.parseLong(normalizedEarTagNo);
+                } catch (NumberFormatException ex) {
+                    throw new ClientException("耳标号格式不正确");
+                }
+                if (earTagNo <= 0) {
+                    throw new ClientException("耳标号必须大于0");
+                }
+                if (!uniqueEarTags.add(earTagNo)) {
+                    throw new ClientException("耳标号不能重复");
+                }
+                normalizedEarTags.add(earTagNo);
+            }
+            if (CollUtil.isEmpty(normalizedEarTags)) {
+                throw new ClientException("耳标号不能为空");
+            }
+            assignedEarTagMap.computeIfAbsent(adoptItemId, unused -> new ArrayList<>())
+                .addAll(normalizedEarTags);
+        }
+        return assignedEarTagMap;
+    }
+
+    private void validateAssignedEarTags(
+        Map<Long, Integer> requiredQuantityMap,
+        Map<Long, List<Long>> assignedEarTagMap,
+        Map<Long, String> itemNameMap
+    ) {
+        if (!requiredQuantityMap.keySet().equals(assignedEarTagMap.keySet())) {
+            throw new ClientException("请为订单中的每个认养项目分配耳标号");
+        }
+        for (Map.Entry<Long, Integer> entry : requiredQuantityMap.entrySet()) {
+            Long adoptItemId = entry.getKey();
+            Integer requiredQuantity = entry.getValue();
+            int assignedQuantity = CollUtil.size(assignedEarTagMap.get(adoptItemId));
+            if (!Objects.equals(requiredQuantity, assignedQuantity)) {
+                String itemName = itemNameMap.getOrDefault(adoptItemId, "认养项目");
+                throw new ClientException(itemName + "需要分配" + requiredQuantity + "个耳标号");
+            }
+        }
+    }
+
+    private OrderPageRespDTO buildOrderPageResp(OrderDO order) {
+        OrderPageRespDTO response = BeanUtil.toBean(order, OrderPageRespDTO.class);
+        response.setReceiveAddress(buildReceiveAddress(order));
+        return response;
+    }
+
+    private String buildReceiveAddress(OrderDO order) {
+        return Stream.of(
+                order.getProvinceName(),
+                order.getCityName(),
+                order.getDistrictName(),
+                order.getDetailAddress()
+            )
+            .filter(StrUtil::isNotBlank)
+            .collect(Collectors.joining());
     }
 
     private SeckillActivityDO buildSeckillActivity(Map<String, String> map, DateTimeFormatter formatter) {

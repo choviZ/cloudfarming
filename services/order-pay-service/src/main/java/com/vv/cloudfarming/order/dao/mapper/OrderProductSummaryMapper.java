@@ -7,5 +7,7 @@ import java.util.List;
 
 public interface OrderProductSummaryMapper {
 
-    List<OrderProductSummaryRecordDTO> selectByOrderNos(@Param("orderNos") List<String> orderNos);
+    List<OrderProductSummaryRecordDTO> selectAdoptByOrderNos(@Param("orderNos") List<String> orderNos);
+
+    List<OrderProductSummaryRecordDTO> selectSkuByOrderNos(@Param("orderNos") List<String> orderNos);
 }

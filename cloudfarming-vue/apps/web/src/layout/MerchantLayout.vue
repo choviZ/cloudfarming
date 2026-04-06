@@ -32,7 +32,7 @@
           <shop-outlined />
           <span>店铺管理</span>
         </a-menu-item>
-        <a-menu-item key="3">
+        <a-menu-item key="3" @click="router.push('/farmer/orders')">
           <transaction-outlined />
           <span>订单管理</span>
         </a-menu-item>
@@ -48,6 +48,10 @@
           <a-menu-item key="4-2" @click="router.push('/farmer/adopt/my')">
             <ordered-list-outlined />
             <span>我的发布</span>
+          </a-menu-item>
+          <a-menu-item key="4-3" @click="router.push('/farmer/adopt/instances')">
+            <deployment-unit-outlined />
+            <span>养殖实例</span>
           </a-menu-item>
         </a-sub-menu>
         <a-menu-item key="5" @click="router.push('/farmer/statistics')">
@@ -90,6 +94,7 @@ import {
   AppstoreOutlined,
   BarChartOutlined,
   DashboardOutlined,
+  DeploymentUnitOutlined,
   OrderedListOutlined,
   PictureOutlined,
   PlusOutlined,
@@ -119,11 +124,17 @@ const selectedKeys = computed(() => {
   if (route.path === '/farmer/shop') {
     return ['2']
   }
+  if (route.path === '/farmer/orders') {
+    return ['3']
+  }
   if (route.path === '/farmer/adopt/create') {
     return ['4-1']
   }
   if (route.path === '/farmer/adopt/my') {
     return ['4-2']
+  }
+  if (route.path === '/farmer/adopt/instances') {
+    return ['4-3']
   }
   if (route.path === '/farmer/statistics') {
     return ['5']

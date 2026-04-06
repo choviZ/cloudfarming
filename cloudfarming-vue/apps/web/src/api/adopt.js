@@ -93,6 +93,30 @@ export function pageMyAdoptItems(data) {
 }
 
 /**
+ * 查询我的养殖实例（分页）
+ * @param {Object} data - AdoptInstancePageReq
+ * @returns {Promise<Object>} Result<IPage<AdoptInstanceResp>>
+ */
+export function pageMyAdoptInstances(data) {
+    return request.post(
+        '/api/adopt/instance/v1/my',
+        data
+    )
+}
+
+/**
+ * 批量查询认养项目详情
+ * @param {number[]} ids
+ * @returns {Promise<Object>} Result<AdoptItemResp[]>
+ */
+export function batchAdoptItemDetails(ids) {
+    return request.post(
+        '/api/adopt/item/v1/batch',
+        ids
+    )
+}
+
+/**
  * 创建认养订单
  * @param {Object} data - AdoptOrderCreateReq
  * @returns {Promise<Object>} Result<AdoptOrderResp>

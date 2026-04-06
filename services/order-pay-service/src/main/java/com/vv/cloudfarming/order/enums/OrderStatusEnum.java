@@ -15,7 +15,8 @@ public enum OrderStatusEnum {
     COMPLETED(3, "已完成"),
     CANCEL(4, "已关闭"),
     AFTER_SALE(5, "售后中"),
-    BREEDING(6,"养殖中");
+    BREEDING(6,"养殖中"),
+    PENDING_ASSIGNMENT(7, "待分配");
 
     private final int code;
     private final String desc;

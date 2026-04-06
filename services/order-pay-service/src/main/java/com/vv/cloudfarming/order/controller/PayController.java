@@ -263,16 +263,15 @@ public class PayController {
             throw new ServiceException("更新支付单状态失败");
         }
 
-        LambdaUpdateWrapper<OrderDO> orderWrapper = Wrappers.lambdaUpdate(OrderDO.class)
-                .eq(OrderDO::getUserId, userId)
-                .eq(OrderDO::getPayOrderNo, payNo)
-                .set(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_SHIPMENT.getCode());
-        int orderUpdated = orderMapper.update(null, orderWrapper);
-        if (!SqlHelper.retBool(orderUpdated)) {
-            throw new ServiceException("更新订单状态失败");
-        }
-
         for (OrderDO order : orders) {
+            int orderUpdated = orderMapper.update(null, Wrappers.lambdaUpdate(OrderDO.class)
+                    .eq(OrderDO::getId, order.getId())
+                    .eq(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_PAYMENT.getCode())
+                    .set(OrderDO::getOrderStatus, resolvePaidOrderStatus(order.getOrderType())));
+            if (!SqlHelper.retBool(orderUpdated)) {
+                throw new ServiceException("更新订单状态失败");
+            }
+
             if (OrderTypeConstant.ADOPT == order.getOrderType()) {
                 LambdaQueryWrapper<OrderDetailAdoptDO> adoptDetailWrapper = Wrappers.lambdaQuery(OrderDetailAdoptDO.class)
                         .eq(OrderDetailAdoptDO::getOrderNo, order.getOrderNo());
@@ -307,6 +306,16 @@ public class PayController {
         }
 
         log.info("支付成功处理完成，payOrderNo={}, tradeNo={}", payNo, tradeNo);
+    }
+
+    private Integer resolvePaidOrderStatus(Integer orderType) {
+        if (OrderTypeConstant.ADOPT == orderType) {
+            return OrderStatusEnum.PENDING_ASSIGNMENT.getCode();
+        }
+        if (OrderTypeConstant.GOODS == orderType) {
+            return OrderStatusEnum.PENDING_SHIPMENT.getCode();
+        }
+        throw new ServiceException("不支持的订单类型");
     }
 
     private ServiceException wrapAlipayException(String fallbackMessage, AlipayApiException e) {
