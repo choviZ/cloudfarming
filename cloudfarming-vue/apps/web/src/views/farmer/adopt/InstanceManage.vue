@@ -1,9 +1,9 @@
 <template>
-  <div class="adopt-instance-page">
+  <div class="instance-manage-page">
     <section class="page-header">
       <div>
         <h1 class="page-title">养殖实例</h1>
-        <p class="page-desc">查看当前农户已分配的养殖实例，列表按认养项目 ID 升序、项目内创建时间倒序展示。</p>
+        <p class="page-desc">集中查看已分配的认养实例，并从这里进入详情页维护生长日记。</p>
       </div>
       <a-button type="primary" :loading="loading" @click="fetchInstances">
         刷新列表
@@ -13,19 +13,19 @@
     <section class="toolbar-card">
       <div class="summary-grid">
         <div class="summary-item">
+          <span class="summary-label">当前筛选</span>
+          <strong class="summary-value">{{ activeStatusLabel }}</strong>
+          <p class="summary-hint">支持按实例状态、认养项目 ID、订单 ID 快速定位。</p>
+        </div>
+        <div class="summary-item">
           <span class="summary-label">实例总数</span>
           <strong class="summary-value">{{ pagination.total }}</strong>
-          <p class="summary-hint">当前筛选条件下的养殖实例总量</p>
+          <p class="summary-hint">当前条件下已分配的养殖实例数量。</p>
         </div>
         <div class="summary-item">
           <span class="summary-label">当前页项目数</span>
           <strong class="summary-value">{{ currentPageItemCount }}</strong>
-          <p class="summary-hint">当前页共涉及 {{ instanceRecords.length }} 条养殖实例</p>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">当前筛选</span>
-          <strong class="summary-value">{{ activeStatusLabel }}</strong>
-          <p class="summary-hint">支持按状态、认养项目 ID、关联订单 ID 快速定位</p>
+          <p class="summary-hint">本页共展示 {{ instanceRecords.length }} 条实例记录。</p>
         </div>
       </div>
 
@@ -74,7 +74,7 @@
       <div class="table-head">
         <div>
           <h2 class="table-title">实例列表</h2>
-          <p class="table-desc">耳标号用于标识唯一牲畜，后续养殖日志、履约记录都将围绕该实例展开。</p>
+          <p class="table-desc">耳标号是后续养殖日志、体重记录和履约追踪的唯一标识。</p>
         </div>
       </div>
 
@@ -83,7 +83,7 @@
         :data-source="instanceRecords"
         :loading="loading"
         :pagination="false"
-        :scroll="{ x: 1220 }"
+        :scroll="{ x: 1420 }"
         :locale="{ emptyText: '当前筛选条件下暂无养殖实例' }"
         row-key="id"
         class="instance-table"
@@ -96,14 +96,15 @@
                 :height="72"
                 :src="resolveCover(record)"
                 class="project-image"
-                fallback="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='16' fill='%23f3f6f4'/%3E%3Cpath d='M22 46c4-7 9-11 14-11s10 4 14 11' fill='none' stroke='%2390a69a' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='28' r='6' fill='%23c8d7ce'/%3E%3Ccircle cx='44' cy='28' r='6' fill='%23dbe5df'/%3E%3C/svg%3E"
                 :preview="false"
+                fallback="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='18' fill='%23f3f6f4'/%3E%3Cpath d='M20 46c5-7 10-11 16-11 5 0 10 4 16 11' fill='none' stroke='%238ca292' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='29' cy='28' r='6' fill='%23c8d7ce'/%3E%3Ccircle cx='43' cy='28' r='6' fill='%23dbe5df'/%3E%3C/svg%3E"
               />
               <div class="project-meta">
-                <a-button type="link" class="project-link" @click="handleViewAdopt(record.itemId)">
-                  {{ resolveTitle(record) }}
-                </a-button>
+                <button class="project-link" type="button" @click="handleViewDetail(record.id)">
+                  {{ record.itemTitle || '认养项目' }}
+                </button>
                 <p class="secondary-text">项目 ID：{{ record.itemId || '--' }}</p>
+                <p class="secondary-text">最新日记：{{ formatDate(record.latestLogTime, '暂无更新') }}</p>
               </div>
             </div>
           </template>
@@ -117,32 +118,39 @@
 
           <template v-else-if="column.key === 'status'">
             <a-tag :color="getStatusColor(record.status)">
-              {{ getStatusText(record.status) }}
+              {{ record.statusDesc || getStatusText(record.status) }}
             </a-tag>
           </template>
 
-          <template v-else-if="column.key === 'ownerOrderId'">
+          <template v-else-if="column.key === 'orderInfo'">
             <div class="order-cell">
-              <p class="primary-text">订单 ID：{{ record.ownerOrderId || '--' }}</p>
+              <p class="primary-text">订单号：{{ record.orderNo || '--' }}</p>
               <p class="secondary-text">实例 ID：{{ record.id || '--' }}</p>
             </div>
           </template>
 
-          <template v-else-if="column.key === 'instanceImage'">
-            <a-image
-              :width="64"
-              :height="64"
-              :src="record.image || resolveCover(record)"
-              class="project-image"
-              :preview="false"
-            />
-          </template>
-
-          <template v-else-if="column.key === 'timeInfo'">
+          <template v-else-if="column.key === 'createTime'">
             <div class="time-cell">
               <p class="primary-text">创建：{{ formatDate(record.createTime) }}</p>
               <p class="secondary-text">更新：{{ formatDate(record.updateTime) }}</p>
             </div>
+          </template>
+
+          <template v-else-if="column.key === 'action'">
+            <a-space size="small">
+              <a-button type="link" size="small" @click="handleViewDetail(record.id)">
+                查看详情
+              </a-button>
+              <a-button
+                v-if="canManageStatus(record)"
+                type="link"
+                size="small"
+                class="danger-link"
+                @click="openStatusActionModal(record)"
+              >
+                状态处理
+              </a-button>
+            </a-space>
           </template>
         </template>
       </a-table>
@@ -158,6 +166,69 @@
         />
       </div>
     </section>
+
+    <a-modal
+      v-model:open="statusActionVisible"
+      title="状态处理"
+      :confirm-loading="statusActionSubmitting"
+      :ok-text="statusActionForm.actionType === 'dead' ? '确认异常处理' : '确认完成履约'"
+      cancel-text="取消"
+      @ok="handleStatusActionSubmit"
+      @cancel="handleStatusActionCancel"
+    >
+      <div class="status-modal-record">
+        <p class="status-modal-title">{{ currentActionRecord?.itemTitle || '认养项目' }}</p>
+        <p class="status-modal-subtitle">
+          耳标号：{{ currentActionRecord?.earTagNo || '--' }}
+          <span class="status-modal-divider">|</span>
+          当前状态：{{ currentActionRecord?.statusDesc || getStatusText(currentActionRecord?.status) }}
+        </p>
+      </div>
+
+      <a-radio-group
+        v-model:value="statusActionForm.actionType"
+        button-style="solid"
+        class="status-action-group"
+      >
+        <a-radio-button value="fulfill" :disabled="!canFulfillRecord(currentActionRecord)">
+          完成履约
+        </a-radio-button>
+        <a-radio-button value="dead">
+          异常处理
+        </a-radio-button>
+      </a-radio-group>
+
+      <a-alert
+        class="status-action-alert"
+        :type="statusActionForm.actionType === 'dead' ? 'warning' : 'info'"
+        show-icon
+        :message="statusActionForm.actionType === 'dead' ? '异常处理会将实例标记为异常死亡' : '完成履约后，若同订单下全部实例都已履约，订单会自动进入待发货'"
+        :description="statusActionForm.actionType === 'dead' ? '请填写死亡时间和原因，便于后续追溯与用户侧展示。' : '该操作通常用于认养周期正常结束，提交后实例状态会改为已履约完成，并进入物流发货环节。'"
+      />
+
+      <a-form v-if="statusActionForm.actionType === 'dead'" layout="vertical" class="status-action-form">
+        <a-form-item label="异常类型">
+          <a-input value="牲畜死亡" disabled />
+        </a-form-item>
+        <a-form-item label="死亡时间" required>
+          <a-date-picker
+            v-model:value="statusActionForm.deathTime"
+            show-time
+            style="width: 100%"
+            placeholder="请选择死亡时间"
+          />
+        </a-form-item>
+        <a-form-item label="原因说明" required>
+          <a-textarea
+            v-model:value="statusActionForm.deathReason"
+            :rows="4"
+            :maxlength="120"
+            placeholder="请输入死亡原因或处理说明"
+            show-count
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -166,52 +237,48 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import dayjs from 'dayjs'
 import { message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
-import { batchAdoptItemDetails, pageMyAdoptInstances } from '@/api/adopt'
+import { markAdoptInstanceDead, pageMyAdoptInstances } from '@/api/adopt'
+import { fulfillFarmerAdoptInstance } from '@/api/order'
+import { ADOPT_INSTANCE_STATUS, ADOPT_INSTANCE_STATUS_OPTIONS, getAdoptInstanceStatusOption } from '@/constants/adopt'
 
 const router = useRouter()
 
-const STATUS_OPTIONS = [
-  { label: '可认养', value: 0 },
-  { label: '已认养', value: 1 },
-  { label: '已履约完成', value: 2 }
-]
+const STATUS_OPTIONS = ADOPT_INSTANCE_STATUS_OPTIONS
 
 const columns = [
   {
     title: '认养项目',
     key: 'projectInfo',
-    width: 340,
+    width: 360,
     fixed: 'left'
   },
   {
     title: '耳标号',
-    dataIndex: 'earTagNo',
     key: 'earTagNo',
     width: 180
   },
   {
     title: '实例状态',
-    dataIndex: 'status',
     key: 'status',
     width: 120,
     align: 'center'
   },
   {
     title: '关联信息',
-    dataIndex: 'ownerOrderId',
-    key: 'ownerOrderId',
+    key: 'orderInfo',
     width: 220
-  },
-  {
-    title: '实例图片',
-    key: 'instanceImage',
-    width: 120,
-    align: 'center'
   },
   {
     title: '时间信息',
-    key: 'timeInfo',
-    width: 220
+    key: 'createTime',
+    width: 240
+  },
+  {
+    title: '操作',
+    key: 'action',
+    width: 160,
+    align: 'center',
+    fixed: 'right'
   }
 ]
 
@@ -232,7 +299,14 @@ const searchForm = reactive({
   itemId: '',
   ownerOrderId: ''
 })
-const adoptItemMap = ref({})
+const statusActionVisible = ref(false)
+const statusActionSubmitting = ref(false)
+const currentActionRecord = ref(null)
+const statusActionForm = reactive({
+  actionType: 'fulfill',
+  deathTime: null,
+  deathReason: ''
+})
 
 const instanceRecords = computed(() => (Array.isArray(instancePage.records) ? instancePage.records : []))
 
@@ -245,7 +319,7 @@ const activeStatusLabel = computed(() => {
   return matchedOption?.label || '全部状态'
 })
 
-const isSuccessCode = (code) => String(code) === '0'
+const isSuccessCode = (code) => ['0', '200'].includes(String(code))
 
 const normalizePositiveInteger = (value) => {
   const normalizedValue = String(value || '').trim()
@@ -258,7 +332,7 @@ const normalizePositiveInteger = (value) => {
   if (/^0+$/.test(normalizedValue)) {
     throw new Error('筛选项请输入有效的正整数')
   }
-  return normalizedValue.replace(/^0+(?=\d)/, '')
+  return Number(normalizedValue.replace(/^0+(?=\d)/, ''))
 }
 
 const applyPageData = (data = {}) => {
@@ -269,28 +343,6 @@ const applyPageData = (data = {}) => {
 
   pagination.current = instancePage.current
   pagination.total = instancePage.total
-}
-
-const fetchAdoptItems = async (records) => {
-  const itemIds = [...new Set(records.map((record) => record.itemId).filter(Boolean))]
-  if (!itemIds.length) {
-    adoptItemMap.value = {}
-    return
-  }
-  try {
-    const response = await batchAdoptItemDetails(itemIds)
-    if (!isSuccessCode(response.code)) {
-      adoptItemMap.value = {}
-      return
-    }
-    adoptItemMap.value = (Array.isArray(response.data) ? response.data : []).reduce((result, item) => {
-      result[item.id] = item
-      return result
-    }, {})
-  } catch (error) {
-    console.error('获取认养项目详情失败', error)
-    adoptItemMap.value = {}
-  }
 }
 
 const fetchInstances = async () => {
@@ -318,7 +370,6 @@ const fetchInstances = async () => {
       return
     }
     applyPageData(response.data || {})
-    await fetchAdoptItems(instanceRecords.value)
   } catch (error) {
     console.error('获取养殖实例失败', error)
     message.error('获取养殖实例失败，请稍后重试')
@@ -345,43 +396,127 @@ const handlePageChange = (page) => {
   fetchInstances()
 }
 
-const handleViewAdopt = (itemId) => {
-  if (!itemId) {
+const handleViewDetail = (instanceId) => {
+  if (!instanceId) {
     return
   }
-  router.push({
-    path: '/farmer/adopt/create',
-    query: { id: itemId }
-  })
+  router.push(`/farmer/adopt/instances/${instanceId}`)
 }
 
-const resolveTitle = (record) => {
-  return adoptItemMap.value[record.itemId]?.title || '认养项目'
+const canFulfillRecord = (record) => Number(record?.status) === ADOPT_INSTANCE_STATUS.ADOPTED
+
+const canManageStatus = (record) => {
+  const status = Number(record?.status)
+  return status === ADOPT_INSTANCE_STATUS.ADOPTED || status === ADOPT_INSTANCE_STATUS.DEAD
+}
+
+const resetStatusActionForm = () => {
+  statusActionForm.actionType = 'fulfill'
+  statusActionForm.deathTime = null
+  statusActionForm.deathReason = ''
+}
+
+const openStatusActionModal = (record) => {
+  currentActionRecord.value = record || null
+  resetStatusActionForm()
+  if (!canFulfillRecord(record)) {
+    statusActionForm.actionType = 'dead'
+  }
+  statusActionForm.deathTime = record?.deathTime ? dayjs(record.deathTime) : dayjs()
+  statusActionForm.deathReason = record?.deathReason || ''
+  statusActionVisible.value = true
+}
+
+const handleStatusActionCancel = () => {
+  statusActionVisible.value = false
+  currentActionRecord.value = null
+  resetStatusActionForm()
+}
+
+const shouldMoveToPreviousPage = (nextStatus, previousStatus) => {
+  return (
+    pagination.current > 1 &&
+    instanceRecords.value.length === 1 &&
+    searchForm.status !== undefined &&
+    Number(searchForm.status) === Number(previousStatus) &&
+    Number(nextStatus) !== Number(previousStatus)
+  )
+}
+
+const handleStatusActionSubmit = async () => {
+  const record = currentActionRecord.value
+  if (!record?.id) {
+    message.error('当前养殖实例不存在')
+    return
+  }
+
+  statusActionSubmitting.value = true
+  try {
+    if (statusActionForm.actionType === 'dead') {
+      const deathReason = String(statusActionForm.deathReason || '').trim()
+      if (!statusActionForm.deathTime) {
+        message.warning('请选择死亡时间')
+        return
+      }
+      if (!deathReason) {
+        message.warning('请输入死亡原因')
+        return
+      }
+      const response = await markAdoptInstanceDead({
+        instanceId: record.id,
+        deathTime: statusActionForm.deathTime.toDate(),
+        deathReason
+      })
+      if (!isSuccessCode(response.code)) {
+        message.error(response.message || '更新异常状态失败')
+        return
+      }
+      if (shouldMoveToPreviousPage(ADOPT_INSTANCE_STATUS.DEAD, record.status)) {
+        pagination.current -= 1
+      }
+      message.success(Number(record.status) === ADOPT_INSTANCE_STATUS.DEAD ? '异常信息已更新' : '已标记为异常死亡')
+    } else {
+      if (!canFulfillRecord(record)) {
+        message.warning('当前实例状态不支持完成履约')
+        return
+      }
+      const response = await fulfillFarmerAdoptInstance({
+        instanceId: record.id
+      })
+      if (!isSuccessCode(response.code)) {
+        message.error(response.message || '完成履约失败')
+        return
+      }
+      if (shouldMoveToPreviousPage(ADOPT_INSTANCE_STATUS.FULFILLED, record.status)) {
+        pagination.current -= 1
+      }
+      message.success('当前养殖实例已完成履约')
+    }
+
+    handleStatusActionCancel()
+    fetchInstances()
+  } catch (error) {
+    console.error('处理实例状态失败', error)
+    message.error('处理实例状态失败，请稍后重试')
+  } finally {
+    statusActionSubmitting.value = false
+  }
 }
 
 const resolveCover = (record) => {
-  return record.image || adoptItemMap.value[record.itemId]?.coverImage || ''
+  return record?.image || record?.itemCoverImage || ''
 }
 
 const getStatusText = (status) => {
-  return STATUS_OPTIONS.find((option) => option.value === status)?.label || '未知状态'
+  return getAdoptInstanceStatusOption(status)?.label || '未知状态'
 }
 
 const getStatusColor = (status) => {
-  if (status === 0) {
-    return 'default'
-  }
-  if (status === 1) {
-    return 'gold'
-  }
-  if (status === 2) {
-    return 'green'
-  }
-  return 'default'
+  return getAdoptInstanceStatusOption(status)?.color || 'default'
 }
 
-const formatDate = (value) => {
-  return value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '--'
+const formatDate = (value, fallback = '--') => {
+  return value ? dayjs(value).format('YYYY-MM-DD HH:mm') : fallback
 }
 
 onMounted(() => {
@@ -390,7 +525,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.adopt-instance-page {
+.instance-manage-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -416,95 +551,101 @@ onMounted(() => {
 }
 
 .page-title {
-  margin: 0;
+  margin: 0 0 8px;
   color: #17311f;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
 }
 
 .page-desc {
-  margin: 8px 0 0;
-  color: #6b7c72;
+  margin: 0;
+  color: #6d7c73;
   font-size: 14px;
 }
 
-.toolbar-card {
-  padding: 20px 24px;
+.toolbar-card,
+.table-card {
+  padding: 22px 24px;
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 
 .summary-item {
-  padding: 16px 18px;
-  border-radius: 14px;
-  background: #f7faf8;
+  padding: 18px 20px;
+  background: #f8fbf9;
   border: 1px solid #e7efe9;
+  border-radius: 16px;
 }
 
 .summary-label {
   display: block;
   margin-bottom: 8px;
-  color: #8a9b90;
-  font-size: 12px;
+  color: #7b8b7f;
+  font-size: 13px;
 }
 
 .summary-value {
   display: block;
+  margin-bottom: 10px;
   color: #17311f;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
-  line-height: 1.2;
 }
 
 .summary-hint {
-  margin: 8px 0 0;
-  color: #7b8b7f;
-  font-size: 12px;
+  margin: 0;
+  color: #6d7c73;
+  font-size: 13px;
   line-height: 1.6;
 }
 
 .filter-form {
-  row-gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 0;
 }
 
 .filter-actions {
   margin-left: auto;
 }
 
-.table-card {
-  padding: 20px 24px;
-}
-
 .table-head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .table-title {
-  margin: 0;
+  margin: 0 0 8px;
   color: #17311f;
   font-size: 20px;
   font-weight: 700;
 }
 
 .table-desc {
-  margin: 6px 0 0;
-  color: #7b8b7f;
-  font-size: 13px;
+  margin: 0;
+  color: #6d7c73;
+  font-size: 14px;
 }
 
 .project-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  min-width: 0;
+}
+
+.project-image {
+  border-radius: 18px;
+  overflow: hidden;
+  background: #f3f6f4;
 }
 
 .project-meta {
@@ -513,103 +654,127 @@ onMounted(() => {
 
 .project-link {
   padding: 0;
-  height: auto;
+  margin: 0 0 8px;
+  border: 0;
+  background: transparent;
   color: #17311f;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: normal;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
   text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
 }
 
 .project-link:hover {
-  color: #3d7a59;
+  color: #3f8f61;
 }
 
-.project-image {
-  border-radius: 16px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.ear-tag-cell,
-.order-cell,
-.time-cell {
+.primary-text,
+.secondary-text {
+  margin: 0;
   line-height: 1.7;
 }
 
+.primary-text {
+  color: #24372a;
+}
+
+.secondary-text {
+  color: #7b8b7f;
+  font-size: 13px;
+}
+
+.ear-tag-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .ear-tag-label {
-  display: block;
-  margin-bottom: 4px;
   color: #7b8b7f;
   font-size: 12px;
 }
 
 .ear-tag-value {
   color: #17311f;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
-}
-
-.primary-text {
-  margin: 0;
-  color: #1f2937;
-  font-size: 13px;
-  font-weight: 600;
-  word-break: break-all;
-}
-
-.secondary-text {
-  margin: 0;
-  color: #7b8b7f;
-  font-size: 12px;
-  word-break: break-word;
 }
 
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
-.instance-table :deep(.ant-table-thead > tr > th) {
-  color: #445449;
+.danger-link {
+  color: #cf1322;
+}
+
+.status-modal-record {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: #f8fbf9;
+  border: 1px solid #e7efe9;
+  border-radius: 14px;
+}
+
+.status-modal-title,
+.status-modal-subtitle {
+  margin: 0;
+}
+
+.status-modal-title {
+  color: #17311f;
+  font-size: 16px;
   font-weight: 600;
-  background: #f7faf8;
 }
 
-.instance-table :deep(.ant-table-tbody > tr:hover > td) {
-  background: #fbfdfb;
+.status-modal-subtitle {
+  margin-top: 6px;
+  color: #6d7c73;
+  font-size: 13px;
 }
 
-@media (max-width: 992px) {
+.status-modal-divider {
+  margin: 0 8px;
+  color: #c2cdc6;
+}
+
+.status-action-group {
+  display: flex;
+  margin-bottom: 16px;
+}
+
+.status-action-group :deep(.ant-radio-button-wrapper) {
+  flex: 1;
+  text-align: center;
+}
+
+.status-action-alert {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 1200px) {
   .summary-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .page-header,
-  .toolbar-card,
-  .table-card {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
   .page-header {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
-  .page-title {
-    font-size: 24px;
+  .toolbar-card,
+  .table-card {
+    padding: 18px;
   }
 
   .filter-actions {
     margin-left: 0;
-  }
-
-  .project-cell {
-    align-items: flex-start;
   }
 }
 </style>

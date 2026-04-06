@@ -51,6 +51,13 @@ public enum UploadTypeEnum {
             Set.of(1, 2)
     ),
 
+    // 认养动物日记视频
+    ANIMAL_DIARY_VIDEO(
+            "ANIMAL_DIARY_VIDEO",
+            "/adopt/animal/diary/video/",
+            Set.of(1, 2)
+    ),
+
     // 广告
     BANNER(
             "BANNER",

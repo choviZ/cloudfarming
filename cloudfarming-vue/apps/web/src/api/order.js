@@ -68,6 +68,10 @@ export const shipFarmerOrder = (data) => {
   return request.post('/api/order/v1/farmer/ship', data)
 }
 
+export const receiveUserOrder = (data) => {
+  return request.post('/api/order/v1/receive', data)
+}
+
 export const getAdoptOrderDetail = (orderNo) => {
   return request.get('/api/order/v1/detail/adopt', {
     params: { orderNo }
@@ -76,4 +80,8 @@ export const getAdoptOrderDetail = (orderNo) => {
 
 export const assignFarmerAdoptOrder = (data) => {
   return request.post('/api/order/v1/farmer/adopt/assign', data)
+}
+
+export const fulfillFarmerAdoptInstance = (data) => {
+  return request.post('/api/order/v1/farmer/adopt/fulfill', data)
 }

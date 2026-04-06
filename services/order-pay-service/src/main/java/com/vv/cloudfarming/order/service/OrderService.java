@@ -3,7 +3,9 @@ package com.vv.cloudfarming.order.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderFulfillAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderReceiveReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderShipReqDTO;
 import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
@@ -11,6 +13,7 @@ import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderSimpleRespDTO;
 import com.vv.cloudfarming.order.dto.resp.SkuOrderDetailRespDTO;
 
 import java.util.List;
@@ -51,9 +54,19 @@ public interface OrderService {
     void shipCurrentFarmerOrder(OrderShipReqDTO requestParam);
 
     /**
+     * 当前用户确认收货
+     */
+    void receiveCurrentUserOrder(OrderReceiveReqDTO requestParam);
+
+    /**
      * 当前农户分配认养牲畜
      */
     void assignCurrentFarmerAdoptOrder(OrderAssignAdoptReqDTO requestParam);
+
+    /**
+     * 当前农户完成认养履约
+     */
+    void fulfillCurrentFarmerAdoptInstance(OrderFulfillAdoptReqDTO requestParam);
 
     /**
      * 获取认养订单详情
@@ -73,4 +86,9 @@ public interface OrderService {
      * 获取农户订单统计
      */
     FarmerOrderStatisticsRespDTO getFarmerOrderStatistics();
+
+    /**
+     * 按订单ID批量查询订单简要信息
+     */
+    List<OrderSimpleRespDTO> listSimpleOrdersByIds(List<Long> orderIds);
 }

@@ -22,7 +22,12 @@ public enum LivestockStatusEnum {
     /**
      * 已履约完成
      */
-    FULFILLED(2, "已履约完成");
+    FULFILLED(2, "已履约完成"),
+
+    /**
+     * 异常死亡
+     */
+    DEAD(3, "异常死亡");
 
     /**
      * 存储到数据库的 code 值

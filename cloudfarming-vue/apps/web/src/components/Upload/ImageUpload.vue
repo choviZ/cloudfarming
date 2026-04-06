@@ -1,22 +1,22 @@
 <script setup>
-import { ref, watch } from 'vue';
-import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue';
-import { message } from 'ant-design-vue';
-import { uploadImage } from "@/api/spu.js";
+import { ref, watch } from 'vue'
+import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { uploadMedia } from '@/api/common'
 
 const props = defineProps({
   value: { type: String, default: '' },
   bizCode: { type: String, required: true },
   maxSize: { type: Number, default: 2 } // MB
-});
+})
 
-const emit = defineEmits(['update:value', 'change']);
+const emit = defineEmits(['update:value', 'change'])
 
-const fileList = ref([]);
-const loading = ref(false);
-const previewVisible = ref(false);
-const previewImage = ref('');
-const previewTitle = ref('');
+const fileList = ref([])
+const loading = ref(false)
+const previewVisible = ref(false)
+const previewImage = ref('')
+const previewTitle = ref('')
 
 watch(
   () => props.value,
@@ -32,77 +32,77 @@ watch(
           status: 'done',
           url: val,
         },
-      ];
+      ]
     } else {
-      fileList.value = [];
+      fileList.value = []
     }
   },
   { immediate: true }
-);
+)
 
 const beforeUpload = (file) => {
-  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/gif' || file.type === 'image/webp';
-  if (!isJpgOrPng) {
-    message.error('You can only upload JPG/PNG/GIF/WEBP file!');
+  const isImage = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/gif' || file.type === 'image/webp'
+  if (!isImage) {
+    message.error('仅支持上传 JPG、PNG、GIF、WEBP 图片')
   }
-  const isLt2M = file.size / 1024 / 1024 < props.maxSize;
+  const isLt2M = file.size / 1024 / 1024 < props.maxSize
   if (!isLt2M) {
-    message.error(`Image must smaller than ${props.maxSize}MB!`);
+    message.error(`图片大小不能超过 ${props.maxSize}MB`)
   }
-  return isJpgOrPng && isLt2M;
-};
+  return isImage && isLt2M
+}
 
 const customRequest = async (options) => {
-  const { file, onSuccess, onError } = options;
-  loading.value = true;
+  const { file, onSuccess, onError } = options
+  loading.value = true
   try {
-    const result = await uploadImage(file, { bizCode: props.bizCode });
+    const result = await uploadMedia(file, { bizCode: props.bizCode })
     if (result.code === '0' || result.code === '200') {
-       onSuccess(result.data, file);
-       emit('update:value', result.data);
-       emit('change', result.data);
+       onSuccess(result.data, file)
+       emit('update:value', result.data)
+       emit('change', result.data)
     } else {
-       onError(new Error(result.message));
-       message.error(result.message || 'Upload failed');
+       onError(new Error(result.message))
+       message.error(result.message || '上传失败')
     }
   } catch (err) {
-    onError(err);
-    message.error(err.message || 'Upload failed');
+    onError(err)
+    message.error(err.message || '上传失败')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const handleCancel = () => {
-  previewVisible.value = false;
-  previewTitle.value = '';
-};
+  previewVisible.value = false
+  previewTitle.value = ''
+}
 
 const handlePreview = async (file) => {
   if (!file.url && !file.preview) {
-    file.preview = await getBase64(file.originFileObj);
+    file.preview = await getBase64(file.originFileObj)
   }
-  previewImage.value = file.url || file.preview || '';
-  previewVisible.value = true;
-  previewTitle.value = file.name || previewImage.value.substring(previewImage.value.lastIndexOf('/') + 1);
-};
+  previewImage.value = file.url || file.preview || ''
+  previewVisible.value = true
+  previewTitle.value = file.name || previewImage.value.substring(previewImage.value.lastIndexOf('/') + 1)
+}
 
 const handleChange = (info) => {
-  fileList.value = info.fileList;
+  fileList.value = info.fileList
   
   if (info.file.status === 'removed') {
-      emit('update:value', '');
-      emit('change', '');
+      emit('update:value', '')
+      emit('change', '')
   }
-};
+}
 
 function getBase64(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
-  });
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = error => reject(error)
+  })
 }
 </script>
 
@@ -120,7 +120,7 @@ function getBase64(file) {
       <div v-if="fileList && fileList.length < 1">
         <loading-outlined v-if="loading" />
         <plus-outlined v-else />
-        <div style="margin-top: 8px">点击上传图片📷</div>
+        <div style="margin-top: 8px">点击上传图片</div>
       </div>
     </a-upload>
     <a-modal :open="previewVisible" :title="previewTitle" :footer="null" @cancel="handleCancel">

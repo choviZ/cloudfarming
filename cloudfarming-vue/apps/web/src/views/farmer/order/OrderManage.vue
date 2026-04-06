@@ -38,7 +38,7 @@
       <div class="table-head">
         <div>
           <h2 class="table-title">订单列表</h2>
-          <p class="table-desc">商品订单支持直接发货，认养订单在分配耳标号并创建养殖实例后进入养殖中。</p>
+          <p class="table-desc">商品订单与认养订单都支持物流发货，认养订单会在履约完成后进入待发货。</p>
         </div>
       </div>
 
@@ -255,7 +255,7 @@ const FILTER_OPTIONS = [
     key: 'pendingShipment',
     label: '待发货',
     value: ORDER_STATUS.PENDING_SHIPMENT,
-    description: '优先处理待发货商品订单'
+    description: '优先处理待发货订单，包含履约完成后的认养订单'
   },
   {
     key: 'breeding',
@@ -470,7 +470,10 @@ const parseEarTags = (value) => {
 const countEarTags = (value) => parseEarTags(value).length
 
 const canShip = (order) => {
-  return order?.orderType === ORDER_TYPE.GOODS && order?.orderStatus === ORDER_STATUS.PENDING_SHIPMENT
+  return (
+    (order?.orderType === ORDER_TYPE.GOODS || order?.orderType === ORDER_TYPE.ADOPT) &&
+    order?.orderStatus === ORDER_STATUS.PENDING_SHIPMENT
+  )
 }
 
 const canAssign = (order) => {
@@ -485,7 +488,16 @@ const getProgressTitle = (order) => {
     if (order?.orderStatus === ORDER_STATUS.BREEDING) {
       return '已完成耳标分配'
     }
-    return '认养订单无需物流'
+    if (order?.orderStatus === ORDER_STATUS.PENDING_SHIPMENT) {
+      return '认养履约已完成'
+    }
+    if (order?.orderStatus === ORDER_STATUS.SHIPPED) {
+      return order?.logisticsCompany || '认养订单已发货'
+    }
+    if (order?.orderStatus === ORDER_STATUS.COMPLETED) {
+      return '认养订单已签收'
+    }
+    return '认养订单物流处理中'
   }
   return order?.logisticsCompany || '暂未发货'
 }
@@ -498,10 +510,19 @@ const getProgressDescription = (order) => {
     if (order?.orderStatus === ORDER_STATUS.BREEDING) {
       return '可基于养殖实例继续记录养殖日志'
     }
+    if (order?.orderStatus === ORDER_STATUS.PENDING_SHIPMENT) {
+      return '全部认养实例已履约完成，待录入物流信息后发货'
+    }
+    if (order?.orderStatus === ORDER_STATUS.SHIPPED) {
+      return order?.logisticsNo || '已录入物流信息，等待用户确认收货'
+    }
+    if (order?.orderStatus === ORDER_STATUS.COMPLETED) {
+      return formatOptionalTime(order?.receiveTime, '用户已确认收货')
+    }
     if (order?.orderStatus === ORDER_STATUS.PENDING_PAYMENT) {
       return '待买家支付后进入分配流程'
     }
-    return '认养订单不涉及物流配送'
+    return '认养订单物流流程已结束'
   }
   return order?.logisticsNo || '暂无物流单号'
 }
@@ -511,7 +532,19 @@ const getFulfillmentTimeText = (order) => {
     if (order?.orderStatus === ORDER_STATUS.PENDING_ASSIGNMENT) {
       return '待分配牲畜'
     }
-    return '无需发货'
+    if (order?.orderStatus === ORDER_STATUS.BREEDING) {
+      return '养殖中'
+    }
+    if (order?.orderStatus === ORDER_STATUS.PENDING_SHIPMENT) {
+      return '已履约，待发货'
+    }
+    if (order?.orderStatus === ORDER_STATUS.SHIPPED) {
+      return formatOptionalTime(order?.deliveryTime, '已发货')
+    }
+    if (order?.orderStatus === ORDER_STATUS.COMPLETED) {
+      return formatOptionalTime(order?.deliveryTime, '已完成')
+    }
+    return '--'
   }
   return formatOptionalTime(order?.deliveryTime, '待发货')
 }
@@ -524,6 +557,12 @@ const getActionText = (order) => {
     if (order?.orderStatus === ORDER_STATUS.PENDING_ASSIGNMENT) {
       return '待分配'
     }
+    if (order?.orderStatus === ORDER_STATUS.PENDING_SHIPMENT) {
+      return '待发货'
+    }
+    if (order?.orderStatus === ORDER_STATUS.SHIPPED) {
+      return '已发货'
+    }
     if (order?.orderStatus === ORDER_STATUS.PENDING_PAYMENT) {
       return '待付款'
     }
@@ -533,10 +572,7 @@ const getActionText = (order) => {
     if (order?.orderStatus === ORDER_STATUS.AFTER_SALE) {
       return '售后中'
     }
-    if (order?.orderStatus === ORDER_STATUS.COMPLETED) {
-      return '已完成'
-    }
-    return '--'
+    return order?.orderStatus === ORDER_STATUS.COMPLETED ? '已完成' : '--'
   }
   if (order?.orderStatus === ORDER_STATUS.SHIPPED || order?.orderStatus === ORDER_STATUS.COMPLETED) {
     return '已发货'

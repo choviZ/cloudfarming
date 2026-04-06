@@ -46,6 +46,11 @@
                 <span class="label">合计：</span>
                 <span class="amount">￥{{ order.totalAmount || order.totalPrice }}</span>
               </div>
+              <div class="order-actions" v-if="canConfirmReceive(order)">
+                <a-button type="primary" size="small" @click="handleConfirmReceive(order)">
+                  确认收货
+                </a-button>
+              </div>
             </div>
           </div>
         </div>
@@ -70,7 +75,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getOrderList, getPayOrderList, ORDER_STATUS, ORDER_STATUS_TEXT } from '@/api/order'
+import { getOrderList, getPayOrderList, ORDER_STATUS, ORDER_STATUS_TEXT, receiveUserOrder } from '@/api/order'
 import { useUserStore } from '@/stores/useUserStore'
 
 const PAGE_SIZE = 20
@@ -212,7 +217,14 @@ const getOrderStatusClass = (order) => {
   if (status === ORDER_STATUS.CANCEL) {
     return 'status-closed'
   }
+  if (status === ORDER_STATUS.COMPLETED) {
+    return 'status-completed'
+  }
   return 'status-default'
+}
+
+const canConfirmReceive = (order) => {
+  return resolveOrderStatus(order) === ORDER_STATUS.SHIPPED && Boolean(order?.orderNo)
 }
 
 const handleTabChange = (key) => {
@@ -224,6 +236,34 @@ const handleTabChange = (key) => {
 const handlePageChange = (page) => {
   pagination.current = page
   fetchOrders()
+}
+
+const handleConfirmReceive = async (order) => {
+  if (!order?.orderNo) {
+    message.error('订单号不存在')
+    return
+  }
+  try {
+    const response = await receiveUserOrder({
+      orderNo: order.orderNo
+    })
+    if (response.code !== '0') {
+      message.error(response.message || '确认收货失败')
+      return
+    }
+    message.success('确认收货成功')
+    if (
+      activeTab.value === 'shipped' &&
+      currentOrders.value.length === 1 &&
+      pagination.current > 1
+    ) {
+      pagination.current -= 1
+    }
+    fetchOrders()
+  } catch (error) {
+    console.error('handleConfirmReceive error:', error)
+    message.error('确认收货失败，请稍后重试')
+  }
 }
 
 const fetchOrders = async () => {
@@ -441,6 +481,11 @@ watch(
   color: #6b7280;
 }
 
+.status-completed {
+  background: #ecfdf5;
+  color: #059669;
+}
+
 .status-default {
   background: #f4f4f5;
   color: #52525b;
@@ -504,6 +549,11 @@ watch(
   gap: 16px;
   padding: 12px 16px;
   border-top: 1px solid #f3f4f6;
+}
+
+.order-actions {
+  display: flex;
+  align-items: center;
 }
 
 .order-total .label {

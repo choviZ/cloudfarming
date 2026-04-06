@@ -18,6 +18,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.util.Optional;
 
@@ -33,9 +35,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(NotLoginException.class)
     public SaResult handlerException(NotLoginException e) {
-        // 打印堆栈，以供调试
         e.printStackTrace();
-        // 返回给前端
         return SaResult.error(e.getMessage());
     }
 
@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 拦截参数验证异常
+     * 拦截参数校验异常
      */
     @SneakyThrows
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
@@ -80,6 +80,15 @@ public class GlobalExceptionHandler {
         }
         log.error("[{}] {} [ex] {} \n\n{}", request.getMethod(), request.getRequestURL().toString(), ex, stackTraceBuilder);
         return Results.failure(ex);
+    }
+
+    /**
+     * 拦截文件上传大小超限异常
+     */
+    @ExceptionHandler(value = {MaxUploadSizeExceededException.class, MultipartException.class})
+    public Result multipartExceptionHandler(HttpServletRequest request, Exception ex) {
+        log.error("[{}] {} [ex] {}", request.getMethod(), getUrl(request), ex.getMessage(), ex);
+        return Results.failure(BaseErrorCode.CLIENT_ERROR.code(), "上传文件过大，请压缩后重试");
     }
 
     /**

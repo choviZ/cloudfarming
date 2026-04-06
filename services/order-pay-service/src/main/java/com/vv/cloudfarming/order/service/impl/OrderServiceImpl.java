@@ -30,7 +30,9 @@ import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptItemReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderFulfillAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderReceiveReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderShipReqDTO;
 import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
@@ -38,6 +40,7 @@ import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderSimpleRespDTO;
 import com.vv.cloudfarming.order.dto.resp.SkuOrderDetailRespDTO;
 import com.vv.cloudfarming.order.enums.OrderStatusEnum;
 import com.vv.cloudfarming.order.enums.PayStatusEnum;
@@ -56,7 +59,9 @@ import com.vv.cloudfarming.order.strategy.StrategyFactory;
 import com.vv.cloudfarming.order.utils.RedisIdWorker;
 import com.vv.cloudfarming.product.dto.req.AdoptInstanceAssignReqDTO;
 import com.vv.cloudfarming.product.dto.req.AdoptInstanceCreateReqDTO;
+import com.vv.cloudfarming.product.dto.req.AdoptInstanceFulfillReqDTO;
 import com.vv.cloudfarming.product.dao.entity.SeckillActivityDO;
+import com.vv.cloudfarming.product.dto.resp.AdoptInstanceFulfillRespDTO;
 import com.vv.cloudfarming.product.dto.resp.ShopRespDTO;
 import com.vv.cloudfarming.user.dto.resp.ReceiveAddressRespDTO;
 import lombok.RequiredArgsConstructor;
@@ -328,11 +333,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         Long id = requestParam.getId();
         Integer orderStatus = requestParam.getOrderStatus();
         Long userId = requestParam.getUserId();
+        Integer orderType = requestParam.getOrderType();
 
         LambdaQueryWrapper<OrderDO> wrapper = Wrappers.lambdaQuery(OrderDO.class)
             .eq(ObjectUtil.isNotNull(id), OrderDO::getId, id)
             .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
             .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId)
+            .eq(ObjectUtil.isNotNull(orderType), OrderDO::getOrderType, orderType)
             .orderByDesc(OrderDO::getCreateTime)
             .orderByDesc(OrderDO::getId);
 
@@ -361,6 +368,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         String orderNo = requestParam.getOrderNo();
         Integer orderStatus = requestParam.getOrderStatus();
         Long userId = requestParam.getUserId();
+        Integer orderType = requestParam.getOrderType();
         Long shopId = requestParam.getShopId();
 
         LambdaQueryWrapper<OrderDO> wrapper = Wrappers.lambdaQuery(OrderDO.class)
@@ -368,6 +376,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             .eq(StrUtil.isNotBlank(orderNo), OrderDO::getOrderNo, orderNo)
             .eq(ObjectUtil.isNotNull(orderStatus), OrderDO::getOrderStatus, orderStatus)
             .eq(ObjectUtil.isNotNull(userId), OrderDO::getUserId, userId)
+            .eq(ObjectUtil.isNotNull(orderType), OrderDO::getOrderType, orderType)
             .eq(ObjectUtil.isNotNull(shopId), OrderDO::getShopId, shopId)
             .orderByDesc(OrderDO::getCreateTime)
             .orderByDesc(OrderDO::getId);
@@ -394,15 +403,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         if (order == null) {
             throw new ClientException("订单不存在或无权操作");
         }
-        if (!Objects.equals(order.getOrderType(), OrderTypeConstant.GOODS)) {
-            throw new ClientException("当前订单无需发货");
+        if (!Objects.equals(order.getOrderType(), OrderTypeConstant.GOODS)
+            && !Objects.equals(order.getOrderType(), OrderTypeConstant.ADOPT)) {
+            throw new ClientException("当前订单不支持发货");
         }
         if (!Objects.equals(order.getOrderStatus(), OrderStatusEnum.PENDING_SHIPMENT.getCode())) {
             throw new ClientException("当前订单状态不支持发货");
         }
 
         int updated = baseMapper.update(null, Wrappers.lambdaUpdate(OrderDO.class)
-            .eq(OrderDO::getId, order.getId())
+            .eq(OrderDO::getOrderNo, order.getOrderNo())
+            .eq(OrderDO::getShopId, shop.getId())
             .eq(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_SHIPMENT.getCode())
             .set(OrderDO::getLogisticsCompany, StrUtil.trim(requestParam.getLogisticsCompany()))
             .set(OrderDO::getLogisticsNo, StrUtil.trim(requestParam.getLogisticsNo()))
@@ -410,6 +421,38 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             .set(OrderDO::getOrderStatus, OrderStatusEnum.SHIPPED.getCode()));
         if (!SqlHelper.retBool(updated)) {
             throw new ServiceException("订单发货失败，请刷新后重试");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void receiveCurrentUserOrder(OrderReceiveReqDTO requestParam) {
+        long userId = StpUtil.getLoginIdAsLong();
+        String orderNo = StrUtil.trim(requestParam.getOrderNo());
+        OrderDO order = baseMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class)
+            .eq(OrderDO::getOrderNo, orderNo)
+            .eq(OrderDO::getUserId, userId));
+        if (order == null) {
+            throw new ClientException("订单不存在或无权操作");
+        }
+        if (!Objects.equals(order.getOrderStatus(), OrderStatusEnum.SHIPPED.getCode())) {
+            throw new ClientException("当前订单状态不支持确认收货");
+        }
+
+        int updated = baseMapper.update(null, Wrappers.lambdaUpdate(OrderDO.class)
+            .eq(OrderDO::getOrderNo, order.getOrderNo())
+            .eq(OrderDO::getUserId, userId)
+            .eq(OrderDO::getOrderStatus, OrderStatusEnum.SHIPPED.getCode())
+            .set(OrderDO::getReceiveTime, LocalDateTime.now())
+            .set(OrderDO::getOrderStatus, OrderStatusEnum.COMPLETED.getCode()));
+        if (!SqlHelper.retBool(updated)) {
+            OrderDO latestOrder = baseMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class)
+                .eq(OrderDO::getOrderNo, order.getOrderNo())
+                .eq(OrderDO::getUserId, userId));
+            if (latestOrder != null && Objects.equals(latestOrder.getOrderStatus(), OrderStatusEnum.COMPLETED.getCode())) {
+                return;
+            }
+            throw new ServiceException("确认收货失败，请刷新后重试");
         }
     }
 
@@ -487,6 +530,59 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void fulfillCurrentFarmerAdoptInstance(OrderFulfillAdoptReqDTO requestParam) {
+        ShopRespDTO shop = getCurrentFarmerShop();
+        AdoptInstanceFulfillReqDTO fulfillReqDTO = new AdoptInstanceFulfillReqDTO();
+        fulfillReqDTO.setInstanceId(requestParam.getInstanceId());
+        var fulfillResult = adoptItemRemoteService.fulfillAdoptInstance(fulfillReqDTO);
+        if (fulfillResult == null || !fulfillResult.isSuccess() || fulfillResult.getData() == null) {
+            throw new ServiceException("完成认养履约失败");
+        }
+
+        AdoptInstanceFulfillRespDTO fulfillRespDTO = fulfillResult.getData();
+        Long ownerOrderId = fulfillRespDTO.getOwnerOrderId();
+        if (ownerOrderId == null || ownerOrderId <= 0) {
+            throw new ServiceException("养殖实例未绑定认养订单");
+        }
+
+        OrderDO order = baseMapper.selectById(ownerOrderId);
+        if (order == null || !Objects.equals(order.getShopId(), shop.getId())) {
+            throw new ClientException("认养订单不存在或无权操作");
+        }
+        if (StrUtil.isBlank(order.getOrderNo())) {
+            throw new ServiceException("认养订单号不存在");
+        }
+        if (!Objects.equals(order.getOrderType(), OrderTypeConstant.ADOPT)) {
+            throw new ClientException("当前订单无需完成履约");
+        }
+        if (!Boolean.TRUE.equals(fulfillRespDTO.getAllFulfilled())) {
+            return;
+        }
+        if (Objects.equals(order.getOrderStatus(), OrderStatusEnum.COMPLETED.getCode())) {
+            return;
+        }
+        if (!Objects.equals(order.getOrderStatus(), OrderStatusEnum.BREEDING.getCode())) {
+            throw new ClientException("当前认养订单状态不支持完成履约");
+        }
+
+        int updated = baseMapper.update(null, Wrappers.lambdaUpdate(OrderDO.class)
+            .eq(OrderDO::getOrderNo, order.getOrderNo())
+            .eq(OrderDO::getShopId, shop.getId())
+            .eq(OrderDO::getOrderStatus, OrderStatusEnum.BREEDING.getCode())
+            .set(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_SHIPMENT.getCode()));
+        if (!SqlHelper.retBool(updated)) {
+            OrderDO latestOrder = baseMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class)
+                .eq(OrderDO::getOrderNo, order.getOrderNo())
+                .eq(OrderDO::getShopId, shop.getId()));
+            if (latestOrder != null && Objects.equals(latestOrder.getOrderStatus(), OrderStatusEnum.PENDING_SHIPMENT.getCode())) {
+                return;
+            }
+            throw new ServiceException("更新认养订单状态失败，请刷新后重试");
+        }
+    }
+
+    @Override
     public List<AdoptOrderDetailRespDTO> getAdoptOrderDetail(String orderNo) {
         LambdaQueryWrapper<OrderDetailAdoptDO> wrapper = Wrappers.lambdaQuery(OrderDetailAdoptDO.class)
             .eq(OrderDetailAdoptDO::getOrderNo, orderNo);
@@ -521,6 +617,32 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             .salesAmount(salesAmount)
             .orderCount(orderCount)
             .build();
+    }
+
+    @Override
+    public List<OrderSimpleRespDTO> listSimpleOrdersByIds(List<Long> orderIds) {
+        if (CollUtil.isEmpty(orderIds)) {
+            return Collections.emptyList();
+        }
+        List<Long> distinctOrderIds = orderIds.stream()
+            .filter(Objects::nonNull)
+            .filter(each -> each > 0)
+            .distinct()
+            .toList();
+        if (CollUtil.isEmpty(distinctOrderIds)) {
+            return Collections.emptyList();
+        }
+        List<OrderDO> orders = baseMapper.selectBatchIds(distinctOrderIds);
+        if (CollUtil.isEmpty(orders)) {
+            return Collections.emptyList();
+        }
+        return orders.stream()
+            .map(each -> OrderSimpleRespDTO.builder()
+                .id(each.getId())
+                .orderNo(each.getOrderNo())
+                .orderStatus(each.getOrderStatus())
+                .build())
+            .toList();
     }
 
     private String generateOrderNo(Long userId) {

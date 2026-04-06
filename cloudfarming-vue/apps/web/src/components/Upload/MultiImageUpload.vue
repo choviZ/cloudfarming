@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { LoadingOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { uploadImage } from '@/api/spu'
+import { uploadMedia } from '@/api/common'
 
 const props = defineProps({
   value: {
@@ -74,7 +74,7 @@ const customRequest = async (options) => {
   const { file, onSuccess, onError } = options
   loading.value = true
   try {
-    const result = await uploadImage(file, { bizCode: props.bizCode })
+    const result = await uploadMedia(file, { bizCode: props.bizCode })
     if (result.code === '0' || result.code === '200') {
       emitValue([...props.value, result.data])
       onSuccess(result.data, file)

@@ -31,6 +31,11 @@ public class OrderPageReqDTO extends Page<OrderDO> {
     private Long userId;
 
     /**
+     * 订单类型
+     */
+    private Integer orderType;
+
+    /**
      * 店铺id
      */
     private Long shopId;

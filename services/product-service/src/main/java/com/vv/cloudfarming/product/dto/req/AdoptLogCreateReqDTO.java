@@ -3,6 +3,8 @@ package com.vv.cloudfarming.product.dto.req;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 创建养殖日志请求参数
  */
@@ -27,9 +29,9 @@ public class AdoptLogCreateReqDTO {
     private String content;
 
     /**
-     * 图片地址，多个用逗号分隔
+     * 图片地址列表
      */
-    private String imageUrls;
+    private List<String> imageUrls;
 
     /**
      * 视频地址

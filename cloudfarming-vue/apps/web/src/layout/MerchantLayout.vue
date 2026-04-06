@@ -133,7 +133,7 @@ const selectedKeys = computed(() => {
   if (route.path === '/farmer/adopt/my') {
     return ['4-2']
   }
-  if (route.path === '/farmer/adopt/instances') {
+  if (route.path.startsWith('/farmer/adopt/instances')) {
     return ['4-3']
   }
   if (route.path === '/farmer/statistics') {

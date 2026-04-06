@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /**
  * 认养实例响应
@@ -44,4 +45,39 @@ public class AdoptInstanceRespDTO extends BaseDO implements Serializable {
      * 绑定订单id
      */
     private Long ownerOrderId;
+
+    /**
+     * 关联订单号
+     */
+    private String orderNo;
+
+    /**
+     * 认养项目名称
+     */
+    private String itemTitle;
+
+    /**
+     * 认养项目封面
+     */
+    private String itemCoverImage;
+
+    /**
+     * 状态描述
+     */
+    private String statusDesc;
+
+    /**
+     * 最新日记时间
+     */
+    private Date latestLogTime;
+
+    /**
+     * 死亡时间
+     */
+    private Date deathTime;
+
+    /**
+     * 死亡原因
+     */
+    private String deathReason;
 }

@@ -9,7 +9,9 @@ import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.config.AdoptAgreementProperties;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderFulfillAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderReceiveReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderShipReqDTO;
 import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptAgreementRespDTO;
@@ -18,6 +20,7 @@ import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderSimpleRespDTO;
 import com.vv.cloudfarming.order.dto.resp.SkuOrderDetailRespDTO;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.starter.idempotent.NoDuplicateSubmit;
@@ -95,11 +98,26 @@ public class OrderController {
         return Results.success();
     }
 
+    @Operation(summary = "用户确认收货")
+    @PostMapping("/api/order/v1/receive")
+    public Result<Void> receiveCurrentUserOrder(@RequestBody @Valid OrderReceiveReqDTO requestParam) {
+        orderService.receiveCurrentUserOrder(requestParam);
+        return Results.success();
+    }
+
     @Operation(summary = "农户分配认养牲畜")
     @SaCheckRole(UserRoleConstant.FARMER_DESC)
     @PostMapping("/api/order/v1/farmer/adopt/assign")
     public Result<Void> assignCurrentFarmerAdoptOrder(@RequestBody @Valid OrderAssignAdoptReqDTO requestParam) {
         orderService.assignCurrentFarmerAdoptOrder(requestParam);
+        return Results.success();
+    }
+
+    @Operation(summary = "农户完成认养履约")
+    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @PostMapping("/api/order/v1/farmer/adopt/fulfill")
+    public Result<Void> fulfillCurrentFarmerAdoptInstance(@RequestBody @Valid OrderFulfillAdoptReqDTO requestParam) {
+        orderService.fulfillCurrentFarmerAdoptInstance(requestParam);
         return Results.success();
     }
 
@@ -113,6 +131,12 @@ public class OrderController {
     @GetMapping("/api/order/v1/detail/sku")
     public Result<List<SkuOrderDetailRespDTO>> getSkuOrderDetail(@RequestParam @NotNull String orderNo) {
         return Results.success(orderService.getSkuOrderDetail(orderNo));
+    }
+
+    @Operation(summary = "按订单ID批量查询订单简要信息")
+    @PostMapping("/api/order/v1/inner/simple/list")
+    public Result<List<OrderSimpleRespDTO>> listSimpleOrdersByIds(@RequestBody List<Long> orderIds) {
+        return Results.success(orderService.listSimpleOrdersByIds(orderIds));
     }
 
     @Operation(summary = "查询农户订单统计")

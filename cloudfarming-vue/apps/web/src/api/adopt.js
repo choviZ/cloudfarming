@@ -105,15 +105,61 @@ export function pageMyAdoptInstances(data) {
 }
 
 /**
- * 批量查询认养项目详情
- * @param {number[]} ids
- * @returns {Promise<Object>} Result<AdoptItemResp[]>
+ * 查询养殖实例详情
+ * @param {string|number} id
+ * @returns {Promise<Object>} Result<AdoptInstanceDetailResp>
  */
-export function batchAdoptItemDetails(ids) {
+export function getAdoptInstanceDetail(id) {
+    return request.get('/api/adopt/instance/v1/detail', {
+        params: { id }
+    })
+}
+
+/**
+ * 将养殖实例标记为异常死亡
+ * @param {Object} data - AdoptInstanceMarkDeadReq
+ * @returns {Promise<Object>} Result<void>
+ */
+export function markAdoptInstanceDead(data) {
     return request.post(
-        '/api/adopt/item/v1/batch',
-        ids
+        '/api/adopt/instance/v1/dead',
+        data
     )
+}
+
+/**
+ * 创建养殖日志
+ * @param {Object} data - AdoptLogCreateReq
+ * @returns {Promise<Object>} Result<void>
+ */
+export function createAdoptLog(data) {
+    return request.post(
+        '/api/adopt/log/v1/create',
+        data
+    )
+}
+
+/**
+ * 分页查询养殖日志
+ * @param {Object} data - AdoptLogPageReq
+ * @returns {Promise<Object>} Result<IPage<AdoptLogResp>>
+ */
+export function pageAdoptLogs(data) {
+    return request.post(
+        '/api/adopt/log/v1/page',
+        data
+    )
+}
+
+/**
+ * 查询体重变化曲线
+ * @param {string|number} instanceId
+ * @returns {Promise<Object>} Result<AdoptWeightPointResp[]>
+ */
+export function getAdoptWeightTrend(instanceId) {
+    return request.get('/api/adopt/log/v1/weight-trend', {
+        params: { instanceId }
+    })
 }
 
 /**

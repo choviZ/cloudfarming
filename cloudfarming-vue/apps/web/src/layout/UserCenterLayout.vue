@@ -18,6 +18,12 @@
                 </template>
                 <router-link to="/usercenter/orders">我的订单</router-link>
               </a-menu-item>
+              <a-menu-item key="adopts">
+                <template #icon>
+                  <HeartOutlined />
+                </template>
+                <router-link to="/usercenter/adopts">我的认养</router-link>
+              </a-menu-item>
               <a-menu-item key="cart">
                 <template #icon>
                   <ShoppingCartOutlined />
@@ -43,20 +49,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import GlobalHeader from '../components/GlobalHeader.vue'
-import { FileTextOutlined, ShoppingCartOutlined } from '@ant-design/icons-vue'
+import { FileTextOutlined, HeartOutlined, ShoppingCartOutlined } from '@ant-design/icons-vue'
 
 const route = useRoute()
-const selectedKeys = ref(['orders'])
-
-// 根据路由更新选中状态
-if (route.path.includes('/usercenter/orders')) {
-  selectedKeys.value = ['orders']
-} else if (route.path.includes('/cart')) {
-  selectedKeys.value = ['cart']
-}
+const selectedKeys = computed(() => {
+  if (route.path.includes('/usercenter/adopts')) {
+    return ['adopts']
+  }
+  if (route.path.includes('/cart')) {
+    return ['cart']
+  }
+  return ['orders']
+})
 </script>
 
 <style scoped>
