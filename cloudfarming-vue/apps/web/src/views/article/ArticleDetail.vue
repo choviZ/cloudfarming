@@ -97,9 +97,7 @@ onMounted(() => {
 <style scoped>
 .article-detail-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top right, rgba(251, 191, 36, 0.15), transparent 18%),
-    linear-gradient(180deg, #fcfcf8 0%, #f3f5ef 100%);
+  background: transparent;
 }
 
 .detail-shell {

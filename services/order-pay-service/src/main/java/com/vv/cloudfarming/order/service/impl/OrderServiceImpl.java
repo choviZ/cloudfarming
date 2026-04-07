@@ -24,7 +24,7 @@ import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dao.mapper.PayOrderMapper;
-import com.vv.cloudfarming.order.dto.common.FarmerOrderStatisticsAggDTO;
+import com.vv.cloudfarming.order.dto.common.FarmerOrderTrendAggDTO;
 import com.vv.cloudfarming.order.dto.common.ProductItemDTO;
 import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptItemReqDTO;
@@ -37,6 +37,7 @@ import com.vv.cloudfarming.order.dto.req.OrderShipReqDTO;
 import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
 import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
+import com.vv.cloudfarming.order.dto.resp.FarmerOrderTrendPointRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
@@ -77,6 +78,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -601,21 +603,77 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     @Override
     public FarmerOrderStatisticsRespDTO getFarmerOrderStatistics() {
         ShopRespDTO shop = getCurrentFarmerShop();
-        FarmerOrderStatisticsAggDTO statistics = baseMapper.selectFarmerOrderStatistics(
+        LocalDate today = LocalDate.now();
+        LocalDateTime tomorrowStart = today.plusDays(1).atStartOfDay();
+        LocalDateTime last30DaysStart = today.minusDays(29).atStartOfDay();
+        List<FarmerOrderTrendAggDTO> last30DaysTrendAggList = baseMapper.selectFarmerOrderTrend(
             shop.getId(),
-            FARMER_STAT_EXCLUDED_ORDER_STATUSES
+            FARMER_STAT_EXCLUDED_ORDER_STATUSES,
+            last30DaysStart,
+            tomorrowStart
         );
-        BigDecimal salesAmount = statistics == null || statistics.getSalesAmount() == null
-            ? BigDecimal.ZERO
-            : statistics.getSalesAmount();
-        Long orderCount = statistics == null || statistics.getOrderCount() == null
-            ? 0L
-            : statistics.getOrderCount();
+        List<OrderDO> totalOrders = baseMapper.selectList(Wrappers.lambdaQuery(OrderDO.class)
+            .select(OrderDO::getId, OrderDO::getActualPayAmount)
+            .eq(OrderDO::getDelFlag, 0)
+            .eq(OrderDO::getShopId, shop.getId())
+            .notIn(OrderDO::getOrderStatus, FARMER_STAT_EXCLUDED_ORDER_STATUSES));
+        BigDecimal totalSalesAmount = BigDecimal.ZERO;
+        long totalOrderCount = 0L;
+        if (CollUtil.isNotEmpty(totalOrders)) {
+            totalOrderCount = totalOrders.size();
+            for (OrderDO order : totalOrders) {
+                totalSalesAmount = totalSalesAmount.add(safeAmount(order.getActualPayAmount()));
+            }
+        }
+        Map<String, FarmerOrderTrendAggDTO> trendMap = new HashMap<>();
+        if (CollUtil.isNotEmpty(last30DaysTrendAggList)) {
+            last30DaysTrendAggList.forEach(item -> trendMap.put(item.getStatDate(), item));
+        }
+
+        List<FarmerOrderTrendPointRespDTO> trendPoints = new ArrayList<>();
+        BigDecimal todaySalesAmount = BigDecimal.ZERO;
+        long todayOrderCount = 0L;
+        BigDecimal last7DaysSalesAmount = BigDecimal.ZERO;
+        long last7DaysOrderCount = 0L;
+        BigDecimal last30DaysSalesAmount = BigDecimal.ZERO;
+        long last30DaysOrderCount = 0L;
+        for (int i = 0; i < 30; i++) {
+            LocalDate statDate = today.minusDays(29L - i);
+            String statDateText = statDate.format(DateTimeFormatter.ISO_LOCAL_DATE);
+            FarmerOrderTrendAggDTO trendAggDTO = trendMap.get(statDateText);
+            BigDecimal dailySalesAmount = safeAmount(trendAggDTO == null ? null : trendAggDTO.getSalesAmount());
+            long dailyOrderCount = safeCount(trendAggDTO == null ? null : trendAggDTO.getOrderCount());
+
+            last30DaysSalesAmount = last30DaysSalesAmount.add(dailySalesAmount);
+            last30DaysOrderCount += dailyOrderCount;
+            if (!statDate.isBefore(today.minusDays(6))) {
+                last7DaysSalesAmount = last7DaysSalesAmount.add(dailySalesAmount);
+                last7DaysOrderCount += dailyOrderCount;
+            }
+            if (statDate.isEqual(today)) {
+                todaySalesAmount = dailySalesAmount;
+                todayOrderCount = dailyOrderCount;
+            }
+
+            trendPoints.add(FarmerOrderTrendPointRespDTO.builder()
+                .statDate(statDateText)
+                .salesAmount(dailySalesAmount)
+                .orderCount(dailyOrderCount)
+                .build());
+        }
+
         return FarmerOrderStatisticsRespDTO.builder()
             .shopId(shop.getId())
             .shopName(shop.getShopName())
-            .salesAmount(salesAmount)
-            .orderCount(orderCount)
+            .salesAmount(totalSalesAmount)
+            .orderCount(totalOrderCount)
+            .todaySalesAmount(todaySalesAmount)
+            .todayOrderCount(todayOrderCount)
+            .last7DaysSalesAmount(last7DaysSalesAmount)
+            .last7DaysOrderCount(last7DaysOrderCount)
+            .last30DaysSalesAmount(last30DaysSalesAmount)
+            .last30DaysOrderCount(last30DaysOrderCount)
+            .trendPoints(trendPoints)
             .build();
     }
 
@@ -648,6 +706,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private String generateOrderNo(Long userId) {
         long userTail = Math.floorMod(userId, 1_000_000L);
         return redisIdWorker.generateId("orderSN").toString() + String.format("%06d", userTail);
+    }
+
+    private BigDecimal safeAmount(BigDecimal amount) {
+        return amount == null ? BigDecimal.ZERO : amount;
+    }
+
+    private Long safeCount(Long count) {
+        return count == null ? 0L : count;
     }
 
     private ShopRespDTO getCurrentFarmerShop() {

@@ -1,30 +1,27 @@
 <template>
   <div class="article-list-page">
-    <section class="hero-section">
-      <div class="hero-inner">
-        <div class="hero-copy">
-          <span class="eyebrow">资讯与公告</span>
-          <h1>平台公告、政策资讯与养殖知识</h1>
-          <p>查看平台最新通知，跟进农业政策变化，持续获取养殖经营经验。</p>
+    <div class="page-shell">
+      <section class="page-header">
+        <div class="page-header__main">
+          <span class="page-eyebrow">资讯中心</span>
+          <div class="page-title-row">
+            <h1 class="page-title">平台公告、政策资讯与养殖知识</h1>
+            <span class="page-count">{{ resultTotal }} 篇</span>
+          </div>
+          <p class="page-desc">
+            集中查看平台公告、农业政策与养殖经验，页面风格与站内列表页保持统一，减少中间壳层和无效留白。
+          </p>
         </div>
 
-        <div class="hero-actions">
-          <div class="search-box">
-            <input
-              v-model="filters.title"
-              type="text"
-              class="search-input"
-              placeholder="搜索文章标题"
-              @keyup.enter="handleSearch"
-            >
-            <button class="search-button" @click="handleSearch">搜索</button>
+        <div class="page-header__side">
+          <div class="summary-card">
+            <span class="summary-label">当前分类</span>
+            <strong>{{ currentTabLabel }}</strong>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="content-section">
-      <div class="toolbar">
+      <section class="toolbar-panel">
         <div class="tab-group">
           <button
             v-for="tab in articleTabs"
@@ -36,56 +33,78 @@
             {{ tab.label }}
           </button>
         </div>
-      </div>
 
-      <a-spin :spinning="loading">
-        <div v-if="articleList.length" class="article-grid">
-          <article
-            v-for="article in articleList"
-            :key="article.id"
-            class="article-card"
-            @click="goToDetail(article.id)"
-          >
-            <div class="card-cover-wrap">
-              <img :src="article.coverImage || defaultImage" :alt="article.title" class="card-cover">
-              <div class="card-badges">
-                <span class="type-badge">{{ article.articleTypeDesc || '资讯文章' }}</span>
-                <span v-if="article.isTop" class="top-badge">置顶</span>
-              </div>
-            </div>
-
-            <div class="card-content">
-              <h3 class="card-title">{{ article.title }}</h3>
-              <p class="card-summary">{{ article.summary || '暂无摘要' }}</p>
-
-              <div class="card-meta">
-                <span>{{ article.articleTypeDesc || '资讯文章' }}</span>
-                <span>{{ formatDate(article.publishTime || article.createTime) }}</span>
-              </div>
-            </div>
-          </article>
+        <div class="toolbar-search">
+          <label class="search-label" for="article-search">搜索文章</label>
+          <div class="search-box">
+            <input
+              id="article-search"
+              v-model="filters.title"
+              type="text"
+              class="search-input"
+              placeholder="搜索文章标题"
+              @keyup.enter="handleSearch"
+            >
+            <button class="search-button" @click="handleSearch">搜索</button>
+          </div>
         </div>
+      </section>
 
-        <a-empty v-else description="暂无文章" />
+      <section class="content-panel">
+        <a-spin :spinning="loading">
+          <div v-if="articleList.length" class="article-stack">
+            <article
+              v-for="article in articleList"
+              :key="article.id"
+              class="article-card"
+              @click="goToDetail(article.id)"
+            >
+              <div class="card-cover-wrap">
+                <img :src="article.coverImage || defaultImage" :alt="article.title" class="card-cover">
+              </div>
 
-        <div v-if="pagination.total > 0" class="pagination-wrap">
-          <a-pagination
-            v-model:current="pagination.current"
-            v-model:page-size="pagination.size"
-            :total="pagination.total"
-            :show-total="(total) => `共 ${total} 篇文章`"
-            show-size-changer
-            @change="handlePageChange"
-            @showSizeChange="handleSizeChange"
-          />
-        </div>
-      </a-spin>
-    </section>
+              <div class="card-content">
+                <div class="card-head">
+                  <div class="card-badges">
+                    <span class="type-badge">{{ article.articleTypeDesc || '资讯文章' }}</span>
+                    <span v-if="article.isTop" class="top-badge">置顶</span>
+                  </div>
+                  <span class="card-date">{{ formatDate(article.publishTime || article.createTime) }}</span>
+                </div>
+
+                <h3 class="card-title">{{ article.title }}</h3>
+                <p class="card-summary">{{ article.summary || '暂无摘要' }}</p>
+
+                <div class="card-footer">
+                  <span class="card-footer-link">查看详情</span>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div v-else class="empty-wrap">
+            <a-empty description="暂无文章" />
+          </div>
+
+          <div v-if="pagination.total > 0" class="pagination-wrap">
+            <a-pagination
+              v-model:current="pagination.current"
+              v-model:page-size="pagination.size"
+              :total="pagination.total"
+              :show-total="(total) => `共 ${total} 篇文章`"
+              show-size-changer
+              @change="handlePageChange"
+              @showSizeChange="handleSizeChange"
+            />
+          </div>
+        </a-spin>
+      </section>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { pagePublishedArticles } from '@/api/article'
@@ -97,7 +116,23 @@ const articleTabs = [
   { value: '3', label: '养殖知识' }
 ]
 
-const defaultImage = 'https://via.placeholder.com/640x420?text=Cloud+Farming+Article'
+const defaultImage = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eef8f0" />
+      <stop offset="100%" stop-color="#dceedd" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" rx="28" fill="url(#bg)" />
+  <rect x="86" y="84" width="468" height="252" rx="22" fill="#ffffff" opacity="0.94" />
+  <rect x="132" y="138" width="212" height="18" rx="9" fill="#2f8b49" opacity="0.82" />
+  <rect x="132" y="176" width="346" height="12" rx="6" fill="#9cc8aa" />
+  <rect x="132" y="204" width="304" height="12" rx="6" fill="#b7d8c0" />
+  <rect x="132" y="250" width="144" height="32" rx="16" fill="#1f7a3f" opacity="0.84" />
+  <text x="320" y="378" text-anchor="middle" font-size="30" fill="#2f5d3c" font-family="Microsoft YaHei, sans-serif">云养殖资讯</text>
+</svg>
+`)}` 
 
 const route = useRoute()
 const router = useRouter()
@@ -113,6 +148,14 @@ const pagination = reactive({
   current: 1,
   size: 9,
   total: 0
+})
+
+const currentTabLabel = computed(() => {
+  return articleTabs.find((tab) => tab.value === activeType.value)?.label || '全部文章'
+})
+
+const resultTotal = computed(() => {
+  return Number(pagination.total) || articleList.value.length
 })
 
 const normalizeQueryValue = (value) => {
@@ -219,113 +262,129 @@ watch(
   () => {
     syncFromRoute()
     fetchArticles()
-  }
+  },
+  { immediate: true }
 )
-
-onMounted(() => {
-  syncFromRoute()
-  fetchArticles()
-})
 </script>
 
 <style scoped>
 .article-list-page {
-  min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 20%),
-    linear-gradient(180deg, #f8faf7 0%, #eef4ec 100%);
+  background: transparent;
 }
 
-.hero-section {
-  padding: 48px 24px 24px;
+.page-shell {
+  width: 100%;
+  max-width: none;
+  padding: 4px 0 24px;
 }
 
-.hero-inner {
-  max-width: 1240px;
-  margin: 0 auto;
-  border-radius: 30px;
-  padding: 36px;
-  background:
-    linear-gradient(135deg, rgba(18, 85, 54, 0.95), rgba(36, 121, 72, 0.88)),
-    linear-gradient(180deg, #fefce8, #ffffff);
-  color: #fff;
+.page-header {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 28px;
+  gap: 24px;
+  padding: 22px 24px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #fcfefd 0%, #f5faf6 100%);
+  border: 1px solid #e4ece6;
+  box-shadow: 0 12px 30px rgba(31, 122, 63, 0.05);
 }
 
-.eyebrow {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-}
-
-.hero-copy h1 {
-  margin: 14px 0 12px;
-  font-size: 40px;
-  line-height: 1.15;
-}
-
-.hero-copy p {
-  margin: 0;
-  max-width: 620px;
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.86);
-}
-
-.hero-actions {
-  width: 360px;
-  max-width: 100%;
-}
-
-.search-box {
-  display: flex;
-  gap: 10px;
-}
-
-.search-input {
+.page-header__main {
+  min-width: 0;
   flex: 1;
-  height: 48px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 16px;
-  background: #ffffff;
-  color: #17212b;
-  caret-color: #1f6f3e;
-  font-size: 15px;
 }
 
-.search-input:focus {
-  outline: none;
-}
-
-.search-input::placeholder {
-  color: #8aa08f;
-}
-
-.search-button {
-  height: 48px;
-  padding: 0 20px;
-  border: none;
-  border-radius: 16px;
-  background: #facc15;
-  color: #1f2937;
+.page-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #edf8f0;
+  color: #1f7a3f;
+  font-size: 12px;
   font-weight: 700;
-  cursor: pointer;
 }
 
-.content-section {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 0 24px 48px;
+.page-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
 }
 
-.toolbar {
-  margin: 20px 0 24px;
+.page-title {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #17212b;
+  letter-spacing: -0.6px;
+}
+
+.page-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #dfece2;
+  color: #1f7a3f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.page-desc {
+  margin: 10px 0 0;
+  max-width: 900px;
+  color: #617067;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.page-header__side {
+  display: flex;
+  align-items: stretch;
+}
+
+.summary-card {
+  min-width: 168px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e4ece6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 10px 24px rgba(31, 122, 63, 0.04);
+}
+
+.summary-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a948d;
+}
+
+.summary-card strong {
+  color: #17212b;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.toolbar-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 14px;
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e4ece6;
+  box-shadow: 0 8px 24px rgba(31, 122, 63, 0.04);
 }
 
 .tab-group {
@@ -335,46 +394,115 @@ onMounted(() => {
 }
 
 .tab-button {
-  border: 1px solid rgba(18, 85, 54, 0.12);
-  background: rgba(255, 255, 255, 0.88);
+  min-height: 38px;
+  padding: 0 18px;
+  border: 1px solid #d9e7dc;
+  background: #f8fbf8;
   border-radius: 999px;
-  padding: 10px 18px;
   color: #355241;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  border-color: #bdd5c3;
+  background: #f1f8f3;
 }
 
 .tab-button.active {
-  background: #1f6f3e;
-  color: #fff;
-  border-color: #1f6f3e;
+  background: #1f7a3f;
+  color: #ffffff;
+  border-color: #1f7a3f;
+  box-shadow: 0 10px 20px rgba(31, 122, 63, 0.16);
 }
 
-.article-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+.toolbar-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, 100%);
+  flex-shrink: 0;
+}
+
+.search-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7a71;
+}
+
+.search-box {
+  display: flex;
+  gap: 10px;
+}
+
+.search-input {
+  flex: 1;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid #dce8df;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #17212b;
+  font-size: 15px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2f8b49;
+  box-shadow: 0 0 0 4px rgba(47, 139, 73, 0.12);
+}
+
+.search-input::placeholder {
+  color: #97a49a;
+}
+
+.search-button {
+  height: 46px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #22693c 0%, #369356 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(31, 122, 63, 0.16);
+}
+
+.content-panel {
+  margin-top: 16px;
+}
+
+.article-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .article-card {
-  background: #fff;
-  border-radius: 22px;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  min-height: 224px;
+  border-radius: 24px;
   overflow: hidden;
-  border: 1px solid rgba(15, 23, 42, 0.05);
-  box-shadow: 0 20px 40px rgba(18, 38, 24, 0.08);
+  background: #ffffff;
+  border: 1px solid #e4ece6;
+  box-shadow: 0 14px 34px rgba(31, 122, 63, 0.05);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .article-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 24px 46px rgba(18, 38, 24, 0.12);
+  transform: translateY(-2px);
+  border-color: #cddfd1;
+  box-shadow: 0 18px 40px rgba(31, 122, 63, 0.08);
 }
 
 .card-cover-wrap {
-  position: relative;
-  height: 190px;
-  background: #e5efe2;
+  height: 100%;
+  background: #eef4ef;
 }
 
 .card-cover {
@@ -384,99 +512,190 @@ onMounted(() => {
   display: block;
 }
 
-.card-badges {
-  position: absolute;
-  top: 14px;
-  left: 14px;
+.card-content {
   display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 20px 22px;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.card-badges {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .type-badge,
 .top-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
 }
 
 .type-badge {
-  background: rgba(17, 24, 39, 0.76);
-  color: #fff;
+  background: #ecf7ef;
+  color: #1f7a3f;
 }
 
 .top-badge {
-  background: #fef3c7;
-  color: #92400e;
+  background: #fff4d6;
+  color: #a16207;
 }
 
-.card-content {
-  padding: 18px;
+.card-date {
+  color: #8b949e;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
 .card-title {
-  margin: 0;
-  font-size: 20px;
-  line-height: 1.4;
+  margin: 16px 0 10px;
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 700;
   color: #17212b;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .card-summary {
-  margin: 12px 0 16px;
-  min-height: 66px;
+  margin: 0;
   color: #5f6d64;
-  line-height: 1.7;
+  font-size: 14px;
+  line-height: 1.8;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.card-meta {
+.card-footer {
+  margin-top: auto;
+  padding-top: 20px;
   display: flex;
+  justify-content: flex-end;
+}
+
+.card-footer-link {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: #7c8b80;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #f4fbf6;
+  color: #1f7a3f;
   font-size: 13px;
+  font-weight: 700;
+}
+
+.empty-wrap {
+  padding: 48px 0 28px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #e4ece6;
 }
 
 .pagination-wrap {
-  margin-top: 30px;
+  margin-top: 22px;
   display: flex;
   justify-content: center;
 }
 
-@media (max-width: 900px) {
-  .hero-inner {
+@media (max-width: 1080px) {
+  .page-header,
+  .toolbar-panel {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .hero-copy h1 {
-    font-size: 32px;
+  .page-header__side {
+    justify-content: flex-start;
   }
 
-  .hero-actions {
+  .toolbar-search {
     width: 100%;
+  }
+
+  .article-card {
+    grid-template-columns: 260px minmax(0, 1fr);
   }
 }
 
-@media (max-width: 640px) {
-  .hero-section,
-  .content-section {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .hero-inner {
-    padding: 24px;
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 28px;
   }
 
   .search-box {
     flex-direction: column;
+  }
+
+  .article-card {
+    grid-template-columns: 1fr;
+  }
+
+  .card-cover-wrap {
+    height: 220px;
+  }
+
+  .card-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-shell {
+    padding-bottom: 20px;
+  }
+
+  .page-header {
+    padding: 18px 16px;
+    border-radius: 20px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .toolbar-panel {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .tab-group {
+    gap: 8px;
+  }
+
+  .tab-button {
+    min-height: 36px;
+    padding: 0 14px;
+  }
+
+  .card-content {
+    padding: 18px 16px;
+  }
+
+  .card-title {
+    font-size: 20px;
+  }
+
+  .card-footer {
+    justify-content: flex-start;
   }
 }
 </style>

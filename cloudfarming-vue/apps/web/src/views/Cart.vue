@@ -348,7 +348,7 @@ onMounted(() => {
 .cart-container {
   min-height: 100vh;
   padding: 24px 20px 132px;
-  background: linear-gradient(180deg, #f7faf7 0%, #f3f5f7 100%);
+  background: transparent;
 }
 
 .cart-shell {

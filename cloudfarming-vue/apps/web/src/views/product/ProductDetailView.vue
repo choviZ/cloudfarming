@@ -108,28 +108,12 @@
                     </div>
                 </div>
 
-                <!-- Content Layout -->
-                <div class="content-layout">
-                    <!-- Sidebar -->
-                    <aside class="sidebar">
-                        <div class="shop-card shop-card--clickable" @click="goToShopHome">
-                            <div class="shop-header">
-                                <div class="shop-avatar">
-                                    <img v-if="shopInfo.shopAvatar" :src="shopInfo.shopAvatar" alt="店铺头像"
-                                         class="shop-logo">
-                                    <ShopOutlined v-else/>
-                                </div>
-                                <div class="shop-meta">
-                                    <div class="shop-name">{{ shopInfo.shopName || '店铺名称加载中...' }}</div>
-                                </div>
-                            </div>
-                            <div class="shop-actions">
-                                <button type="button" class="btn-small btn-outline" @click.stop="goToShopHome">
-                                    进入店铺
-                                </button>
-                            </div>
-                        </div>
-                    </aside>
+                    <!-- Content Layout -->
+                    <div class="content-layout">
+                        <!-- Sidebar -->
+                        <aside class="sidebar">
+                            <ShopSummaryCard :shop-info="shopInfo" @enter="goToShopHome"/>
+                        </aside>
 
                     <!-- Main Detail -->
                     <div class="detail-container">
@@ -199,6 +183,7 @@ import {message} from 'ant-design-vue'
 import {addToCart as addToCartApi} from '@/api/cart'
 import {getSpuDetail} from '@/api/spu'
 import {getShopInfo} from '@/api/shop'
+import ShopSummaryCard from '@/components/shop/ShopSummaryCard.vue'
 import {
     ShopOutlined,
     StarOutlined,
@@ -777,129 +762,6 @@ onMounted(() => {
     .sidebar {
         display: none;
     }
-}
-
-/* Sidebar */
-.shop-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    border: 1px solid #f3f4f6;
-}
-
-.shop-card--clickable {
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.shop-card--clickable:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 16px 28px rgba(17, 24, 39, 0.08);
-}
-
-.shop-header {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.shop-avatar {
-    width: 48px;
-    height: 48px;
-    background: #f3f4f6;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    color: #9ca3af;
-    overflow: hidden;
-}
-
-.shop-logo {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.shop-avatar .anticon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.shop-meta {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.shop-name {
-    font-weight: 700;
-    color: #111827;
-    font-size: 14px;
-}
-
-.shop-rating {
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 4px;
-}
-
-.star {
-    color: #facc15;
-}
-
-.shop-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    text-align: center;
-    margin-bottom: 16px;
-}
-
-.shop-stats .label {
-    font-size: 12px;
-    color: #9ca3af;
-}
-
-.shop-stats .value {
-    font-size: 14px;
-    font-weight: 700;
-    color: #111827;
-}
-
-.shop-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.btn-small {
-    flex: 1;
-    padding: 8px 0;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    border: none;
-}
-
-.btn-outline {
-    background: white;
-    border: 1px solid #e5e7eb;
-    color: #374151;
-}
-
-.btn-outline:hover {
-    background: #f9fafb;
-}
-
-.btn-filled {
-    background: #059669;
-    color: white;
-}
-
-.btn-filled:hover {
-    background: #047857;
 }
 
 /* Main Detail Content */

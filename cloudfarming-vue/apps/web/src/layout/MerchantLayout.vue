@@ -64,6 +64,7 @@
         </a-menu-item>
       </a-menu>
     </a-layout-sider>
+
     <a-layout>
       <a-layout-header class="layout-header">
         <a-flex gap="middle" align="center" justify="flex-end" class="header-actions">
@@ -72,15 +73,13 @@
           </a-button>
         </a-flex>
       </a-layout-header>
+
       <a-layout-content class="layout-content">
-        <a-breadcrumb class="layout-breadcrumb">
-          <a-breadcrumb-item>农户端</a-breadcrumb-item>
-          <a-breadcrumb-item>后台管理</a-breadcrumb-item>
-        </a-breadcrumb>
         <div class="layout-body">
           <router-view />
         </div>
       </a-layout-content>
+
       <a-layout-footer style="text-align: center">
         Cloud Farming 2026
       </a-layout-footer>
@@ -179,13 +178,9 @@ const openKeys = computed(() => {
 }
 
 .layout-content {
-  margin: 0 16px;
+  margin: 20px 16px 0;
   display: flex;
   flex-direction: column;
-}
-
-.layout-breadcrumb {
-  margin: 16px 0;
 }
 
 .layout-body {

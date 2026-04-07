@@ -25,7 +25,40 @@
 
     <select id="selectFarmerOrderStatistics" resultType="com.vv.cloudfarming.order.dto.common.FarmerOrderStatisticsAggDTO">
         SELECT COUNT(1) AS orderCount,
-               SUM(actual_pay_amount) AS salesAmount
+               COALESCE(SUM(actual_pay_amount), 0) AS salesAmount,
+               COUNT(CASE
+                         WHEN create_time <![CDATA[ >= ]]> #{todayStart}
+                          AND create_time <![CDATA[ < ]]> #{todayEnd}
+                         THEN 1
+                     END) AS todayOrderCount,
+               COALESCE(SUM(CASE
+                                WHEN create_time <![CDATA[ >= ]]> #{todayStart}
+                                 AND create_time <![CDATA[ < ]]> #{todayEnd}
+                                THEN actual_pay_amount
+                                ELSE 0
+                            END), 0) AS todaySalesAmount,
+               COUNT(CASE
+                         WHEN create_time <![CDATA[ >= ]]> #{last7DaysStart}
+                          AND create_time <![CDATA[ < ]]> #{todayEnd}
+                         THEN 1
+                     END) AS last7DaysOrderCount,
+               COALESCE(SUM(CASE
+                                WHEN create_time <![CDATA[ >= ]]> #{last7DaysStart}
+                                 AND create_time <![CDATA[ < ]]> #{todayEnd}
+                                THEN actual_pay_amount
+                                ELSE 0
+                            END), 0) AS last7DaysSalesAmount,
+               COUNT(CASE
+                         WHEN create_time <![CDATA[ >= ]]> #{last30DaysStart}
+                          AND create_time <![CDATA[ < ]]> #{todayEnd}
+                         THEN 1
+                     END) AS last30DaysOrderCount,
+               COALESCE(SUM(CASE
+                                WHEN create_time <![CDATA[ >= ]]> #{last30DaysStart}
+                                 AND create_time <![CDATA[ < ]]> #{todayEnd}
+                                THEN actual_pay_amount
+                                ELSE 0
+                            END), 0) AS last30DaysSalesAmount
         FROM t_order
         WHERE del_flag = 0
           AND shop_id = #{shopId}
@@ -33,5 +66,22 @@
           <foreach collection="excludedStatuses" item="orderStatus" open="(" separator="," close=")">
               #{orderStatus}
           </foreach>
+    </select>
+
+    <select id="selectFarmerOrderTrend" resultType="com.vv.cloudfarming.order.dto.common.FarmerOrderTrendAggDTO">
+        SELECT DATE_FORMAT(create_time, '%Y-%m-%d') AS statDate,
+               COUNT(1) AS orderCount,
+               COALESCE(SUM(actual_pay_amount), 0) AS salesAmount
+        FROM t_order
+        WHERE del_flag = 0
+          AND shop_id = #{shopId}
+          AND create_time <![CDATA[ >= ]]> #{startTime}
+          AND create_time <![CDATA[ < ]]> #{endTime}
+          AND order_status NOT IN
+          <foreach collection="excludedStatuses" item="orderStatus" open="(" separator="," close=")">
+              #{orderStatus}
+          </foreach>
+        GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d')
+        ORDER BY statDate ASC
     </select>
 </mapper>

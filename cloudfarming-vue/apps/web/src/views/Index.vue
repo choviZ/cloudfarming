@@ -3,7 +3,7 @@
     <header class="hero-header">
       <div class="hero-inner">
         <div class="brand-block" @click="router.push('/')">
-          <h1 class="brand-title">云农场</h1>
+          <h1 class="brand-title">云养殖助农平台</h1>
           <span class="brand-subtitle">优质农产品与认养项目</span>
         </div>
 
@@ -117,7 +117,7 @@
         <a-empty v-else description="暂无农产品" />
       </a-skeleton>
 
-      <div class="pagination-wrap" v-if="pagination.total > 0">
+      <div class="pagination-wrap" v-if="false">
         <a-pagination
           v-model:current="pagination.current"
           v-model:page-size="pagination.size"
@@ -168,11 +168,7 @@ const searchModeRef = ref(null)
 const productList = ref([])
 const productLoading = ref(false)
 
-const pagination = ref({
-  current: 1,
-  size: 20,
-  total: 0
-})
+const HOME_PRODUCT_LIMIT = 6
 
 const defaultProductPlaceholder = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="420" height="320" viewBox="0 0 420 320">
@@ -212,14 +208,13 @@ const fetchProducts = async () => {
   productLoading.value = true
   try {
     const queryParam = {
-      current: pagination.value.current,
-      size: pagination.value.size,
+      current: 1,
+      size: HOME_PRODUCT_LIMIT,
       status: 1
     }
     const response = await listSpuByPage(queryParam)
     if (response.code === '0' && response.data) {
       productList.value = response.data.records || []
-      pagination.value.total = Number(response.data.total || 0)
       return
     }
     message.error(response.message || '获取商品数据失败')
@@ -270,17 +265,6 @@ const handleDocumentClick = (event) => {
   }
 }
 
-const handlePageChange = (page) => {
-  pagination.value.current = page
-  fetchProducts()
-}
-
-const handleSizeChange = (current, size) => {
-  pagination.value.current = current
-  pagination.value.size = size
-  fetchProducts()
-}
-
 const goToProductDetail = (productId) => {
   router.push({
     name: 'productDetail',
@@ -327,7 +311,7 @@ onBeforeUnmount(() => {
 
 .brand-title {
   margin: 0;
-  font-size: 34px;
+  font-size: 32px;
   line-height: 1;
   letter-spacing: -1px;
   color: #17212b;
@@ -381,9 +365,9 @@ onBeforeUnmount(() => {
 }
 
 .search-mode-trigger {
-  min-width: 118px;
+  width: 96px;
   height: 36px;
-  padding: 0 12px 0 14px;
+  padding: 0 10px 0 14px;
   border: 1px solid #e3ebe5;
   border-radius: 12px;
   background: linear-gradient(180deg, #ffffff 0%, #f6faf7 100%);
@@ -395,7 +379,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   box-shadow: 0 6px 16px rgba(31, 109, 61, 0.08);
   transition:
     border-color 0.2s ease,
@@ -429,7 +413,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 10px);
   left: 0;
-  min-width: 156px;
+  min-width: 128px;
   padding: 8px;
   border-radius: 16px;
   background: #ffffff;
@@ -748,7 +732,7 @@ onBeforeUnmount(() => {
   }
 
   .search-mode-trigger {
-    min-width: 102px;
+    width: 92px;
     padding-left: 10px;
     padding-right: 10px;
   }
