@@ -323,6 +323,7 @@ onMounted(() => {
   position: relative;
   display: flex;
   flex-direction: column;
+  overflow: visible;
 }
 
 .card-bg {
@@ -355,7 +356,7 @@ onMounted(() => {
 .user-info-section {
   flex: 1;
   padding: 0 16px 14px;
-  margin-top: -34px;
+  margin-top: -14px;
   position: relative;
   text-align: center;
   display: flex;
@@ -365,10 +366,12 @@ onMounted(() => {
 .avatar-wrapper {
   display: inline-block;
   width: fit-content;
-  margin: 0 auto 8px;
+  margin: 0 auto 10px;
   padding: 5px;
   background-color: #ffffff;
   border-radius: 50%;
+  position: relative;
+  z-index: 1;
 }
 
 .avatar-img,
