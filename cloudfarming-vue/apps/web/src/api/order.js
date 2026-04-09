@@ -78,10 +78,34 @@ export const getAdoptOrderDetail = (orderNo) => {
   })
 }
 
+export const getSkuOrderDetail = (orderNo) => {
+  return request.get('/api/order/v1/detail/sku', {
+    params: { orderNo }
+  })
+}
+
 export const assignFarmerAdoptOrder = (data) => {
   return request.post('/api/order/v1/farmer/adopt/assign', data)
 }
 
 export const fulfillFarmerAdoptInstance = (data) => {
   return request.post('/api/order/v1/farmer/adopt/fulfill', data)
+}
+
+export const getMyPendingReviewOrders = (data) => {
+  return request.post('/api/order/review/v1/my/pending/page', data)
+}
+
+export const createOrderReview = (data) => {
+  return request.post('/api/order/review/v1/create', data)
+}
+
+export const getSpuReviewSummary = (spuId) => {
+  return request.get('/api/order/review/v1/spu/summary', {
+    params: { spuId }
+  })
+}
+
+export const pageSpuReviews = (data) => {
+  return request.post('/api/order/review/v1/spu/page', data)
 }

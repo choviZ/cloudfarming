@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vv.cloudfarming.order.dao.mapper.OrderSkuReviewMapper">
+
+    <select id="selectOrderReviewAggByOrderNos" resultType="com.vv.cloudfarming.order.dto.common.OrderReviewAggDTO">
+        SELECT d.order_no AS orderNo,
+               COUNT(1) AS totalItemCount,
+               SUM(CASE
+                       WHEN r.id IS NULL THEN 1
+                       ELSE 0
+                   END) AS pendingReviewCount
+        FROM t_order_detail_sku d
+        LEFT JOIN t_order_sku_review r
+          ON r.order_no = d.order_no
+         AND r.order_detail_sku_id = d.id
+         AND r.del_flag = 0
+        WHERE d.del_flag = 0
+          AND d.order_no IN
+          <foreach collection="orderNos" item="orderNo" open="(" separator="," close=")">
+              #{orderNo}
+          </foreach>
+        GROUP BY d.order_no
+    </select>
+
+    <select id="selectSpuReviewSummary" resultType="com.vv.cloudfarming.order.dto.common.SpuReviewSummaryAggDTO">
+        SELECT COUNT(1) AS totalReviewCount,
+               COALESCE(AVG(score), 0) AS avgScore,
+               COALESCE(SUM(CASE WHEN score = 1 THEN 1 ELSE 0 END), 0) AS score1Count,
+               COALESCE(SUM(CASE WHEN score = 2 THEN 1 ELSE 0 END), 0) AS score2Count,
+               COALESCE(SUM(CASE WHEN score = 3 THEN 1 ELSE 0 END), 0) AS score3Count,
+               COALESCE(SUM(CASE WHEN score = 4 THEN 1 ELSE 0 END), 0) AS score4Count,
+               COALESCE(SUM(CASE WHEN score = 5 THEN 1 ELSE 0 END), 0) AS score5Count
+        FROM t_order_sku_review
+        WHERE del_flag = 0
+          AND spu_id = #{spuId}
+    </select>
+
+    <select id="selectSpuReviewPage" resultType="com.vv.cloudfarming.order.dao.entity.OrderSkuReviewDO">
+        SELECT id,
+               order_no,
+               order_detail_sku_id,
+               spu_id,
+               sku_id,
+               shop_id,
+               user_id,
+               score,
+               content,
+               image_urls,
+               user_name_snapshot,
+               user_avatar_snapshot,
+               create_time,
+               update_time,
+               del_flag
+        FROM t_order_sku_review
+        WHERE del_flag = 0
+          AND spu_id = #{spuId}
+        ORDER BY CASE
+                     WHEN image_urls IS NULL OR image_urls = '' THEN 0
+                     ELSE 1
+                 END DESC,
+                 create_time DESC,
+                 id DESC
+    </select>
+</mapper>

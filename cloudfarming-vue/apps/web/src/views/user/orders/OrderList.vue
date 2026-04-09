@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h2 class="page-title">我的订单</h2>
-        <p class="page-subtitle">按淘宝式订单台账排版整理，快速查看商品、金额、状态与当前可执行操作。</p>
+        <p class="page-subtitle">按订单流程快速查看商品、金额、状态与当前可执行操作。</p>
       </div>
       <div class="page-summary">
         <span class="summary-pill">当前 {{ tabLabelMap[activeTab] }}</span>
@@ -17,6 +17,7 @@
         <a-tab-pane key="pending" tab="待支付" />
         <a-tab-pane key="pendingShip" tab="待发货" />
         <a-tab-pane key="shipped" tab="待收货" />
+        <a-tab-pane key="pendingReview" tab="待评价" />
       </a-tabs>
     </div>
 
@@ -42,7 +43,7 @@
         <div v-else class="order-items">
           <article
             v-for="order in currentOrders"
-            :key="order.payOrderNo || order.orderNo || order.id"
+            :key="getOrderIdentifier(order)"
             class="order-card"
           >
             <header class="order-meta">
@@ -51,9 +52,9 @@
                 <span class="meta-divider"></span>
                 <span class="meta-label">订单编号</span>
                 <span class="meta-value">{{ order.orderNo || order.payOrderNo || '--' }}</span>
-                <span class="meta-divider"></span>
-                <span class="meta-label">店铺</span>
-                <span class="meta-shop">{{ order.shopName || '--' }}</span>
+                <span v-if="order.shopName" class="meta-divider"></span>
+                <span v-if="order.shopName" class="meta-label">店铺</span>
+                <span v-if="order.shopName" class="meta-shop">{{ order.shopName }}</span>
               </div>
               <div class="order-meta-side">
                 <span class="order-type-tag" :class="getOrderTypeClass(order)">
@@ -67,7 +68,7 @@
                 <template v-if="resolveOrderItems(order).length">
                   <div
                     v-for="(item, index) in resolveOrderItems(order)"
-                    :key="`${order.payOrderNo || order.orderNo || order.id}-${index}`"
+                    :key="`${getOrderIdentifier(order)}-${index}`"
                     class="line-item"
                   >
                     <div class="item-main">
@@ -115,7 +116,15 @@
 
               <div class="action-col">
                 <a-button
-                  v-if="canConfirmReceive(order)"
+                  v-if="canGoReview(order)"
+                  type="primary"
+                  class="action-button action-button--review"
+                  @click="handleGoReview(order)"
+                >
+                  去评价
+                </a-button>
+                <a-button
+                  v-else-if="canConfirmReceive(order)"
                   type="primary"
                   class="action-button"
                   @click="handleConfirmReceive(order)"
@@ -149,6 +158,7 @@ import { message } from 'ant-design-vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  getMyPendingReviewOrders,
   getOrderList,
   getPayOrderList,
   ORDER_STATUS,
@@ -160,12 +170,19 @@ import { useUserStore } from '@/stores/useUserStore'
 
 const PAGE_SIZE = 20
 const DEFAULT_TAB = 'all'
-const VALID_TAB_KEYS = ['all', 'pending', 'pendingShip', 'shipped']
+const VALID_TAB_KEYS = ['all', 'pending', 'pendingShip', 'shipped', 'pendingReview']
+
 const tabLabelMap = {
   all: '全部订单',
   pending: '待支付',
   pendingShip: '待发货',
-  shipped: '待收货'
+  shipped: '待收货',
+  pendingReview: '待评价'
+}
+
+const TAB_ORDER_STATUS = {
+  pendingShip: ORDER_STATUS.PENDING_SHIPMENT,
+  shipped: ORDER_STATUS.SHIPPED
 }
 
 const loading = ref(false)
@@ -186,6 +203,8 @@ const userStore = useUserStore()
 const route = useRoute()
 const router = useRouter()
 
+const userId = computed(() => userStore.loginUser?.id)
+
 const orderImageFallback = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
   <defs>
@@ -203,21 +222,11 @@ const orderImageFallback = `data:image/svg+xml;charset=UTF-8,${encodeURIComponen
 </svg>
 `)}` 
 
-const TAB_ORDER_STATUS = {
-  pendingShip: ORDER_STATUS.PENDING_SHIPMENT,
-  shipped: ORDER_STATUS.SHIPPED
-}
-
-const userId = computed(() => userStore.loginUser?.id)
-
 const currentOrders = computed(() => {
   if (Array.isArray(orderList.value)) {
     return orderList.value
   }
-  if (Array.isArray(orderList.value?.records)) {
-    return orderList.value.records
-  }
-  return []
+  return Array.isArray(orderList.value?.records) ? orderList.value.records : []
 })
 
 const displayTotal = computed(() => {
@@ -300,12 +309,26 @@ const resolveOrderItems = (order) => {
   return Array.isArray(order?.items) ? order.items : []
 }
 
+const isPendingReviewOrder = (order) => {
+  return (
+    order?.orderType === ORDER_TYPE.GOODS &&
+    resolveOrderStatus(order) === ORDER_STATUS.COMPLETED &&
+    Number(order?.pendingReviewCount || 0) > 0
+  )
+}
+
 const getOrderStatusText = (order) => {
+  if (isPendingReviewOrder(order)) {
+    return '待评价'
+  }
   const status = resolveOrderStatus(order)
   return status !== undefined ? (ORDER_STATUS_TEXT[status] || '未知状态') : '未知状态'
 }
 
 const getOrderStatusClass = (order) => {
+  if (isPendingReviewOrder(order)) {
+    return 'status-review'
+  }
   const status = resolveOrderStatus(order)
   if (status === ORDER_STATUS.PENDING_PAYMENT) {
     return 'status-pending'
@@ -332,6 +355,9 @@ const getOrderStatusClass = (order) => {
 }
 
 const getOrderStatusHint = (order) => {
+  if (isPendingReviewOrder(order)) {
+    return `订单已完成，当前还有 ${Number(order.pendingReviewCount || 0)} 件商品待评价`
+  }
   const status = resolveOrderStatus(order)
   if (status === ORDER_STATUS.PENDING_PAYMENT) {
     return '订单已创建，等待完成支付'
@@ -358,6 +384,9 @@ const getOrderStatusHint = (order) => {
 }
 
 const getActionPlaceholder = (order) => {
+  if (isPendingReviewOrder(order)) {
+    return '待你评价'
+  }
   const status = resolveOrderStatus(order)
   if (status === ORDER_STATUS.PENDING_PAYMENT) {
     return '等待支付'
@@ -372,7 +401,7 @@ const getActionPlaceholder = (order) => {
     return '养殖中'
   }
   if (status === ORDER_STATUS.COMPLETED) {
-    return '已完成'
+    return order?.orderType === ORDER_TYPE.GOODS ? '已完成' : '已完成'
   }
   if (status === ORDER_STATUS.CANCEL) {
     return '已关闭'
@@ -386,6 +415,9 @@ const getOrderTypeText = (order) => {
   }
   if (order?.orderType === ORDER_TYPE.GOODS) {
     return '商品订单'
+  }
+  if (resolveOrderStatus(order) === ORDER_STATUS.PENDING_PAYMENT) {
+    return '待支付订单'
   }
   return '订单'
 }
@@ -402,6 +434,23 @@ const getOrderTypeClass = (order) => {
 
 const canConfirmReceive = (order) => {
   return resolveOrderStatus(order) === ORDER_STATUS.SHIPPED && Boolean(order?.orderNo)
+}
+
+const canGoReview = (order) => {
+  return isPendingReviewOrder(order) && Boolean(order?.orderNo)
+}
+
+const handleGoReview = (order) => {
+  if (!order?.orderNo) {
+    message.error('订单号不存在')
+    return
+  }
+  router.push({
+    name: 'userOrderReview',
+    params: {
+      orderNo: order.orderNo
+    }
+  })
 }
 
 const handleTabChange = (key) => {
@@ -471,6 +520,19 @@ const fetchOrders = async () => {
       return
     }
 
+    if (activeTab.value === 'pendingReview') {
+      const response = await getMyPendingReviewOrders({
+        current: pagination.current,
+        size: PAGE_SIZE
+      })
+      if (response.code === '0' && response.data) {
+        applyPageData(response.data)
+      } else {
+        message.error(response.message || '获取待评价订单列表失败')
+      }
+      return
+    }
+
     const payload = {
       userId: userId.value,
       current: pagination.current,
@@ -521,6 +583,10 @@ const formatDateTime = (timestamp) => {
 
 const getItemImage = (image) => {
   return image || orderImageFallback
+}
+
+const getOrderIdentifier = (order) => {
+  return order?.orderNo || order?.payOrderNo || order?.id || Math.random()
 }
 
 watch(
@@ -623,7 +689,6 @@ watch(
   color: #5f6d64;
   font-size: 14px;
   font-weight: 600;
-  transition: color 0.2s ease;
 }
 
 .tabs-wrapper :deep(.ant-tabs-tab:hover) {
@@ -659,7 +724,6 @@ watch(
 .line-items-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px 88px;
-  gap: 0;
 }
 
 .line-items-head span:nth-child(2),
@@ -758,17 +822,11 @@ watch(
   background: #d6e2d8;
 }
 
-.order-meta-side {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .order-type-tag {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 76px;
+  min-width: 80px;
   height: 28px;
   padding: 0 10px;
   border-radius: 999px;
@@ -782,8 +840,8 @@ watch(
 }
 
 .order-type-tag--adopt {
-  background: #f6f3ff;
-  color: #6d4fe0;
+  background: #fff4e6;
+  color: #b76a11;
 }
 
 .order-type-tag--default {
@@ -794,18 +852,12 @@ watch(
 .order-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 156px 150px 132px;
-  gap: 0;
-}
-
-.line-items {
-  min-width: 0;
 }
 
 .line-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px 88px;
   align-items: center;
-  gap: 0;
   min-height: 112px;
   padding: 0 18px;
   border-bottom: 1px solid #edf3ee;
@@ -838,10 +890,9 @@ watch(
   width: 84px;
   height: 84px;
   object-fit: cover;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid #e7efe8;
-  background: #f4f8f5;
-  flex-shrink: 0;
+  background: #f4faf5;
 }
 
 .item-info {
@@ -851,13 +902,9 @@ watch(
 .product-title {
   margin: 0;
   font-size: 15px;
+  line-height: 1.6;
   font-weight: 600;
-  line-height: 1.5;
-  color: #1f2937;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  color: #26362c;
 }
 
 .item-tags {
@@ -876,237 +923,162 @@ watch(
   padding: 0 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
-}
-
-.item-tag {
-  background: #eef8f0;
-  color: #1f7a3f;
-}
-
-.item-shop-inline {
-  background: #f7f7f8;
-  color: #6b7280;
+  color: #607264;
+  background: #f3f7f4;
 }
 
 .item-price,
-.item-quantity {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100%;
-  color: #1f2937;
-}
-
-.price-current {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.item-quantity {
-  font-size: 15px;
-  color: #52625a;
-  font-weight: 600;
-}
-
+.item-quantity,
 .summary-col,
 .status-col,
 .action-col {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 20px 16px;
-  border-left: 1px solid #edf3ee;
-  text-align: center;
+  flex-direction: column;
+  padding: 18px 14px;
 }
 
+.price-current,
 .summary-main {
-  margin: 0;
-  font-size: 22px;
-  line-height: 1.1;
+  font-size: 18px;
   font-weight: 700;
-  color: #156b33;
+  color: #22352a;
 }
 
-.summary-label {
-  margin: 0;
+.summary-label,
+.summary-sub,
+.status-desc,
+.action-placeholder {
+  margin: 6px 0 0;
+  text-align: center;
   font-size: 12px;
-  color: #6b7280;
-}
-
-.summary-sub {
-  margin: 0;
-  font-size: 12px;
-  color: #9ca3af;
+  line-height: 1.6;
+  color: #7b887f;
 }
 
 .status-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 86px;
-  min-height: 32px;
+  min-width: 84px;
+  height: 30px;
   padding: 0 12px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
 }
 
-.status-desc {
-  margin: 0;
-  max-width: 120px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #7b8794;
-}
-
 .status-pending {
-  background: #fff4e8;
-  color: #ea580c;
+  background: #fff7e8;
+  color: #c78511;
 }
 
+.status-assignment,
 .status-shipping {
-  background: #eefaf1;
+  background: #eef8f1;
   color: #1f7a3f;
 }
 
-.status-assignment {
-  background: #fffbeb;
-  color: #c98512;
-}
-
 .status-shipped {
-  background: #ecfeff;
-  color: #0891b2;
+  background: #eef6ff;
+  color: #1860d6;
 }
 
 .status-breeding {
-  background: #effaf1;
-  color: #4d7c0f;
+  background: #f2fbf5;
+  color: #14834a;
+}
+
+.status-completed {
+  background: #eff7f0;
+  color: #236f3f;
+}
+
+.status-review {
+  background: #fff4e8;
+  color: #d97706;
 }
 
 .status-closed {
+  background: #f4f4f5;
+  color: #71717a;
+}
+
+.status-default {
   background: #f3f4f6;
   color: #6b7280;
 }
 
-.status-completed {
-  background: #e8f8ee;
-  color: #0f9f57;
-}
-
-.status-default {
-  background: #f4f4f5;
-  color: #52525b;
-}
-
 .action-button {
-  min-width: 96px;
-  height: 36px;
+  min-width: 92px;
+  height: 38px;
   border-radius: 999px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #1f7a3f 0%, #3da85f 100%);
+  background: linear-gradient(90deg, #18874a 0%, #35a865 100%);
   border: none;
-  box-shadow: 0 8px 18px rgba(31, 122, 63, 0.18);
+  box-shadow: 0 10px 20px rgba(24, 135, 74, 0.16);
 }
 
-.action-button:hover,
-.action-button:focus {
-  background: linear-gradient(135deg, #176633 0%, #338d52 100%);
-}
-
-.action-placeholder {
-  font-size: 13px;
-  color: #98a2b3;
+.action-button--review {
+  background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%);
+  box-shadow: 0 10px 20px rgba(249, 115, 22, 0.18);
 }
 
 .pagination-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-top: 28px;
+  margin-top: 20px;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1200px) {
   .order-table-head,
   .order-content {
-    grid-template-columns: minmax(0, 1fr) 140px 132px 120px;
-  }
-
-  .line-items-head,
-  .line-item {
-    grid-template-columns: minmax(0, 1fr) 104px 72px;
-  }
-}
-
-@media (max-width: 960px) {
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .page-summary {
-    justify-content: space-between;
+    grid-template-columns: 1fr;
   }
 
   .order-table-head {
     display: none;
   }
 
-  .order-content {
-    grid-template-columns: 1fr;
-  }
-
   .summary-col,
   .status-col,
   .action-col {
-    border-left: none;
+    align-items: flex-start;
+    padding: 18px;
     border-top: 1px solid #edf3ee;
+  }
+
+  .summary-label,
+  .summary-sub,
+  .status-desc,
+  .action-placeholder {
+    text-align: left;
   }
 }
 
-@media (max-width: 640px) {
-  .page-title {
-    font-size: 22px;
-  }
-
-  .page-subtitle {
-    font-size: 13px;
-  }
-
-  .tabs-wrapper :deep(.ant-tabs-tab) {
-    padding: 12px 10px;
-    margin-right: 4px;
-    font-size: 13px;
-  }
-
-  .order-meta {
+@media (max-width: 768px) {
+  .page-header,
+  .order-meta,
+  .item-main {
     flex-direction: column;
     align-items: flex-start;
   }
 
+  .page-summary {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .line-item {
     grid-template-columns: 1fr;
-    gap: 12px;
-    padding-top: 16px;
-    padding-bottom: 16px;
+    gap: 10px;
+    padding: 16px;
   }
 
   .item-price,
   .item-quantity {
-    justify-content: flex-start;
-    padding-left: 98px;
-  }
-
-  .summary-col,
-  .status-col,
-  .action-col {
-    padding: 16px;
-  }
-
-  .pagination-wrapper {
-    justify-content: center;
+    align-items: flex-start;
+    padding: 0;
   }
 }
 </style>

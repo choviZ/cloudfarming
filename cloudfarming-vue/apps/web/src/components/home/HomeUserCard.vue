@@ -15,29 +15,23 @@
         </div>
         <h3 class="user-name">{{ userName }}</h3>
 
-        <div class="address-box" @click="router.push('/user/info/address')">
+        <div class="address-box" @click="handleAddressClick">
           <EnvironmentOutlined class="address-icon" />
           <span class="address-text">{{ address }}</span>
           <RightOutlined class="address-arrow" />
         </div>
 
         <div class="stats-grid">
-          <div class="stat-item group">
-            <div class="stat-value">2</div>
-            <div class="stat-label">购物车</div>
-          </div>
-          <div class="stat-item group">
-            <div class="stat-value">1</div>
-            <div class="stat-label">待收货</div>
-          </div>
-          <div class="stat-item group">
-            <div class="stat-value">0</div>
-            <div class="stat-label">待发货</div>
-          </div>
-          <div class="stat-item group">
-            <div class="stat-value">5</div>
-            <div class="stat-label">待评价</div>
-          </div>
+          <button
+            v-for="stat in statCards"
+            :key="stat.key"
+            type="button"
+            class="stat-item group"
+            @click="navigateTo(stat.path, stat.query)"
+          >
+            <div class="stat-value">{{ stat.value }}</div>
+            <div class="stat-label">{{ stat.label }}</div>
+          </button>
         </div>
       </div>
     </section>
@@ -71,7 +65,7 @@
       </ul>
     </section>
 
-    <section class="showcase-card" @click="goToFarmerList">
+    <section class="showcase-card surface-card" @click="goToFarmerList">
       <div class="showcase-header">
         <h4 class="notice-title">
           <span class="title-indicator"></span>
@@ -95,11 +89,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { EnvironmentOutlined, RightOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { getCurrentUserDefaultReceiveAddress } from '@/api/address'
 import { pagePublishedArticles } from '@/api/article'
+import { getCart } from '@/api/cart'
+import { getMyPendingReviewOrders, getOrderList, ORDER_STATUS } from '@/api/order'
 import { useUserStore } from '@/stores/useUserStore'
 
 const router = useRouter()
@@ -107,6 +103,12 @@ const userStore = useUserStore()
 
 const address = ref('暂未设置默认收货地址')
 const noticeList = ref([])
+const stats = reactive({
+  cartCount: 0,
+  pendingReceiveCount: 0,
+  pendingShipCount: 0,
+  pendingReviewCount: 0
+})
 
 const userName = computed(() => userStore.loginUser?.username || '请登录')
 const userAvatar = computed(() => userStore.loginUser?.avatar || '')
@@ -114,6 +116,36 @@ const hasAvatar = computed(() => {
   const avatar = userAvatar.value
   return avatar && avatar !== '' && !avatar.includes('Avatar')
 })
+
+const statCards = computed(() => ([
+  {
+    key: 'cart',
+    label: '购物车',
+    value: stats.cartCount,
+    path: '/cart'
+  },
+  {
+    key: 'receive',
+    label: '待收货',
+    value: stats.pendingReceiveCount,
+    path: '/usercenter/orders',
+    query: { tab: 'shipped' }
+  },
+  {
+    key: 'ship',
+    label: '待发货',
+    value: stats.pendingShipCount,
+    path: '/usercenter/orders',
+    query: { tab: 'pendingShip' }
+  },
+  {
+    key: 'review',
+    label: '待评价',
+    value: stats.pendingReviewCount,
+    path: '/usercenter/orders',
+    query: { tab: 'pendingReview' }
+  }
+]))
 
 const goToArticleList = () => {
   router.push({
@@ -134,6 +166,25 @@ const goToArticleDetail = (id) => {
     name: 'articleDetail',
     params: { id: String(id) }
   })
+}
+
+const navigateTo = (path, query) => {
+  if (!userStore.loginUser) {
+    router.push('/user/login')
+    return
+  }
+  router.push({
+    path,
+    query
+  })
+}
+
+const handleAddressClick = () => {
+  if (!userStore.loginUser) {
+    router.push('/user/login')
+    return
+  }
+  router.push('/user/info/address')
 }
 
 const getNoticeTagClass = (notice) => {
@@ -159,8 +210,16 @@ const getNoticeTagText = (notice) => {
   return '公告'
 }
 
+const resetStats = () => {
+  stats.cartCount = 0
+  stats.pendingReceiveCount = 0
+  stats.pendingShipCount = 0
+  stats.pendingReviewCount = 0
+}
+
 const loadDefaultAddress = async () => {
   if (!userStore.loginUser) {
+    address.value = '暂未设置默认收货地址'
     return
   }
   try {
@@ -168,9 +227,48 @@ const loadDefaultAddress = async () => {
     if (res.code === '0' && res.data) {
       const { provinceName, cityName, districtName, detailAddress } = res.data
       address.value = `${provinceName}${cityName}${districtName}${detailAddress}`
+      return
     }
+    address.value = '暂未设置默认收货地址'
   } catch (error) {
     console.error(error)
+    address.value = '暂未设置默认收货地址'
+  }
+}
+
+const loadUserStats = async () => {
+  if (!userStore.loginUser) {
+    resetStats()
+    return
+  }
+  try {
+    const [cartRes, pendingShipRes, pendingReceiveRes, pendingReviewRes] = await Promise.all([
+      getCart(),
+      getOrderList({
+        userId: userStore.loginUser.id,
+        orderStatus: ORDER_STATUS.PENDING_SHIPMENT,
+        current: 1,
+        size: 1
+      }),
+      getOrderList({
+        userId: userStore.loginUser.id,
+        orderStatus: ORDER_STATUS.SHIPPED,
+        current: 1,
+        size: 1
+      }),
+      getMyPendingReviewOrders({
+        current: 1,
+        size: 1
+      })
+    ])
+
+    stats.cartCount = Number(cartRes?.data?.totalQuantity) || 0
+    stats.pendingShipCount = Number(pendingShipRes?.data?.total) || 0
+    stats.pendingReceiveCount = Number(pendingReceiveRes?.data?.total) || 0
+    stats.pendingReviewCount = Number(pendingReviewRes?.data?.total) || 0
+  } catch (error) {
+    console.error(error)
+    resetStats()
   }
 }
 
@@ -189,8 +287,19 @@ const loadNotices = async () => {
   }
 }
 
-onMounted(async () => {
-  await Promise.all([loadDefaultAddress(), loadNotices()])
+const loadPageData = async () => {
+  await Promise.all([loadDefaultAddress(), loadUserStats(), loadNotices()])
+}
+
+watch(
+  () => userStore.loginUser?.id,
+  () => {
+    loadPageData()
+  }
+)
+
+onMounted(() => {
+  loadPageData()
 })
 </script>
 
@@ -260,311 +369,227 @@ onMounted(async () => {
   padding: 5px;
   background-color: #ffffff;
   border-radius: 50%;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+}
+
+.avatar-img,
+.avatar-placeholder {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
 }
 
 .avatar-img {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background-color: #f8fafc;
+  object-fit: cover;
+  display: block;
 }
 
 .avatar-placeholder {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background-color: #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  color: #6b7280;
 }
 
 .avatar-icon {
-  font-size: 28px;
-  color: #94a3b8;
+  font-size: 30px;
 }
 
 .user-name {
-  margin: 0 0 10px;
-  font-weight: 700;
-  color: #0f172a;
+  margin: 0 0 12px;
   font-size: 18px;
-  line-height: 1.2;
+  font-weight: 700;
+  color: #1f2937;
 }
 
 .address-box {
-  margin: 0 0 14px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #64748b;
-  background-color: #f8fafc;
-  padding: 7px 10px;
-  border-radius: 10px;
-  border: 1px solid #f1f5f9;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f6faf7;
+  border: 1px solid #e2eee5;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
-.address-box:hover {
-  background-color: #f1f5f9;
-  border-color: #e2e8f0;
-}
-
-.address-icon {
-  color: #22c55e;
+.address-icon,
+.address-arrow {
+  color: #2f8b49;
+  font-size: 14px;
 }
 
 .address-text {
-  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: #52625a;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 176px;
-}
-
-.address-arrow {
-  font-size: 10px;
-  color: #cbd5e1;
+  white-space: nowrap;
+  text-align: left;
 }
 
 .stats-grid {
-  margin-top: auto;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  border-top: 1px solid #f1f5f9;
-  padding-top: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: auto;
 }
 
 .stat-item {
+  border: none;
+  padding: 10px 0;
+  border-radius: 12px;
+  background: #f8fbf8;
   cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-1px);
+  background: #f1f8f3;
 }
 
 .stat-value {
+  font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
-  font-size: 16px;
-  transition: color 0.2s;
-}
-
-.stat-item:hover .stat-value {
-  color: #15803d;
+  color: #1f7a3f;
 }
 
 .stat-label {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 3px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6a7b70;
 }
 
-.notice-card {
-  padding: 14px 16px 12px;
-  display: flex;
-  flex-direction: column;
+.notice-card,
+.showcase-card {
+  padding: 14px 16px;
 }
 
 .notice-header,
 .showcase-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 
-.notice-header {
-  margin-bottom: 8px;
-}
-
 .notice-title {
-  font-weight: 700;
-  font-size: 14px;
-  color: #1e293b;
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
-  flex-shrink: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
 }
 
 .title-indicator {
   width: 4px;
-  height: 16px;
-  background-color: #16a34a;
-  border-radius: 9999px;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #159947 0%, #0c7c38 100%);
 }
 
-.notice-more {
-  font-size: 12px;
-  color: #94a3b8;
-  cursor: pointer;
-  display: flex;
+.notice-more,
+.showcase-entry {
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  transition: color 0.2s;
-}
-
-.notice-more:hover {
-  color: #15803d;
+  font-size: 12px;
+  color: #2f8b49;
+  cursor: pointer;
 }
 
 .notice-list {
   list-style: none;
+  margin: 12px 0 0;
   padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 0;
 }
 
 .notice-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
+  padding: 8px 0;
   cursor: pointer;
+}
+
+.notice-item + .notice-item {
+  border-top: 1px dashed #ecf1ee;
 }
 
 .notice-tag {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 4px;
-  height: fit-content;
-  margin-top: 1px;
   flex-shrink: 0;
+  min-width: 34px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 22px;
+  text-align: center;
 }
 
 .notice-tag.hot {
-  color: #ef4444;
-  background-color: #fef2f2;
-  border: 1px solid #fee2e2;
+  background: #fff0e0;
+  color: #c77414;
 }
 
 .notice-tag.new {
-  color: #16a34a;
-  background-color: #f0fdf4;
-  border: 1px solid #dcfce7;
+  background: #edf9f0;
+  color: #1d7f44;
 }
 
 .notice-tag.normal {
-  color: #64748b;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .notice-text {
-  font-size: 12px;
-  color: #475569;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
+  min-width: 0;
+  flex: 1;
+  font-size: 13px;
+  color: #46574d;
   overflow: hidden;
-  transition: color 0.2s;
-}
-
-.notice-item:hover .notice-text {
-  color: #15803d;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notice-empty {
-  display: flex;
-  align-items: center;
-  min-height: 36px;
-  color: #94a3b8;
-  font-size: 12px;
+  padding-top: 12px;
+  font-size: 13px;
+  color: #8a968f;
 }
 
 .showcase-card {
-  padding: 12px 14px;
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at top right, rgba(101, 184, 113, 0.18), transparent 30%),
-    linear-gradient(135deg, #f7fcf6 0%, #eef8ef 100%);
-  border: 1px solid #d9ecd9;
-  box-shadow: 0 8px 20px rgba(34, 115, 55, 0.08);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-.showcase-card:hover {
-  transform: translateY(-1px);
-  border-color: #b9ddb9;
-  box-shadow: 0 10px 20px rgba(34, 115, 55, 0.1);
-}
-
-.showcase-entry {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #eef8ef 0%, #dff2e2 100%);
-  border: 1px solid #cce8d0;
-  color: #1f7a42;
-  font-size: 11px;
-  font-weight: 700;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.showcase-card:hover .showcase-entry {
-  transform: translateY(-1px);
-  border-color: #9fd3a8;
-  box-shadow: 0 8px 16px rgba(31, 122, 66, 0.12);
-}
-
-.showcase-icon {
-  font-size: 13px;
 }
 
 .showcase-copy {
-  margin: 6px 0 8px;
-  color: #4e6a56;
-  font-size: 12px;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #5d6f64;
 }
 
 .showcase-tags {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .showcase-tag {
-  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
   border-radius: 999px;
-  background: rgba(26, 127, 58, 0.08);
-  color: #1f7a42;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-@media (max-width: 1200px) {
-  .home-user-card {
-    width: 100%;
-    height: auto;
-    grid-template-rows: none;
-  }
-
-  .user-card-inner {
-    min-height: 220px;
-  }
-
-  .notice-card {
-    min-height: 118px;
-  }
-
-  .showcase-card {
-    min-height: 94px;
-  }
+  background: #f1f7f2;
+  color: #1f7a3f;
+  font-size: 12px;
 }
 </style>

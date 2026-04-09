@@ -19,26 +19,26 @@ create table t_users
 
 create table t_farmer
 (
-    id                   bigint(18)   not null comment '主键' primary key,
-    user_id              bigint(18)   not null comment '用户id',
-    real_name            varchar(255) not null comment '姓名',
-    id_card              varchar(255) not null comment '身份证号',
-    house_address        varchar(255) null comment '户籍地',
-    farm_name            varchar(255) null comment '养殖场名称',
-    farm_address         varchar(255) null comment '养殖场地址',
-    farm_area            double       null comment '养殖场面积',
-    breeding_type        varchar(255) null comment '养殖品类',
-    business_license_no  bigint(18)   null comment '营业执照编号',
-    business_license_pic varchar(255) null comment '营业执照图片',
-    environment_images   text         null comment '农场环境图片，多个地址使用英文逗号分隔',
+    id                   bigint(18)           not null comment '主键' primary key,
+    user_id              bigint(18)           not null comment '用户id',
+    real_name            varchar(255)         not null comment '姓名',
+    id_card              varchar(255)         not null comment '身份证号',
+    house_address        varchar(255)         null comment '户籍地',
+    farm_name            varchar(255)         null comment '养殖场名称',
+    farm_address         varchar(255)         null comment '养殖场地址',
+    farm_area            double               null comment '养殖场面积',
+    breeding_type        varchar(255)         null comment '养殖品类',
+    business_license_no  bigint(18)           null comment '营业执照编号',
+    business_license_pic varchar(255)         null comment '营业执照图片',
+    environment_images   text                 null comment '农场环境图片，多个地址使用英文逗号分隔',
     featured_flag        tinyint(1) default 0 not null comment '是否精选：0-否 1-是',
-    remark               varchar(255) null comment '申请审核备注',
-    review_status        tinyint(1)   null comment '审核状态 0-待审核 1-已通过 2-未通过',
-    review_user_id       varchar(255) null comment '审核人id',
-    review_remark        varchar(255) null comment '管理员审核备注',
-    create_time          datetime     not null on update CURRENT_TIMESTAMP comment '创建时间',
-    update_time          datetime     not null comment '修改时间',
-    del_flag             tinyint(1)   not null comment '逻辑删除'
+    remark               varchar(255)         null comment '申请审核备注',
+    review_status        tinyint(1)           null comment '审核状态 0-待审核 1-已通过 2-未通过',
+    review_user_id       varchar(255)         null comment '审核人id',
+    review_remark        varchar(255)         null comment '管理员审核备注',
+    create_time          datetime             not null on update CURRENT_TIMESTAMP comment '创建时间',
+    update_time          datetime             not null comment '修改时间',
+    del_flag             tinyint(1)           not null comment '逻辑删除'
 ) COMMENT '农户表' CHARSET = utf8mb4;
 
 create table t_receive_address
@@ -731,3 +731,27 @@ create table t_order_detail_sku_7
     index idx_order_no (order_no)
 )
     comment '普通商品明细表' charset = utf8mb4;
+
+CREATE TABLE t_order_sku_review
+(
+    id                   BIGINT                             NOT NULL PRIMARY KEY,
+    order_no             VARCHAR(64)                        NOT NULL,
+    order_detail_sku_id  BIGINT                             NOT NULL,
+    spu_id               BIGINT                             NOT NULL,
+    sku_id               BIGINT                             NOT NULL,
+    shop_id              BIGINT                             NOT NULL,
+    user_id              BIGINT                             NOT NULL,
+    score                TINYINT                            NOT NULL,
+    content              VARCHAR(1000)                      NULL,
+    image_urls           VARCHAR(2000)                      NULL,
+    user_name_snapshot   VARCHAR(128)                       NULL,
+    user_avatar_snapshot VARCHAR(255)                       NULL,
+    create_time          DATETIME DEFAULT CURRENT_TIMESTAMP NULL,
+    update_time          DATETIME DEFAULT CURRENT_TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+    del_flag             INT      DEFAULT 0                 NULL,
+    UNIQUE INDEX uk_order_detail_sku_id (order_detail_sku_id),
+    INDEX idx_order_no (order_no),
+    INDEX idx_spu_create_time (spu_id, create_time),
+    INDEX idx_user_create_time (user_id, create_time)
+)
+    CHARSET = utf8mb4;

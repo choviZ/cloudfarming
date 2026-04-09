@@ -160,6 +160,11 @@ const router = createRouter({
           component: () => import('../views/user/orders/OrderList.vue')
         },
         {
+          path: 'orders/review/:orderNo',
+          name: 'userOrderReview',
+          component: () => import('../views/user/orders/OrderReview.vue')
+        },
+        {
           path: 'adopts',
           name: 'userAdopts',
           component: () => import('../views/user/adopt/MyAdopts.vue')

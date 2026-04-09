@@ -13,18 +13,22 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
+import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.order.constant.OrderTypeConstant;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailAdoptDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailSkuDO;
+import com.vv.cloudfarming.order.dao.entity.OrderSkuReviewDO;
 import com.vv.cloudfarming.order.dao.entity.PayDO;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
+import com.vv.cloudfarming.order.dao.mapper.OrderSkuReviewMapper;
 import com.vv.cloudfarming.order.dao.mapper.PayOrderMapper;
 import com.vv.cloudfarming.order.dto.common.FarmerOrderTrendAggDTO;
+import com.vv.cloudfarming.order.dto.common.OrderReviewAggDTO;
 import com.vv.cloudfarming.order.dto.common.ProductItemDTO;
 import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptItemReqDTO;
@@ -85,6 +89,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -110,6 +115,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     private final RedisIdWorker redisIdWorker;
     private final OrderDetailAdoptMapper orderDetailAdoptMapper;
     private final OrderDetailSkuMapper orderDetailSkuMapper;
+    private final OrderSkuReviewMapper orderSkuReviewMapper;
     private final OrderChainContext orderChainContext;
     private final OrderContext orderContext;
     private final StrategyFactory strategyFactory;
@@ -346,22 +352,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             .orderByDesc(OrderDO::getId);
 
         IPage<OrderDO> orderPage = baseMapper.selectPage(requestParam, wrapper);
-        Map<String, List<ProductSummaryDTO>> productSummariesByOrderNo =
-            orderProductSummaryQueryService.mapByOrderNos(orderPage.getRecords().stream()
-                .map(OrderDO::getOrderNo)
-                .collect(Collectors.toList()));
-        return orderPage.convert(each -> {
-            ShopRespDTO shop = shopRemoteService.getShopById(each.getShopId()).getData();
-            return OrderPageWithProductInfoRespDTO.builder()
-                .id(each.getId())
-                .orderNo(each.getOrderNo())
-                .shopName(shop.getShopName())
-                .items(productSummariesByOrderNo.getOrDefault(each.getOrderNo(), Collections.emptyList()))
-                .totalPrice(each.getTotalAmount())
-                .orderStatus(each.getOrderStatus())
-                .createTime(each.getCreateTime())
-                .build();
-        });
+        List<String> orderNos = orderPage.getRecords().stream()
+            .map(OrderDO::getOrderNo)
+            .collect(Collectors.toList());
+        Map<String, List<ProductSummaryDTO>> productSummariesByOrderNo = orderProductSummaryQueryService.mapByOrderNos(orderNos);
+        Map<String, OrderReviewAggDTO> reviewAggMap = mapOrderReviewAggByOrderNos(orderNos);
+        return orderPage.convert(each -> buildOrderPageWithProductInfoResp(each, productSummariesByOrderNo, reviewAggMap));
     }
 
     @Override
@@ -586,6 +582,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
 
     @Override
     public List<AdoptOrderDetailRespDTO> getAdoptOrderDetail(String orderNo) {
+        getAccessibleOrderByOrderNo(orderNo);
         LambdaQueryWrapper<OrderDetailAdoptDO> wrapper = Wrappers.lambdaQuery(OrderDetailAdoptDO.class)
             .eq(OrderDetailAdoptDO::getOrderNo, orderNo);
         List<OrderDetailAdoptDO> orderDetails = orderDetailAdoptMapper.selectList(wrapper);
@@ -594,10 +591,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
 
     @Override
     public List<SkuOrderDetailRespDTO> getSkuOrderDetail(String orderNo) {
+        OrderDO order = getAccessibleOrderByOrderNo(orderNo);
         LambdaQueryWrapper<OrderDetailSkuDO> wrapper = Wrappers.lambdaQuery(OrderDetailSkuDO.class)
             .eq(OrderDetailSkuDO::getOrderNo, orderNo);
         List<OrderDetailSkuDO> orderDetailSkus = orderDetailSkuMapper.selectList(wrapper);
-        return orderDetailSkus.stream().map(each -> BeanUtil.toBean(each, SkuOrderDetailRespDTO.class)).toList();
+        Map<Long, OrderSkuReviewDO> reviewMap = orderSkuReviewMapper.selectList(Wrappers.lambdaQuery(OrderSkuReviewDO.class)
+                .eq(OrderSkuReviewDO::getOrderNo, order.getOrderNo()))
+            .stream()
+            .collect(Collectors.toMap(OrderSkuReviewDO::getOrderDetailSkuId, each -> each, (left, right) -> left));
+        return orderDetailSkus.stream().map(each -> buildSkuOrderDetailResp(each, reviewMap.get(each.getId()))).toList();
     }
 
     @Override
@@ -793,6 +795,71 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         return response;
     }
 
+    private OrderPageWithProductInfoRespDTO buildOrderPageWithProductInfoResp(
+        OrderDO order,
+        Map<String, List<ProductSummaryDTO>> productSummariesByOrderNo,
+        Map<String, OrderReviewAggDTO> reviewAggMap
+    ) {
+        ShopRespDTO shop = shopRemoteService.getShopById(order.getShopId()).getData();
+        long pendingReviewCount = 0L;
+        boolean allReviewed = true;
+        if (Objects.equals(order.getOrderType(), OrderTypeConstant.GOODS)
+            && Objects.equals(order.getOrderStatus(), OrderStatusEnum.COMPLETED.getCode())) {
+            OrderReviewAggDTO reviewAggDTO = reviewAggMap.get(order.getOrderNo());
+            pendingReviewCount = safeCount(reviewAggDTO == null ? null : reviewAggDTO.getPendingReviewCount());
+            allReviewed = pendingReviewCount <= 0;
+        }
+        return OrderPageWithProductInfoRespDTO.builder()
+            .id(order.getId())
+            .orderNo(order.getOrderNo())
+            .payOrderNo(order.getPayOrderNo())
+            .shopName(shop == null ? "" : shop.getShopName())
+            .items(productSummariesByOrderNo.getOrDefault(order.getOrderNo(), Collections.emptyList()))
+            .totalPrice(order.getTotalAmount())
+            .totalAmount(order.getTotalAmount())
+            .actualPayAmount(order.getActualPayAmount())
+            .orderType(order.getOrderType())
+            .orderStatus(order.getOrderStatus())
+            .pendingReviewCount(pendingReviewCount)
+            .allReviewed(allReviewed)
+            .createTime(order.getCreateTime())
+            .build();
+    }
+
+    private Map<String, OrderReviewAggDTO> mapOrderReviewAggByOrderNos(List<String> orderNos) {
+        if (CollUtil.isEmpty(orderNos)) {
+            return Collections.emptyMap();
+        }
+        return orderSkuReviewMapper.selectOrderReviewAggByOrderNos(orderNos).stream()
+            .collect(Collectors.toMap(OrderReviewAggDTO::getOrderNo, each -> each, (left, right) -> left, LinkedHashMap::new));
+    }
+
+    private SkuOrderDetailRespDTO buildSkuOrderDetailResp(OrderDetailSkuDO orderDetailSku, OrderSkuReviewDO review) {
+        SkuOrderDetailRespDTO respDTO = BeanUtil.toBean(orderDetailSku, SkuOrderDetailRespDTO.class);
+        if (review == null) {
+            respDTO.setReviewed(Boolean.FALSE);
+            respDTO.setReviewImageUrls(Collections.emptyList());
+            return respDTO;
+        }
+        respDTO.setReviewed(Boolean.TRUE);
+        respDTO.setReviewId(review.getId());
+        respDTO.setReviewScore(review.getScore());
+        respDTO.setReviewContent(review.getContent());
+        respDTO.setReviewImageUrls(splitImageUrls(review.getImageUrls()));
+        respDTO.setReviewCreateTime(review.getCreateTime());
+        return respDTO;
+    }
+
+    private List<String> splitImageUrls(String rawImageUrls) {
+        if (StrUtil.isBlank(rawImageUrls)) {
+            return Collections.emptyList();
+        }
+        return StrUtil.split(rawImageUrls, ',').stream()
+            .map(StrUtil::trim)
+            .filter(StrUtil::isNotBlank)
+            .toList();
+    }
+
     private String buildReceiveAddress(OrderDO order) {
         return Stream.of(
                 order.getProvinceName(),
@@ -802,6 +869,29 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             )
             .filter(StrUtil::isNotBlank)
             .collect(Collectors.joining());
+    }
+
+    private OrderDO getAccessibleOrderByOrderNo(String orderNo) {
+        if (!StpUtil.isLogin()) {
+            throw new ClientException("请先登录");
+        }
+        String normalizedOrderNo = StrUtil.trim(orderNo);
+        OrderDO order = baseMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class)
+            .eq(OrderDO::getOrderNo, normalizedOrderNo));
+        if (order == null) {
+            throw new ClientException("订单不存在");
+        }
+        long currentUserId = StpUtil.getLoginIdAsLong();
+        if (Objects.equals(order.getUserId(), currentUserId)) {
+            return order;
+        }
+        if (StpUtil.hasRole(UserRoleConstant.FARMER_DESC)) {
+            ShopRespDTO shop = getCurrentFarmerShop();
+            if (shop != null && Objects.equals(shop.getId(), order.getShopId())) {
+                return order;
+            }
+        }
+        throw new ClientException("订单不存在或无权查看");
     }
 
     private SeckillActivityDO buildSeckillActivity(Map<String, String> map, DateTimeFormatter formatter) {

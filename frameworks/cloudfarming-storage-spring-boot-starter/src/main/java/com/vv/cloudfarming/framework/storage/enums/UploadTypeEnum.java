@@ -9,14 +9,14 @@ import java.util.Set;
 @AllArgsConstructor
 public enum UploadTypeEnum {
 
-    // spu封面
+    // 商品SPU封面
     PRODUCT_SPU_COVER(
             "PRODUCT_SPU_COVER",
             "/product/spu/cover/",
             Set.of(1, 2)
     ),
 
-    // spu详情图片
+    // 商品SPU详情图
     PRODUCT_SPU_DETAIL(
             "PRODUCT_SPU_DETAIL",
             "/product/spu/detail/",
@@ -30,32 +30,39 @@ public enum UploadTypeEnum {
             Set.of(1, 2)
     ),
 
-    // 认养项目详情图片
+    // 认养项目详情图
     ADOPT_ITEM_DETAIL(
             "ADOPT_ITEM_DETAIL",
             "/adopt/item/detail/",
             Set.of(1, 2)
     ),
 
-    // 认养动物图片
+    // 认养动物档案图
     ANIMAL_PROFILE(
             "ANIMAL_PROFILE",
             "/adopt/animal/profile/",
             Set.of(1, 2)
     ),
 
-    // 认养动物日记记录图片
+    // 生长日记图片
     ANIMAL_DIARY(
             "ANIMAL_DIARY",
             "/adopt/animal/diary/",
             Set.of(1, 2)
     ),
 
-    // 认养动物日记视频
+    // 生长日记视频
     ANIMAL_DIARY_VIDEO(
             "ANIMAL_DIARY_VIDEO",
             "/adopt/animal/diary/video/",
             Set.of(1, 2)
+    ),
+
+    // 商品评价图片
+    PRODUCT_REVIEW(
+            "PRODUCT_REVIEW",
+            "/order/review/",
+            Set.of(0, 1, 2)
     ),
 
     // 广告
@@ -72,7 +79,7 @@ public enum UploadTypeEnum {
             Set.of(0, 1, 2)
     ),
 
-    // 文章中的图片
+    // 文章图片
     ARTICLE_IMAGE(
             "ARTICLE_IMAGE",
             "/article/",
@@ -87,7 +94,7 @@ public enum UploadTypeEnum {
     );
 
     /**
-     * 前端传入的类型
+     * 前端传入的业务码
      */
     private final String code;
 
@@ -97,7 +104,7 @@ public enum UploadTypeEnum {
     private final String pathPrefix;
 
     /**
-     * 需要的角色
+     * 允许上传的角色
      */
     private Set<Integer> needRoles;
 
