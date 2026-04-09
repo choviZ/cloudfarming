@@ -63,7 +63,6 @@
                   <span class="amount">{{ displayPrice }}</span>
                 </div>
               </div>
-              <p class="price-hint">支持按规格选择下单，库存以当前规格为准。</p>
             </div>
 
             <div v-if="specKeys.length > 0" class="sku-section">
@@ -95,7 +94,6 @@
                   class="quantity-input"
                   :disabled="!currentSku && specKeys.length > 0"
                 />
-                <span v-if="currentSku" class="stock-text">库存 {{ currentSku.stock }}</span>
               </div>
             </div>
 

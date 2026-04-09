@@ -10,10 +10,6 @@
         theme="light"
         mode="inline"
       >
-        <a-menu-item key="0" @click="router.push('/farmer/index')">
-          <dashboard-outlined />
-          <span>工作台</span>
-        </a-menu-item>
         <a-sub-menu key="1">
           <template #title>
             <appstore-outlined />
@@ -28,14 +24,6 @@
             <span>创建商品</span>
           </a-menu-item>
         </a-sub-menu>
-        <a-menu-item key="2" @click="router.push('/farmer/shop')">
-          <shop-outlined />
-          <span>店铺管理</span>
-        </a-menu-item>
-        <a-menu-item key="3" @click="router.push('/farmer/orders')">
-          <transaction-outlined />
-          <span>订单管理</span>
-        </a-menu-item>
         <a-sub-menu key="4">
           <template #title>
             <project-outlined />
@@ -54,6 +42,14 @@
             <span>养殖实例</span>
           </a-menu-item>
         </a-sub-menu>
+        <a-menu-item key="2" @click="router.push('/farmer/shop')">
+          <shop-outlined />
+          <span>店铺管理</span>
+        </a-menu-item>
+        <a-menu-item key="3" @click="router.push('/farmer/orders')">
+          <transaction-outlined />
+          <span>订单管理</span>
+        </a-menu-item>
         <a-menu-item key="5" @click="router.push('/farmer/statistics')">
           <bar-chart-outlined />
           <span>数据统计</span>
@@ -92,7 +88,6 @@ import { computed, h, ref } from 'vue'
 import {
   AppstoreOutlined,
   BarChartOutlined,
-  DashboardOutlined,
   DeploymentUnitOutlined,
   OrderedListOutlined,
   PictureOutlined,
@@ -111,9 +106,6 @@ const route = useRoute()
 const collapsed = ref(false)
 
 const selectedKeys = computed(() => {
-  if (route.path === '/farmer/index') {
-    return ['0']
-  }
   if (route.path === '/farmer/spu/list') {
     return ['1-1']
   }

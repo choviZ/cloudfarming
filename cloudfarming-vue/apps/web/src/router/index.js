@@ -190,7 +190,7 @@ const router = createRouter({
       path: '/farmer',
       name: 'farmer',
       component: MerchantLayout,
-      redirect: '/farmer/index',
+      redirect: '/farmer/spu/list',
       children: [
         {
           path: 'index',
