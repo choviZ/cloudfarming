@@ -18,8 +18,7 @@
 | 消息队列 | RabbitMQ |
 | 认证鉴权 | Sa-Token |
 | 分库分表 | ShardingSphere |
-| 接口文档 | Knife4j、OpenAPI |
-| 工具库 | Hutool、Lombok、Fastjson2 |
+
 
 ### 前端技术栈
 
@@ -55,7 +54,7 @@ cloudfarming
 │  ├─ user-operation-service/       用户、地址、反馈等相关服务
 │  ├─ product-service/              商品、SKU、分类、店铺、购物车等服务
 │  ├─ order-pay-service/            订单、支付、订单明细等服务
-│  ├─ aggregation-service/          聚合查询与组合接口服务
+│  ├─ aggregation-service/          聚合服务（将其他微服务聚合在一起，若本地配置不足可以只启动网关 + 聚合服务）
 │  └─ gateway-service/              网关服务，统一路由转发
 ├─ docs/                            项目文档
 ├─ resources/                       资源文件与附加材料
@@ -100,3 +99,16 @@ cloudfarming
 - 商品审核：商品审核、上下架状态控制
 - 反馈处理：意见反馈与投诉提交、后台处理反馈内容
 - 公告与内容展示：店铺公告、平台页面内容展示
+
+## 核心页面展示
+首页截图
+![首页](./docs/首页.png)
+
+商品列表页面截图
+![商品列表](./docs/商品列表.png)
+
+商品详情页
+![商品详情页](./docs/商品详情页.png)
+
+确认订单页
+![确认订单页](./docs/确认订单页.png)
