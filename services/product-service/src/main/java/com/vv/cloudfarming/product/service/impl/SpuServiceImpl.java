@@ -230,7 +230,7 @@ public class SpuServiceImpl extends ServiceImpl<SpuMapper, SpuDO> implements Spu
                     ProductRespDTO result = new ProductRespDTO();
                     result.setProductSpu(spuResp);
                     result.setProductSkus(skuService.getSkusBySpuId(id));
-                    spuResp.setAttributes(JSONUtil.toJsonStr(baseMapper.querySpuAttr(spuDO.getId())));
+                    spuResp.setAttributes(JSONUtil.toJsonStr(getSpuAttributes(spuDO.getId())));
 
                     cache = JSONUtil.toJsonStr(result);
                     stringRedisTemplate.opsForValue().set(cacheKey, cache, 30, TimeUnit.MINUTES);
