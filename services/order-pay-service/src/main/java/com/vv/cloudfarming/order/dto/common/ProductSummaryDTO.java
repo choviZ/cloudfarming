@@ -17,6 +17,16 @@ import java.math.BigDecimal;
 public class ProductSummaryDTO {
 
     /**
+     * 商品SPU ID（认养条目为空）
+     */
+    private Long spuId;
+
+    /**
+     * 认养项目ID（商品条目为空）
+     */
+    private Long adoptItemId;
+
+    /**
      * 商品名称
      */
     private String productName;

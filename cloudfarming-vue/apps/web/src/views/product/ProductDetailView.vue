@@ -8,6 +8,18 @@
       </a-breadcrumb>
 
       <a-spin :spinning="loading" tip="加载中...">
+        <a-result
+          v-if="productMissing"
+          status="404"
+          title="商品不存在或已下架"
+          sub-title="该商品可能已删除、下架或链接已失效。"
+        >
+          <template #extra>
+            <a-button type="primary" @click="goToProductList">返回生鲜市集</a-button>
+          </template>
+        </a-result>
+
+        <template v-else>
         <section class="product-hero">
           <div class="gallery-section">
             <div class="main-image-wrapper">
@@ -168,6 +180,7 @@
             </div>
           </div>
         </section>
+        </template>
       </a-spin>
     </div>
   </div>
@@ -196,6 +209,7 @@ const router = useRouter()
 const spuId = route.params.id
 
 const loading = ref(false)
+const productMissing = ref(false)
 const spuInfo = ref({})
 const skuList = ref([])
 const productImages = ref([])
@@ -322,10 +336,12 @@ const extractSpecs = (skus = []) => {
 
 const fetchProductDetail = async (id) => {
   loading.value = true
+  productMissing.value = false
   try {
     const response = await getSpuDetail(Number(id))
     if (response.code !== '0' || !response.data) {
-      message.error(response.message || '获取商品详情失败')
+      productMissing.value = true
+      message.warning('商品不存在或已下架')
       return
     }
     const { productSpu, productSkus } = response.data
@@ -439,6 +455,10 @@ const goToShopHome = () => {
     return
   }
   router.push(`/shop/${targetShopId}`)
+}
+
+const goToProductList = () => {
+  router.push('/product/list')
 }
 
 onMounted(() => {

@@ -4,6 +4,7 @@
 
     <select id="selectAdoptByOrderNos" resultType="com.vv.cloudfarming.order.dto.common.OrderProductSummaryRecordDTO">
         SELECT order_no AS orderNo,
+               adopt_item_id AS adoptItemId,
                item_name AS productName,
                item_image AS coverImage,
                price,
@@ -18,6 +19,7 @@
 
     <select id="selectSkuByOrderNos" resultType="com.vv.cloudfarming.order.dto.common.OrderProductSummaryRecordDTO">
         SELECT order_no AS orderNo,
+               spu_id AS spuId,
                sku_name AS productName,
                sku_image AS coverImage,
                price,

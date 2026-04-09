@@ -45,6 +45,8 @@ public class OrderProductSummaryQueryService {
 
     private ProductSummaryDTO toProductSummary(OrderProductSummaryRecordDTO record) {
         return ProductSummaryDTO.builder()
+            .spuId(record.getSpuId())
+            .adoptItemId(record.getAdoptItemId())
             .productName(record.getProductName())
             .coverImage(record.getCoverImage())
             .price(record.getPrice())

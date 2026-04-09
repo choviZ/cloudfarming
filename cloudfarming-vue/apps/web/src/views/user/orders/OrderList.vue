@@ -66,12 +66,19 @@
             <div class="order-content">
               <div class="line-items">
                 <template v-if="resolveOrderItems(order).length">
-                  <div
-                    v-for="(item, index) in resolveOrderItems(order)"
-                    :key="`${getOrderIdentifier(order)}-${index}`"
-                    class="line-item"
-                  >
-                    <div class="item-main">
+                    <div
+                      v-for="(item, index) in resolveOrderItems(order)"
+                      :key="`${getOrderIdentifier(order)}-${index}`"
+                      class="line-item"
+                    >
+                    <div
+                      class="item-main"
+                      :class="{ 'item-main--clickable': isNavigableOrder(order) }"
+                      :tabindex="isNavigableOrder(order) ? 0 : -1"
+                      @click="handleViewItemDetail(order, item)"
+                      @keydown.enter.prevent="handleViewItemDetail(order, item)"
+                      @keydown.space.prevent="handleViewItemDetail(order, item)"
+                    >
                       <img :src="getItemImage(item.coverImage)" :alt="item.productName || '订单商品'" class="product-img" />
                       <div class="item-info">
                         <h3 class="product-title">{{ item.productName || '订单商品' }}</h3>
@@ -166,6 +173,8 @@ import {
   ORDER_TYPE,
   receiveUserOrder
 } from '@/api/order'
+import { getAdoptItemDetail } from '@/api/adopt'
+import { getSpuDetail } from '@/api/spu'
 import { useUserStore } from '@/stores/useUserStore'
 
 const PAGE_SIZE = 20
@@ -438,6 +447,100 @@ const canConfirmReceive = (order) => {
 
 const canGoReview = (order) => {
   return isPendingReviewOrder(order) && Boolean(order?.orderNo)
+}
+
+const isAdoptOrder = (order) => {
+  return order?.orderType === ORDER_TYPE.ADOPT
+}
+
+const isGoodsOrder = (order) => {
+  return order?.orderType === ORDER_TYPE.GOODS
+}
+
+const isNavigableOrder = (order) => {
+  return isGoodsOrder(order) || isAdoptOrder(order)
+}
+
+const normalizePositiveId = (value) => {
+  if (value === undefined || value === null) {
+    return ''
+  }
+  const text = String(value).trim()
+  if (!/^\d+$/.test(text) || text === '0') {
+    return ''
+  }
+  return text
+}
+
+const resolveItemSpuId = (item) => {
+  const candidates = [item?.spuId, item?.productId, item?.itemId]
+  for (const candidate of candidates) {
+    const normalized = normalizePositiveId(candidate)
+    if (normalized) {
+      return normalized
+    }
+  }
+  return ''
+}
+
+const resolveItemAdoptId = (item) => {
+  const candidates = [item?.adoptItemId, item?.itemId, item?.productId]
+  for (const candidate of candidates) {
+    const normalized = normalizePositiveId(candidate)
+    if (normalized) {
+      return normalized
+    }
+  }
+  return ''
+}
+
+const handleViewItemDetail = async (order, item) => {
+  if (isGoodsOrder(order)) {
+    const spuId = resolveItemSpuId(item)
+    if (!spuId) {
+      message.warning('该商品不存在或已下架')
+      return
+    }
+    try {
+      const response = await getSpuDetail(spuId)
+      if (response.code === '0' && response.data) {
+        router.push({
+          name: 'productDetail',
+          params: {
+            id: spuId
+          }
+        })
+        return
+      }
+      message.warning('该商品不存在或已下架')
+    } catch (error) {
+      message.warning('该商品不存在或已下架')
+    }
+    return
+  }
+
+  if (isAdoptOrder(order)) {
+    const adoptItemId = resolveItemAdoptId(item)
+    if (!adoptItemId) {
+      message.warning('该认养项目不存在或已下架')
+      return
+    }
+    try {
+      const response = await getAdoptItemDetail(adoptItemId)
+      if (response.code === '0' && response.data) {
+        router.push({
+          name: 'adoptDetail',
+          params: {
+            id: adoptItemId
+          }
+        })
+        return
+      }
+      message.warning('该认养项目不存在或已下架')
+    } catch (error) {
+      message.warning('该认养项目不存在或已下架')
+    }
+  }
 }
 
 const handleGoReview = (order) => {
@@ -884,6 +987,23 @@ watch(
   gap: 14px;
   min-width: 0;
   padding: 18px 0;
+}
+
+.item-main--clickable {
+  cursor: pointer;
+  border-radius: 12px;
+  outline: none;
+  transition: background-color 0.2s ease;
+}
+
+.item-main--clickable:hover,
+.item-main--clickable:focus-visible {
+  background: #f4faf5;
+}
+
+.item-main--clickable:hover .product-title,
+.item-main--clickable:focus-visible .product-title {
+  color: #1f7a3f;
 }
 
 .product-img {

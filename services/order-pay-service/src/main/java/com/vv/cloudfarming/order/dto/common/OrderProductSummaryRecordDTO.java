@@ -9,6 +9,10 @@ public class OrderProductSummaryRecordDTO {
 
     private String orderNo;
 
+    private Long spuId;
+
+    private Long adoptItemId;
+
     private String productName;
 
     private String coverImage;
