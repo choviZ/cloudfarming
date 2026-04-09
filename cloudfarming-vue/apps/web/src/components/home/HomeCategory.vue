@@ -281,17 +281,25 @@ onMounted(() => {
 .category-body {
   position: relative;
   flex: 1;
+  min-height: 0;
+}
+
+.category-body :deep(.ant-skeleton),
+.category-body :deep(.ant-skeleton-content) {
+  height: 100%;
 }
 
 .category-list {
   height: 100%;
   margin: 0;
-  padding: 12px 10px;
+  padding: 10px 8px 10px 10px;
   list-style: none;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .category-item + .category-item {
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .category-link {
@@ -300,7 +308,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border: none;
   border-radius: 16px;
   background: transparent;
@@ -323,8 +331,8 @@ onMounted(() => {
 }
 
 .category-icon {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   border-radius: 12px;
   background: #fff7ef;
@@ -340,7 +348,7 @@ onMounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .category-name {
@@ -356,6 +364,19 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 162px;
+}
+
+.category-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.category-list::-webkit-scrollbar-thumb {
+  background: rgba(197, 106, 22, 0.22);
+  border-radius: 999px;
+}
+
+.category-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .arrow-icon {

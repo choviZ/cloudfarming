@@ -58,7 +58,7 @@ export const createUser = (data) => {
  * @returns {Promise<Object>} Result<boolean>
  */
 export const updateUser = (data) => {
-  return request.put('/api/user/update', data)  
+  return request.post('/api/user/update', data)
 }
 
 /**

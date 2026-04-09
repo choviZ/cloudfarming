@@ -173,6 +173,16 @@ const router = createRouter({
           path: 'adopts/:instanceId',
           name: 'userAdoptDetail',
           component: () => import('../views/user/adopt/MyAdoptDetail.vue')
+        },
+        {
+          path: 'profile',
+          name: 'userProfile',
+          component: () => import('../views/user/profile/Profile.vue')
+        },
+        {
+          path: 'address',
+          name: 'userCenterAddress',
+          component: () => import('../views/user/address/AddressList.vue')
         }
       ]
     },

@@ -25,12 +25,18 @@ watch(
       if (fileList.value && fileList.value.length > 0 && fileList.value[0]?.url === val) {
         return;
       }
+      const cleanName = (() => {
+        const rawName = String(val).split('?')[0].split('/').pop()
+        return rawName && rawName.includes('.') ? rawName : 'avatar.png'
+      })()
       fileList.value = [
         {
           uid: '-1',
-          name: 'image.png',
+          name: cleanName,
           status: 'done',
           url: val,
+          thumbUrl: val,
+          type: 'image/png'
         },
       ]
     } else {
@@ -96,6 +102,8 @@ const handleChange = (info) => {
   }
 }
 
+const isImageUrl = () => true
+
 function getBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -113,6 +121,7 @@ function getBase64(file) {
       list-type="picture-card"
       :custom-request="customRequest"
       :before-upload="beforeUpload"
+      :is-image-url="isImageUrl"
       @preview="handlePreview"
       @change="handleChange"
       accept="image/*"

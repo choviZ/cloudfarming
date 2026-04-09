@@ -11,7 +11,7 @@
             <div class="menu-title">
               <a href="/" class="menu-title-link">云养殖助农平台</a>
             </div>
-            <a-menu mode="inline" v-model:selectedKeys="selectedKeys">
+            <a-menu mode="inline" :selected-keys="selectedKeys" :default-open-keys="['accountSetting']">
               <a-menu-item key="orders">
                 <template #icon>
                   <FileTextOutlined />
@@ -30,6 +30,18 @@
                 </template>
                 <router-link to="/cart">购物车</router-link>
               </a-menu-item>
+              <a-sub-menu key="accountSetting">
+                <template #icon>
+                  <SettingOutlined />
+                </template>
+                <template #title>账户设置</template>
+                <a-menu-item key="profile">
+                  <router-link to="/usercenter/profile">个人资料</router-link>
+                </a-menu-item>
+                <a-menu-item key="address">
+                  <router-link to="/usercenter/address">收货地址</router-link>
+                </a-menu-item>
+              </a-sub-menu>
             </a-menu>
           </div>
         </aside>
@@ -52,10 +64,16 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import GlobalHeader from '../components/GlobalHeader.vue'
-import { FileTextOutlined, HeartOutlined, ShoppingCartOutlined } from '@ant-design/icons-vue'
+import { FileTextOutlined, HeartOutlined, SettingOutlined, ShoppingCartOutlined } from '@ant-design/icons-vue'
 
 const route = useRoute()
 const selectedKeys = computed(() => {
+  if (route.path.includes('/usercenter/profile')) {
+    return ['profile']
+  }
+  if (route.path.includes('/usercenter/address')) {
+    return ['address']
+  }
   if (route.path.includes('/usercenter/adopts')) {
     return ['adopts']
   }
@@ -137,7 +155,18 @@ const selectedKeys = computed(() => {
   line-height: 44px;
 }
 
+.sidebar-menu :deep(.ant-menu-submenu-title) {
+  margin: 4px 8px;
+  border-radius: 4px;
+  height: 44px;
+  line-height: 44px;
+}
+
 .sidebar-menu :deep(.ant-menu-item:hover) {
+  background-color: #f6f7f8;
+}
+
+.sidebar-menu :deep(.ant-menu-submenu-title:hover) {
   background-color: #f6f7f8;
 }
 
