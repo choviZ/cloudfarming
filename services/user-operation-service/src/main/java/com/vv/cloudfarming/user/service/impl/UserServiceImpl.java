@@ -27,17 +27,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
     @Override
     public UserRespDTO userLogin(UserLoginReqDTO requestParam) {
-        String username = requestParam.getUsername();
-        String password = requestParam.getPassword();
-        LambdaQueryWrapper<UserDO> wrapper = Wrappers.lambdaQuery(UserDO.class)
-                .eq(UserDO::getUsername, username)
-                .eq(UserDO::getPassword, password);
-        UserDO user = baseMapper.selectOne(wrapper);
-        if (user == null) {
-            throw new ClientException(BaseErrorCode.USERNAME_PASSWORD_ERROR);
-        }
-        if (user.getStatus() == 1) {
-            throw new ClientException(BaseErrorCode.ACCOUNT_STATUS_ERROR);
+        UserDO user = authenticateUser(requestParam);
+        StpUtil.login(user.getId());
+        return BeanUtil.toBean(user, UserRespDTO.class);
+    }
+
+    @Override
+    public UserRespDTO adminLogin(UserLoginReqDTO requestParam) {
+        UserDO user = authenticateUser(requestParam);
+        if (user.getUserType() == null || user.getUserType() != 2) {
+            throw new ClientException("当前账号不是管理员账号");
         }
         StpUtil.login(user.getId());
         return BeanUtil.toBean(user, UserRespDTO.class);
@@ -82,6 +81,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
             throw new ClientException("请先登录");
         }
         return BeanUtil.toBean(userDO, UserRespDTO.class);
+    }
+
+    @Override
+    public UserRespDTO getLoginAdminUser() {
+        UserRespDTO loginUser = getLoginUser();
+        if (loginUser.getUserType() == null || loginUser.getUserType() != 2) {
+            throw new ClientException("当前账号不是管理员账号");
+        }
+        return loginUser;
     }
 
     @Override
@@ -158,5 +166,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     @Override
     public void userLogout() {
         StpUtil.logout();
+    }
+
+    private UserDO authenticateUser(UserLoginReqDTO requestParam) {
+        String username = requestParam.getUsername();
+        String password = requestParam.getPassword();
+        LambdaQueryWrapper<UserDO> wrapper = Wrappers.lambdaQuery(UserDO.class)
+                .eq(UserDO::getUsername, username)
+                .eq(UserDO::getPassword, password);
+        UserDO user = baseMapper.selectOne(wrapper);
+        if (user == null) {
+            throw new ClientException(BaseErrorCode.USERNAME_PASSWORD_ERROR);
+        }
+        if (user.getStatus() == 1) {
+            throw new ClientException(BaseErrorCode.ACCOUNT_STATUS_ERROR);
+        }
+        return user;
     }
 }

@@ -33,6 +33,7 @@ public class SaTokenConfigure {
                 SaRouter.match("/**")
                         .notMatch(
                             "/api/user/login",
+                            "/api/user/login/admin",
                             "/api/user/register",
                             "/api/spu/**", // 商品详情/列表
                                 "/api/category/**",

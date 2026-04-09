@@ -7,6 +7,7 @@ import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.config.AdoptAgreementProperties;
+import com.vv.cloudfarming.order.dto.req.OrderAdminUpdateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderFulfillAdoptReqDTO;
@@ -81,6 +82,14 @@ public class OrderController {
     @PostMapping("/api/order/v1/list/admin")
     public Result<IPage<OrderPageRespDTO>> listOrders(@RequestBody OrderPageReqDTO requestParam) {
         return Results.success(orderService.listOrders(requestParam));
+    }
+
+    @Operation(summary = "管理员更新订单")
+    @SaCheckRole(UserRoleConstant.ADMIN_DESC)
+    @PostMapping("/api/order/v1/admin/update")
+    public Result<Void> updateOrderByAdmin(@RequestBody @Valid OrderAdminUpdateReqDTO requestParam) {
+        orderService.updateOrderByAdmin(requestParam);
+        return Results.success();
     }
 
     @Operation(summary = "查询农户订单列表")

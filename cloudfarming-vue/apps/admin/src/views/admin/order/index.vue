@@ -28,6 +28,9 @@
                             <a-select-option :value="2">已发货</a-select-option>
                             <a-select-option :value="3">已完成</a-select-option>
                             <a-select-option :value="4">已取消</a-select-option>
+                            <a-select-option :value="5">售后中</a-select-option>
+                            <a-select-option :value="6">养殖中</a-select-option>
+                            <a-select-option :value="7">待分配</a-select-option>
                         </a-select>
                     </a-form-item>
                     <a-form-item>
@@ -92,13 +95,26 @@
                         <span>{{ record.receiveTime ? formatTime(record.receiveTime) : '用户未确认收货' }}</span>
                     </template>
                     <template v-else-if="column.key === 'logisticsInfo'">
-                        <span>物流单号：{{ record.logisticsNo }}</span>
-                        <span>物流公司：{{ record.logisticsCompany }}</span>
+                        <div class="logistics-cell">
+                            <div class="logistics-row">
+                                <span class="logistics-label">物流单号：</span>
+                                <span class="logistics-value">{{ record.logisticsNo || '-' }}</span>
+                            </div>
+                            <div class="logistics-row">
+                                <span class="logistics-label">物流公司：</span>
+                                <span class="logistics-value">{{ record.logisticsCompany || '-' }}</span>
+                            </div>
+                        </div>
                     </template>
                     <template v-else-if="column.key === 'action'">
-                        <a-button type="link" size="small" @click="handleDetail(record)">
-                            查看详情
-                        </a-button>
+                        <a-space direction="vertical" size="small">
+                            <a-button type="link" size="small" @click="handleDetail(record)">
+                                查看详情
+                            </a-button>
+                            <a-button type="link" size="small" @click="handleEdit(record)">
+                                编辑订单
+                            </a-button>
+                        </a-space>
                     </template>
                 </template>
             </a-table>
@@ -118,13 +134,48 @@
             :order-no="currentOrderNo"
             @close="handleDetailClose"
         />
+
+        <a-modal
+            v-model:open="editModalVisible"
+            title="编辑订单"
+            :confirm-loading="editLoading"
+            ok-text="保存"
+            cancel-text="取消"
+            @ok="handleEditSubmit"
+            @cancel="handleEditCancel"
+        >
+            <a-form :model="editForm" layout="vertical">
+                <a-form-item label="订单号">
+                    <a-input v-model:value="editForm.orderNo" disabled />
+                </a-form-item>
+                <a-form-item label="订单状态">
+                    <a-select v-model:value="editForm.orderStatus" placeholder="请选择订单状态">
+                        <a-select-option v-for="item in orderStatusOptions" :key="item.value" :value="item.value">
+                            {{ item.label }}
+                        </a-select-option>
+                    </a-select>
+                </a-form-item>
+                <a-form-item label="收货人姓名">
+                    <a-input v-model:value="editForm.receiveName" placeholder="请输入收货人姓名" allow-clear />
+                </a-form-item>
+                <a-form-item label="收货人手机号">
+                    <a-input v-model:value="editForm.receivePhone" placeholder="请输入收货人手机号" allow-clear />
+                </a-form-item>
+                <a-form-item label="物流公司">
+                    <a-input v-model:value="editForm.logisticsCompany" placeholder="请输入物流公司" allow-clear />
+                </a-form-item>
+                <a-form-item label="物流单号">
+                    <a-input v-model:value="editForm.logisticsNo" placeholder="请输入物流单号" allow-clear />
+                </a-form-item>
+            </a-form>
+        </a-modal>
     </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons-vue'
-import { listOrders } from '@/api/order'
+import { listOrders, updateOrderByAdmin } from '@/api/order'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import OrderDetailModal from './components/OrderDetailModal.vue'
@@ -151,6 +202,27 @@ const pagination = reactive({
 const detailModalVisible = ref(false)
 const currentOrderType = ref(0)
 const currentOrderNo = ref('')
+const editModalVisible = ref(false)
+const editLoading = ref(false)
+const editForm = reactive({
+    orderNo: '',
+    orderStatus: undefined,
+    receiveName: '',
+    receivePhone: '',
+    logisticsNo: '',
+    logisticsCompany: ''
+})
+
+const orderStatusOptions = [
+    { value: 0, label: '待付款' },
+    { value: 1, label: '待发货' },
+    { value: 2, label: '已发货' },
+    { value: 3, label: '已完成' },
+    { value: 4, label: '已取消' },
+    { value: 5, label: '售后中' },
+    { value: 6, label: '养殖中' },
+    { value: 7, label: '待分配' }
+]
 
 // 表格列
 const columns = [
@@ -203,7 +275,7 @@ const columns = [
     {
         title: '物流信息',
         key: 'logisticsInfo',
-        width: 160
+        width: 200
     },
     {
         title: '下单时间',
@@ -226,7 +298,7 @@ const columns = [
     {
         title: '操作',
         key: 'action',
-        width: 100,
+        width: 120,
         sticky: 'right'
     }
 ]
@@ -300,6 +372,47 @@ const handleDetailClose = () => {
     currentOrderNo.value = ''
 }
 
+const handleEdit = (record) => {
+    editForm.orderNo = record.orderNo || ''
+    editForm.orderStatus = record.orderStatus
+    editForm.receiveName = record.receiveName || ''
+    editForm.receivePhone = record.receivePhone || ''
+    editForm.logisticsNo = record.logisticsNo || ''
+    editForm.logisticsCompany = record.logisticsCompany || ''
+    editModalVisible.value = true
+}
+
+const handleEditCancel = () => {
+    editModalVisible.value = false
+}
+
+const handleEditSubmit = async () => {
+    if (!editForm.orderNo) {
+        message.warning('订单号不能为空')
+        return
+    }
+    editLoading.value = true
+    try {
+        const res = await updateOrderByAdmin({
+            orderNo: editForm.orderNo,
+            orderStatus: editForm.orderStatus,
+            receiveName: editForm.receiveName,
+            receivePhone: editForm.receivePhone,
+            logisticsCompany: editForm.logisticsCompany,
+            logisticsNo: editForm.logisticsNo
+        })
+        if (res.code == 0) {
+            message.success('订单更新成功')
+            editModalVisible.value = false
+            await fetchData()
+            return
+        }
+        message.error(res.message || '订单更新失败')
+    } finally {
+        editLoading.value = false
+    }
+}
+
 // Helpers
 const getOrderStatusText = (status) => {
     const map = {
@@ -308,7 +421,9 @@ const getOrderStatusText = (status) => {
         2: '已发货',
         3: '已完成',
         4: '已取消',
-        5: '售后中'
+        5: '售后中',
+        6: '养殖中',
+        7: '待分配'
     }
     return map[status] || '未知状态'
 }
@@ -320,7 +435,9 @@ const getOrderStatusColor = (status) => {
         2: 'cyan',
         3: 'green',
         4: 'red',
-        5: 'purple'
+        5: 'purple',
+        6: 'green',
+        7: 'gold'
     }
     return map[status] || 'default'
 }
@@ -342,5 +459,25 @@ onMounted(() => {
 
 .search-card {
     margin-bottom: 16px;
+}
+
+.logistics-cell {
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.logistics-row {
+    display: flex;
+    align-items: flex-start;
+}
+
+.logistics-label {
+    color: #666;
+    white-space: nowrap;
+}
+
+.logistics-value {
+    color: #333;
+    word-break: break-all;
 }
 </style>

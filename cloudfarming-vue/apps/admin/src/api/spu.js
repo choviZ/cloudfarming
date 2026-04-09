@@ -18,7 +18,7 @@ export const deleteSpuById = (id) => {
  * 根据id获取单个SPU详情
  */
 export const getSpuDetail = (id) => {
-  return request.get(`/api/spu/get`,{params: id})
+  return request.get('/api/spu/get', { params: { id } })
 }
 
 /**
@@ -32,8 +32,9 @@ export const listSpuByPage = (data) => {
  * 更新SPU状态
  */
 export const updateSpuStatus = (id, status) => {
-  return request.put(`/api/spu/status/${id}`, null, {
-    params: { status }
+  return request.post('/api/spu/status', {
+    id,
+    status
   })
 }
 

@@ -2,6 +2,7 @@ package com.vv.cloudfarming.order.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderAdminUpdateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderFulfillAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
@@ -47,6 +48,11 @@ public interface OrderService {
      * 分页查询当前农户店铺订单
      */
     IPage<OrderPageRespDTO> listCurrentFarmerOrders(OrderPageReqDTO requestParam);
+
+    /**
+     * 管理员更新订单
+     */
+    void updateOrderByAdmin(OrderAdminUpdateReqDTO requestParam);
 
     /**
      * 当前农户发货

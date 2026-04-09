@@ -15,7 +15,7 @@ export const userRegister = (data) => {
  * @returns {Promise<Object>} Result<UserRespDTO>
  */
 export const userLogin = (data) => {
-  return request.post('/api/user/login', data)
+  return request.post('/api/user/login/admin', data)
 }
 
 /**
@@ -23,7 +23,7 @@ export const userLogin = (data) => {
  * @returns {Promise<Object>} Result<UserRespDTO>
  */
 export const getUser = () => {
-  return request.get('/api/user/get/login')
+  return request.get('/api/user/get/login/admin')
 }
 
 /**

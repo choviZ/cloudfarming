@@ -33,6 +33,7 @@ import com.vv.cloudfarming.order.dto.common.ProductItemDTO;
 import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptItemReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderAssignAdoptReqDTO;
+import com.vv.cloudfarming.order.dto.req.OrderAdminUpdateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderFulfillAdoptReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderPageReqDTO;
@@ -388,6 +389,95 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         ShopRespDTO shop = getCurrentFarmerShop();
         requestParam.setShopId(shop.getId());
         return listOrders(requestParam);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateOrderByAdmin(OrderAdminUpdateReqDTO requestParam) {
+        String orderNo = StrUtil.trim(requestParam.getOrderNo());
+        OrderDO order = baseMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class)
+            .eq(OrderDO::getOrderNo, orderNo));
+        if (order == null) {
+            throw new ClientException("订单不存在");
+        }
+
+        boolean hasUpdateField = ObjectUtil.isNotNull(requestParam.getOrderStatus())
+            || requestParam.getLogisticsNo() != null
+            || requestParam.getLogisticsCompany() != null
+            || requestParam.getReceiveName() != null
+            || requestParam.getReceivePhone() != null;
+        if (!hasUpdateField) {
+            throw new ClientException("请至少填写一个需要更新的字段");
+        }
+
+        Integer targetOrderStatus = requestParam.getOrderStatus();
+        if (targetOrderStatus != null) {
+            OrderStatusEnum.getByCode(targetOrderStatus);
+        }
+        Integer finalOrderStatus = targetOrderStatus == null ? order.getOrderStatus() : targetOrderStatus;
+        String finalLogisticsNo = requestParam.getLogisticsNo() == null
+            ? order.getLogisticsNo()
+            : normalizeOptionalText(requestParam.getLogisticsNo());
+        String finalLogisticsCompany = requestParam.getLogisticsCompany() == null
+            ? order.getLogisticsCompany()
+            : normalizeOptionalText(requestParam.getLogisticsCompany());
+        if (Objects.equals(finalOrderStatus, OrderStatusEnum.SHIPPED.getCode())
+            && (StrUtil.isBlank(finalLogisticsNo) || StrUtil.isBlank(finalLogisticsCompany))) {
+            throw new ClientException("订单状态为已发货时，物流单号和物流公司不能为空");
+        }
+
+        OrderDO updateOrder = new OrderDO();
+        updateOrder.setId(order.getId());
+        boolean changed = false;
+
+        if (targetOrderStatus != null && !Objects.equals(targetOrderStatus, order.getOrderStatus())) {
+            updateOrder.setOrderStatus(targetOrderStatus);
+            changed = true;
+            if (Objects.equals(targetOrderStatus, OrderStatusEnum.SHIPPED.getCode()) && order.getDeliveryTime() == null) {
+                updateOrder.setDeliveryTime(LocalDateTime.now());
+            }
+            if (Objects.equals(targetOrderStatus, OrderStatusEnum.COMPLETED.getCode()) && order.getReceiveTime() == null) {
+                updateOrder.setReceiveTime(LocalDateTime.now());
+            }
+        }
+
+        if (requestParam.getLogisticsNo() != null) {
+            String normalizedLogisticsNo = normalizeOptionalText(requestParam.getLogisticsNo());
+            if (!Objects.equals(order.getLogisticsNo(), normalizedLogisticsNo)) {
+                updateOrder.setLogisticsNo(normalizedLogisticsNo);
+                changed = true;
+            }
+        }
+        if (requestParam.getLogisticsCompany() != null) {
+            String normalizedLogisticsCompany = normalizeOptionalText(requestParam.getLogisticsCompany());
+            if (!Objects.equals(order.getLogisticsCompany(), normalizedLogisticsCompany)) {
+                updateOrder.setLogisticsCompany(normalizedLogisticsCompany);
+                changed = true;
+            }
+        }
+        if (requestParam.getReceiveName() != null) {
+            String normalizedReceiveName = normalizeOptionalText(requestParam.getReceiveName());
+            if (!Objects.equals(order.getReceiveName(), normalizedReceiveName)) {
+                updateOrder.setReceiveName(normalizedReceiveName);
+                changed = true;
+            }
+        }
+        if (requestParam.getReceivePhone() != null) {
+            String normalizedReceivePhone = normalizeOptionalText(requestParam.getReceivePhone());
+            if (!Objects.equals(order.getReceivePhone(), normalizedReceivePhone)) {
+                updateOrder.setReceivePhone(normalizedReceivePhone);
+                changed = true;
+            }
+        }
+
+        if (!changed) {
+            return;
+        }
+
+        int updated = baseMapper.updateById(updateOrder);
+        if (!SqlHelper.retBool(updated)) {
+            throw new ServiceException("订单更新失败，请刷新后重试");
+        }
     }
 
     @Override
@@ -882,6 +972,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             throw new ClientException("订单不存在");
         }
         long currentUserId = StpUtil.getLoginIdAsLong();
+        if (StpUtil.hasRole(UserRoleConstant.ADMIN_DESC)) {
+            return order;
+        }
         if (Objects.equals(order.getUserId(), currentUserId)) {
             return order;
         }
@@ -938,6 +1031,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
         } catch (Exception ex) {
             log.error("秒杀缓存回滚异常，seckillId={}, userId={}, nums={}", seckillId, userId, nums, ex);
         }
+    }
+
+    private String normalizeOptionalText(String text) {
+        String trimmed = StrUtil.trim(text);
+        return StrUtil.isBlank(trimmed) ? null : trimmed;
     }
 
     private LocalDateTime parseDateTime(String value, DateTimeFormatter formatter) {

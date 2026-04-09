@@ -22,6 +22,13 @@ export const getSkuOrderDetail = async (params) =>{
 }
 
 /**
+ * 管理员更新订单
+ */
+export const updateOrderByAdmin = async (data) => {
+  return request.post('/api/order/v1/admin/update', data)
+}
+
+/**
  * 创建订单
  * @param {Object} data - OrderCreateReq
  * @returns {Promise<Object>} Result<OrderCreateResp>

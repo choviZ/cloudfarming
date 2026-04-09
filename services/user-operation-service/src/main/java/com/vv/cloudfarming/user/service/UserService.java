@@ -19,6 +19,12 @@ public interface UserService extends IService<UserDO> {
     UserRespDTO userLogin(UserLoginReqDTO requestParam);
 
     /**
+     * 管理员登录
+     * @return 用户信息
+     */
+    UserRespDTO adminLogin(UserLoginReqDTO requestParam);
+
+    /**
      * 用户注册
      */
     boolean userRegister(UserRegisterReqDTO requestParam);
@@ -32,6 +38,11 @@ public interface UserService extends IService<UserDO> {
     UserRespDTO getLoginUser(HttpServletRequest request);
 
     UserRespDTO getLoginUser();
+
+    /**
+     * 获取当前登录管理员信息
+     */
+    UserRespDTO getLoginAdminUser();
 
     /**
      * 根据用户 ID 查询用户信息

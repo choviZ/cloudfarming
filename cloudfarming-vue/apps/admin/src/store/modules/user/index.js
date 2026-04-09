@@ -18,7 +18,7 @@ const useUserStore = defineStore('useUserStore', () => {
   // 获取用户信息
   async function fetchUser() {
     const res = await getUser()
-    if (res.code === '0' && res.data) {
+    if (res.code === '0' && res.data && res.data.userType === 2) {
       setUser(res.data)
     } else {
       clearUser()

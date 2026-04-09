@@ -31,6 +31,12 @@ public class UserLoginController {
         return Results.success(userService.userLogin(requestParam));
     }
 
+    @Operation(summary = "管理员登录")
+    @PostMapping("/api/user/login/admin")
+    public Result<UserRespDTO> adminLogin(@RequestBody UserLoginReqDTO requestParam) {
+        return Results.success(userService.adminLogin(requestParam));
+    }
+
     @Operation(summary = "注册")
     @PostMapping("/api/user/register")
     public Result<Boolean> userRegister(@RequestBody UserRegisterReqDTO requestParam) {
@@ -41,6 +47,12 @@ public class UserLoginController {
     @GetMapping("/api/user/get/login")
     public Result<UserRespDTO> getUser() {
         return Results.success(userService.getLoginUser());
+    }
+
+    @Operation(summary = "获取登录管理员信息")
+    @GetMapping("/api/user/get/login/admin")
+    public Result<UserRespDTO> getAdminUser() {
+        return Results.success(userService.getLoginAdminUser());
     }
 
     @Operation(summary = "退出登录")

@@ -90,7 +90,9 @@ router.beforeEach(async (to, from, next) => {
       }
     }
 
-    if (to.meta.requiresAuth && !userStore.loginUser) {
+    const isAdminUser = userStore.loginUser && userStore.loginUser.userType === 2
+    if (to.meta.requiresAuth && !isAdminUser) {
+      userStore.clearUser()
       next({
         path: '/login',
         query: { redirect: to.fullPath }
