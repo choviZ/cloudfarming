@@ -6,7 +6,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/admin/user',
+      redirect: '/admin/dashboard',
     },
     {
       path: '/login',
@@ -20,10 +20,16 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: () => import('@/layout/default-layout.vue'),
+      redirect: '/admin/dashboard',
       meta: {
         requiresAuth: true,
       },
       children: [
+        {
+          path: '/admin/dashboard',
+          name: 'admin-dashboard',
+          component: () => import('@/views/admin/dashboard/index.vue'),
+        },
         {
           path: '/admin/user',
           name: 'admin-user',
@@ -70,11 +76,11 @@ const router = createRouter({
           component: () => import('@/views/admin/product/components/detail.vue'),
           meta: {
             title: '商品详情',
-            hideInMenu: true
-          }
+            hideInMenu: true,
+          },
         },
-      ]
-    }
+      ],
+    },
   ],
 })
 
@@ -90,12 +96,12 @@ router.beforeEach(async (to, from, next) => {
       }
     }
 
-    const isAdminUser = userStore.loginUser && userStore.loginUser.userType === 2
+    const isAdminUser = userStore.loginUser?.userType === 2
     if (to.meta.requiresAuth && !isAdminUser) {
       userStore.clearUser()
       next({
         path: '/login',
-        query: { redirect: to.fullPath }
+        query: { redirect: to.fullPath },
       })
     } else {
       next()

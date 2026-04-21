@@ -1,0 +1,21 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brand-bg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D4ED8" />
+      <stop offset="1" stop-color="#0F766E" />
+    </linearGradient>
+    <linearGradient id="brand-field" x1="18" y1="38" x2="52" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCD34D" />
+      <stop offset="1" stop-color="#F59E0B" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="18" fill="url(#brand-bg)" />
+  <path
+    d="M22.4 39.6C17.65 39.6 13.8 35.74 13.8 31C13.8 26.93 16.62 23.52 20.41 22.61C21.96 17.66 26.57 14 32.04 14C37.38 14 41.9 17.5 43.58 22.27C48.12 22.58 51.7 26.35 51.7 31C51.7 35.85 47.75 39.8 42.9 39.8H22.4V39.6Z"
+    fill="white"
+    fill-opacity="0.94"
+  />
+  <path d="M18 43.5C23 41.39 28.33 40.33 34 40.33C40.13 40.33 45.47 41.43 50 43.62" stroke="#FFF7D1" stroke-width="3" stroke-linecap="round" />
+  <path d="M16.8 49.2C22.03 46.89 27.87 45.73 34.33 45.73C40.11 45.73 45.31 46.68 49.95 48.57" stroke="url(#brand-field)" stroke-width="3.2" stroke-linecap="round" />
+  <path d="M18.4 55C24.22 52.79 30.14 51.68 36.16 51.68C40.84 51.68 45.12 52.32 49 53.6" stroke="#6EE7B7" stroke-width="2.8" stroke-linecap="round" />
+</svg>
