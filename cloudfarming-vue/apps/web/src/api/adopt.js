@@ -109,10 +109,13 @@ export function pageMyAdoptInstances(data) {
  * @param {string|number} id
  * @returns {Promise<Object>} Result<AdoptInstanceDetailResp>
  */
-export function getAdoptInstanceDetail(id) {
-    return request.get('/api/adopt/instance/v1/detail', {
-        params: { id }
-    })
+export function getAdoptInstanceDetail(id, viewType) {
+  return request.get('/api/adopt/instance/v1/detail', {
+        params: {
+            id,
+            ...(viewType ? { viewType } : {})
+        }
+  })
 }
 
 /**
@@ -156,9 +159,12 @@ export function pageAdoptLogs(data) {
  * @param {string|number} instanceId
  * @returns {Promise<Object>} Result<AdoptWeightPointResp[]>
  */
-export function getAdoptWeightTrend(instanceId) {
+export function getAdoptWeightTrend(instanceId, viewType) {
     return request.get('/api/adopt/log/v1/weight-trend', {
-        params: { instanceId }
+        params: {
+            instanceId,
+            ...(viewType ? { viewType } : {})
+        }
     })
 }
 

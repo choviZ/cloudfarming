@@ -19,6 +19,7 @@ import com.vv.cloudfarming.order.dto.resp.AdoptAgreementRespDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
 import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderLogisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderSimpleRespDTO;
@@ -140,6 +141,12 @@ public class OrderController {
     @GetMapping("/api/order/v1/detail/sku")
     public Result<List<SkuOrderDetailRespDTO>> getSkuOrderDetail(@RequestParam @NotNull String orderNo) {
         return Results.success(orderService.getSkuOrderDetail(orderNo));
+    }
+
+    @Operation(summary = "查询订单物流轨迹")
+    @GetMapping("/api/order/v1/logistics")
+    public Result<OrderLogisticsRespDTO> getOrderLogistics(@RequestParam @NotNull String orderNo) {
+        return Results.success(orderService.getOrderLogistics(orderNo));
     }
 
     @Operation(summary = "按订单ID批量查询订单简要信息")

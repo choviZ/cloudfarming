@@ -28,5 +28,5 @@ public interface AdoptLogService extends IService<AdoptLogDO> {
     /**
      * 查询体重变化趋势
      */
-    List<AdoptWeightPointRespDTO> listWeightTrend(Long instanceId);
+    List<AdoptWeightPointRespDTO> listWeightTrend(Long instanceId, String viewType);
 }

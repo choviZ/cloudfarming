@@ -12,6 +12,7 @@ import com.vv.cloudfarming.order.dto.req.SeckillCreateReqDTO;
 import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
 import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderLogisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderSimpleRespDTO;
@@ -87,6 +88,13 @@ public interface OrderService {
      * @param orderNo 订单号
      */
     List<SkuOrderDetailRespDTO> getSkuOrderDetail(String orderNo);
+
+    /**
+     * 查询订单物流
+     *
+     * @param orderNo 订单号
+     */
+    OrderLogisticsRespDTO getOrderLogistics(String orderNo);
 
     /**
      * 获取农户订单统计

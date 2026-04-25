@@ -139,6 +139,14 @@
                   确认收货
                 </a-button>
                 <span v-else class="action-placeholder">{{ getActionPlaceholder(order) }}</span>
+                <a-button
+                  v-if="canViewLogistics(order)"
+                  type="link"
+                  class="action-link"
+                  @click="handleViewLogistics(order)"
+                >
+                  查看物流
+                </a-button>
               </div>
             </div>
           </article>
@@ -156,6 +164,12 @@
         </div>
       </a-spin>
     </div>
+
+    <OrderLogisticsModal
+      v-model:open="logisticsModalVisible"
+      :order-no="currentLogisticsOrderNo"
+      @close="handleLogisticsModalClose"
+    />
   </div>
 </template>
 
@@ -174,6 +188,7 @@ import {
   receiveUserOrder
 } from '@/api/order'
 import { getAdoptItemDetail } from '@/api/adopt'
+import OrderLogisticsModal from '@/components/order/OrderLogisticsModal.vue'
 import { getSpuDetail } from '@/api/spu'
 import { useUserStore } from '@/stores/useUserStore'
 
@@ -207,6 +222,8 @@ const pagination = reactive({
   pageSize: PAGE_SIZE,
   total: 0
 })
+const logisticsModalVisible = ref(false)
+const currentLogisticsOrderNo = ref('')
 
 const userStore = useUserStore()
 const route = useRoute()
@@ -449,6 +466,10 @@ const canGoReview = (order) => {
   return isPendingReviewOrder(order) && Boolean(order?.orderNo)
 }
 
+const canViewLogistics = (order) => {
+  return Boolean(order?.orderNo && order?.logisticsNo)
+}
+
 const isAdoptOrder = (order) => {
   return order?.orderType === ORDER_TYPE.ADOPT
 }
@@ -554,6 +575,20 @@ const handleGoReview = (order) => {
       orderNo: order.orderNo
     }
   })
+}
+
+const handleViewLogistics = (order) => {
+  if (!canViewLogistics(order)) {
+    message.warning('当前订单暂无物流信息')
+    return
+  }
+  currentLogisticsOrderNo.value = order.orderNo
+  logisticsModalVisible.value = true
+}
+
+const handleLogisticsModalClose = () => {
+  logisticsModalVisible.value = false
+  currentLogisticsOrderNo.value = ''
 }
 
 const handleTabChange = (key) => {
@@ -1142,6 +1177,13 @@ watch(
 .action-button--review {
   background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%);
   box-shadow: 0 10px 20px rgba(249, 115, 22, 0.18);
+}
+
+.action-link {
+  margin-top: 10px;
+  padding: 0;
+  color: #1f7a3f;
+  font-weight: 600;
 }
 
 .pagination-wrapper {

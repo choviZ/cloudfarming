@@ -36,7 +36,7 @@ public class AdoptLogServiceImpl extends ServiceImpl<AdoptLogMapper, AdoptLogDO>
     @Override
     public void createAdoptLog(AdoptLogCreateReqDTO requestParam) {
         long farmerId = StpUtil.getLoginIdAsLong();
-        AdoptInstanceDO instance = getAndCheckReadableInstance(requestParam.getInstanceId(), true);
+        AdoptInstanceDO instance = getAndCheckReadableInstance(requestParam.getInstanceId(), null, true);
         if (!Objects.equals(instance.getStatus(), LivestockStatusEnum.ADOPTED.getCode())) {
             throw new ClientException("当前养殖实例已结束，不能继续更新生长日记");
         }
@@ -74,7 +74,7 @@ public class AdoptLogServiceImpl extends ServiceImpl<AdoptLogMapper, AdoptLogDO>
 
     @Override
     public IPage<AdoptLogRespDTO> pageAdoptLogs(AdoptLogPageReqDTO requestParam) {
-        AdoptInstanceDO instance = getAndCheckReadableInstance(requestParam.getInstanceId(), false);
+        AdoptInstanceDO instance = getAndCheckReadableInstance(requestParam.getInstanceId(), requestParam.getViewType(), false);
         LambdaQueryWrapper<AdoptLogDO> queryWrapper = Wrappers.lambdaQuery(AdoptLogDO.class)
             .eq(AdoptLogDO::getInstanceId, Long.valueOf(instance.getId()))
             .eq(Objects.nonNull(requestParam.getLogType()), AdoptLogDO::getLogType, requestParam.getLogType())
@@ -84,8 +84,8 @@ public class AdoptLogServiceImpl extends ServiceImpl<AdoptLogMapper, AdoptLogDO>
     }
 
     @Override
-    public List<AdoptWeightPointRespDTO> listWeightTrend(Long instanceId) {
-        AdoptInstanceDO instance = getAndCheckReadableInstance(instanceId, false);
+    public List<AdoptWeightPointRespDTO> listWeightTrend(Long instanceId, String viewType) {
+        AdoptInstanceDO instance = getAndCheckReadableInstance(instanceId, viewType, false);
         List<AdoptLogDO> records = baseMapper.selectList(Wrappers.lambdaQuery(AdoptLogDO.class)
             .eq(AdoptLogDO::getInstanceId, Long.valueOf(instance.getId()))
             .isNotNull(AdoptLogDO::getWeight)
@@ -117,7 +117,7 @@ public class AdoptLogServiceImpl extends ServiceImpl<AdoptLogMapper, AdoptLogDO>
             .build();
     }
 
-    private AdoptInstanceDO getAndCheckReadableInstance(Long instanceId, boolean farmerOnly) {
+    private AdoptInstanceDO getAndCheckReadableInstance(Long instanceId, String viewType, boolean farmerOnly) {
         if (instanceId == null || instanceId <= 0) {
             throw new ClientException("养殖实例不存在");
         }
@@ -128,10 +128,11 @@ public class AdoptLogServiceImpl extends ServiceImpl<AdoptLogMapper, AdoptLogDO>
             throw new ClientException("养殖实例不存在");
         }
         long userId = StpUtil.getLoginIdAsLong();
-        boolean isFarmer = StpUtil.hasRole(UserRoleConstant.FARMER_DESC);
-        if (farmerOnly && !isFarmer) {
+        boolean hasFarmerRole = StpUtil.hasRole(UserRoleConstant.FARMER_DESC);
+        if (farmerOnly && !hasFarmerRole) {
             throw new ClientException("只有农户可以发布养殖日志");
         }
+        boolean isFarmer = farmerOnly || resolveFarmerView(viewType, hasFarmerRole);
         if (isFarmer) {
             if (!Objects.equals(instance.getFarmerId(), userId)) {
                 throw new ClientException("无权查看该养殖实例");
@@ -142,6 +143,23 @@ public class AdoptLogServiceImpl extends ServiceImpl<AdoptLogMapper, AdoptLogDO>
             throw new ClientException("无权查看该养殖实例");
         }
         return instance;
+    }
+
+    private boolean resolveFarmerView(String viewType, boolean hasFarmerRole) {
+        viewType = StrUtil.trimToNull(viewType);
+        if (viewType == null) {
+            return hasFarmerRole;
+        }
+        if ("FARMER".equalsIgnoreCase(viewType)) {
+            if (!hasFarmerRole) {
+                throw new ClientException("当前账号无权按农户视角查询");
+            }
+            return true;
+        }
+        if ("USER".equalsIgnoreCase(viewType)) {
+            return false;
+        }
+        throw new ClientException("查询视角不正确");
     }
 
     private String joinImageUrls(List<String> imageUrls) {

@@ -35,14 +35,17 @@ public class AdoptInstanceController {
 
     @Operation(summary = "查询我的养殖实例列表")
     @PostMapping("/api/adopt/instance/v1/my")
-    public Result<IPage<AdoptInstanceRespDTO>> queryMyInstance(@RequestBody AdoptInstancePageReqDTO requestParam) {
+    public Result<IPage<AdoptInstanceRespDTO>> queryMyInstance(@RequestBody @Valid AdoptInstancePageReqDTO requestParam) {
         return Results.success(adoptInstanceService.queryMyAdoptInstances(requestParam));
     }
 
     @Operation(summary = "查询养殖实例详情")
     @GetMapping("/api/adopt/instance/v1/detail")
-    public Result<AdoptInstanceDetailRespDTO> getAdoptInstanceDetail(@RequestParam @NotNull Long id) {
-        return Results.success(adoptInstanceService.getAdoptInstanceDetail(id));
+    public Result<AdoptInstanceDetailRespDTO> getAdoptInstanceDetail(
+        @RequestParam @NotNull Long id,
+        @RequestParam(required = false) String viewType
+    ) {
+        return Results.success(adoptInstanceService.getAdoptInstanceDetail(id, viewType));
     }
 
     @SaCheckRole(UserRoleConstant.FARMER_DESC)

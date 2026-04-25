@@ -109,6 +109,9 @@
               <a-button v-else-if="canShip(record)" type="link" size="small" @click="openShipModal(record)">
                 发货
               </a-button>
+              <a-button v-else-if="canViewLogistics(record)" type="link" size="small" @click="openLogisticsModal(record)">
+                查看物流
+              </a-button>
               <span v-else class="secondary-text action-text">{{ getActionText(record) }}</span>
             </a-space>
           </template>
@@ -214,6 +217,12 @@
         <a-empty v-else description="当前订单暂无可分配的认养明细" />
       </a-spin>
     </a-modal>
+
+    <OrderLogisticsModal
+      v-model:open="logisticsModalVisible"
+      :order-no="currentLogisticsOrderNo"
+      @close="handleLogisticsModalClose"
+    />
   </div>
 </template>
 
@@ -230,6 +239,7 @@ import {
   ORDER_STATUS_TEXT,
   ORDER_TYPE
 } from '@/api/order'
+import OrderLogisticsModal from '@/components/order/OrderLogisticsModal.vue'
 
 const PAGE_SIZE = 10
 
@@ -349,6 +359,8 @@ const assignSubmitting = ref(false)
 const activeFilterKey = ref('all')
 const selectedShipOrder = ref(null)
 const selectedAssignOrder = ref(null)
+const logisticsModalVisible = ref(false)
+const currentLogisticsOrderNo = ref('')
 const orderPage = reactive({
   records: [],
   total: 0,
@@ -480,6 +492,10 @@ const canAssign = (order) => {
   return order?.orderType === ORDER_TYPE.ADOPT && order?.orderStatus === ORDER_STATUS.PENDING_ASSIGNMENT
 }
 
+const canViewLogistics = (order) => {
+  return Boolean(order?.orderNo && order?.logisticsNo)
+}
+
 const getProgressTitle = (order) => {
   if (order?.orderType === ORDER_TYPE.ADOPT) {
     if (order?.orderStatus === ORDER_STATUS.PENDING_ASSIGNMENT) {
@@ -601,6 +617,20 @@ const resetAssignForm = () => {
   assignForm.orderNo = ''
   assignForm.items = []
   selectedAssignOrder.value = null
+}
+
+const openLogisticsModal = (order) => {
+  if (!canViewLogistics(order)) {
+    message.warning('褰撳墠璁㈠崟鏆傛棤鐗╂祦淇℃伅')
+    return
+  }
+  currentLogisticsOrderNo.value = order.orderNo
+  logisticsModalVisible.value = true
+}
+
+const handleLogisticsModalClose = () => {
+  logisticsModalVisible.value = false
+  currentLogisticsOrderNo.value = ''
 }
 
 const openShipModal = async (order) => {

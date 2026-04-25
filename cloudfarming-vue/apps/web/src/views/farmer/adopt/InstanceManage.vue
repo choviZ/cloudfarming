@@ -239,7 +239,7 @@ import { message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
 import { markAdoptInstanceDead, pageMyAdoptInstances } from '@/api/adopt'
 import { fulfillFarmerAdoptInstance } from '@/api/order'
-import { ADOPT_INSTANCE_STATUS, ADOPT_INSTANCE_STATUS_OPTIONS, getAdoptInstanceStatusOption } from '@/constants/adopt'
+import { ADOPT_INSTANCE_STATUS, ADOPT_INSTANCE_STATUS_OPTIONS, ADOPT_INSTANCE_VIEW_TYPE, getAdoptInstanceStatusOption } from '@/constants/adopt'
 
 const router = useRouter()
 
@@ -363,7 +363,8 @@ const fetchInstances = async () => {
       size: pagination.pageSize,
       status: searchForm.status,
       itemId,
-      ownerOrderId
+      ownerOrderId,
+      viewType: ADOPT_INSTANCE_VIEW_TYPE.FARMER
     })
     if (!isSuccessCode(response.code)) {
       message.error(response.message || '获取养殖实例失败')

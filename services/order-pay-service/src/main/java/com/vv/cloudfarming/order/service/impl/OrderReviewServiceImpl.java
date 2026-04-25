@@ -229,6 +229,8 @@ public class OrderReviewServiceImpl implements OrderReviewService {
             .actualPayAmount(order.getActualPayAmount())
             .orderType(order.getOrderType())
             .orderStatus(order.getOrderStatus())
+            .logisticsNo(order.getLogisticsNo())
+            .logisticsCompany(order.getLogisticsCompany())
             .pendingReviewCount(pendingReviewCount)
             .allReviewed(pendingReviewCount <= 0)
             .createTime(order.getCreateTime())

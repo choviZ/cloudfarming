@@ -108,7 +108,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { pageMyAdoptInstances } from '@/api/adopt'
 import { getOrderList, ORDER_STATUS, ORDER_TYPE } from '@/api/order'
-import { getAdoptInstanceStatusOption, ADOPT_INSTANCE_STATUS } from '@/constants/adopt'
+import { getAdoptInstanceStatusOption, ADOPT_INSTANCE_STATUS, ADOPT_INSTANCE_VIEW_TYPE } from '@/constants/adopt'
 import { useUserStore } from '@/stores/useUserStore'
 
 const PAGE_SIZE = 8
@@ -250,7 +250,8 @@ const fetchList = async () => {
     const response = await pageMyAdoptInstances({
       current: pagination.current,
       size: pagination.pageSize,
-      status
+      status,
+      viewType: ADOPT_INSTANCE_VIEW_TYPE.USER
     })
     if (!isSuccessCode(response.code)) {
       message.error(response.message || '获取认养实例失败')

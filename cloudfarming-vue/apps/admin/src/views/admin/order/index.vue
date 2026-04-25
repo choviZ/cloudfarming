@@ -132,6 +132,8 @@
             v-model:open="detailModalVisible"
             :order-type="currentOrderType"
             :order-no="currentOrderNo"
+            :logistics-no="currentLogisticsNo"
+            :logistics-company="currentLogisticsCompany"
             @close="handleDetailClose"
         />
 
@@ -202,6 +204,8 @@ const pagination = reactive({
 const detailModalVisible = ref(false)
 const currentOrderType = ref(0)
 const currentOrderNo = ref('')
+const currentLogisticsNo = ref('')
+const currentLogisticsCompany = ref('')
 const editModalVisible = ref(false)
 const editLoading = ref(false)
 const editForm = reactive({
@@ -361,6 +365,8 @@ const handlePageChange = (page, pageSize) => {
 const handleDetail = (record) => {
     currentOrderType.value = record.orderType
     currentOrderNo.value = record.orderNo
+    currentLogisticsNo.value = record.logisticsNo || ''
+    currentLogisticsCompany.value = record.logisticsCompany || ''
     detailModalVisible.value = true
 }
 
@@ -370,6 +376,8 @@ const handleDetail = (record) => {
 const handleDetailClose = () => {
     detailModalVisible.value = false
     currentOrderNo.value = ''
+    currentLogisticsNo.value = ''
+    currentLogisticsCompany.value = ''
 }
 
 const handleEdit = (record) => {

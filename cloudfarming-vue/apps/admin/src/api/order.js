@@ -21,6 +21,10 @@ export const getSkuOrderDetail = async (params) =>{
   return request.get('/api/order/v1/detail/sku', { params })
 }
 
+export const getOrderLogistics = async (params) => {
+  return request.get('/api/order/v1/logistics', { params })
+}
+
 /**
  * 管理员更新订单
  */

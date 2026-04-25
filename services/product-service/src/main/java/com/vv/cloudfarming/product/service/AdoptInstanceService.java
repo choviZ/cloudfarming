@@ -24,7 +24,7 @@ public interface AdoptInstanceService extends IService<AdoptInstanceDO> {
     /**
      * 查询养殖实例详情
      */
-    AdoptInstanceDetailRespDTO getAdoptInstanceDetail(Long instanceId);
+    AdoptInstanceDetailRespDTO getAdoptInstanceDetail(Long instanceId, String viewType);
 
     /**
      * 为认养订单分配牲畜并创建养殖实例

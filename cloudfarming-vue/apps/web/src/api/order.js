@@ -84,6 +84,12 @@ export const getSkuOrderDetail = (orderNo) => {
   })
 }
 
+export const getOrderLogistics = (orderNo) => {
+  return request.get('/api/order/v1/logistics', {
+    params: { orderNo }
+  })
+}
+
 export const assignFarmerAdoptOrder = (data) => {
   return request.post('/api/order/v1/farmer/adopt/assign', data)
 }

@@ -40,13 +40,16 @@ public class AdoptLogController {
 
     @Operation(summary = "分页查询养殖日志")
     @PostMapping("/api/adopt/log/v1/page")
-    public Result<IPage<AdoptLogRespDTO>> pageAdoptLogs(@RequestBody AdoptLogPageReqDTO requestParam) {
+    public Result<IPage<AdoptLogRespDTO>> pageAdoptLogs(@RequestBody @Valid AdoptLogPageReqDTO requestParam) {
         return Results.success(adoptLogService.pageAdoptLogs(requestParam));
     }
 
     @Operation(summary = "查询体重变化趋势")
     @GetMapping("/api/adopt/log/v1/weight-trend")
-    public Result<List<AdoptWeightPointRespDTO>> listWeightTrend(@RequestParam @NotNull Long instanceId) {
-        return Results.success(adoptLogService.listWeightTrend(instanceId));
+    public Result<List<AdoptWeightPointRespDTO>> listWeightTrend(
+        @RequestParam @NotNull Long instanceId,
+        @RequestParam(required = false) String viewType
+    ) {
+        return Results.success(adoptLogService.listWeightTrend(instanceId, viewType));
     }
 }

@@ -44,6 +44,7 @@ import com.vv.cloudfarming.order.dto.resp.AdoptOrderDetailRespDTO;
 import com.vv.cloudfarming.order.dto.resp.FarmerOrderStatisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.FarmerOrderTrendPointRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderCreateRespDTO;
+import com.vv.cloudfarming.order.dto.resp.OrderLogisticsRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderPageWithProductInfoRespDTO;
 import com.vv.cloudfarming.order.dto.resp.OrderSimpleRespDTO;
@@ -59,6 +60,7 @@ import com.vv.cloudfarming.order.remote.ShopRemoteService;
 import com.vv.cloudfarming.order.service.OrderService;
 import com.vv.cloudfarming.order.service.basics.chain.OrderChainContext;
 import com.vv.cloudfarming.order.service.basics.chain.OrderContext;
+import com.vv.cloudfarming.order.service.query.AliyunLogisticsQueryService;
 import com.vv.cloudfarming.order.service.query.OrderProductSummaryQueryService;
 import com.vv.cloudfarming.order.strategy.OrderCreateStrategy;
 import com.vv.cloudfarming.order.strategy.StrategyFactory;
@@ -113,6 +115,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     );
     private final ShopRemoteService shopRemoteService;
     private final OrderProductSummaryQueryService orderProductSummaryQueryService;
+    private final AliyunLogisticsQueryService aliyunLogisticsQueryService;
     private final RedisIdWorker redisIdWorker;
     private final OrderDetailAdoptMapper orderDetailAdoptMapper;
     private final OrderDetailSkuMapper orderDetailSkuMapper;
@@ -693,6 +696,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
     }
 
     @Override
+    public OrderLogisticsRespDTO getOrderLogistics(String orderNo) {
+        OrderDO order = getAccessibleOrderByOrderNo(orderNo);
+        if (StrUtil.isBlank(order.getLogisticsNo())) {
+            throw new ClientException("当前订单暂无物流信息");
+        }
+        return aliyunLogisticsQueryService.queryOrderLogistics(order);
+    }
+
+    @Override
     public FarmerOrderStatisticsRespDTO getFarmerOrderStatistics() {
         ShopRespDTO shop = getCurrentFarmerShop();
         LocalDate today = LocalDate.now();
@@ -910,6 +922,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
             .actualPayAmount(order.getActualPayAmount())
             .orderType(order.getOrderType())
             .orderStatus(order.getOrderStatus())
+            .logisticsNo(order.getLogisticsNo())
+            .logisticsCompany(order.getLogisticsCompany())
             .pendingReviewCount(pendingReviewCount)
             .allReviewed(allReviewed)
             .createTime(order.getCreateTime())

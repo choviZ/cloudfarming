@@ -64,6 +64,12 @@ sa-token:
 logging:
   pattern:
     dateformat: yyyy-MM-dd HH:mm:ss.SSS
+logistics:
+  aliyun:
+    enabled: true
+    base-url: https://wuliu.market.alicloudapi.com
+    path: /kdi
+    app-code: ${ALIYUN_LOGISTICS_APPCODE:}
 agreement:
   adopt:
     version: v1.0.0

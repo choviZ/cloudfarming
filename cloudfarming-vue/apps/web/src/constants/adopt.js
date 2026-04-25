@@ -5,6 +5,11 @@ export const ADOPT_INSTANCE_STATUS = {
   DEAD: 3
 }
 
+export const ADOPT_INSTANCE_VIEW_TYPE = {
+  USER: 'USER',
+  FARMER: 'FARMER'
+}
+
 export const ADOPT_INSTANCE_STATUS_OPTIONS = [
   { label: '可认养', value: ADOPT_INSTANCE_STATUS.AVAILABLE, color: 'default' },
   { label: '已认养', value: ADOPT_INSTANCE_STATUS.ADOPTED, color: 'gold' },

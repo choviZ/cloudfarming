@@ -63,7 +63,6 @@
                       <h3 class="content-card__title">{{ item.title }}</h3>
                       <div class="content-card__meta">
                         <span class="price">￥{{ formatPrice(item.minPrice) }}</span>
-                        <span class="hint">已通过审核</span>
                       </div>
                       <button type="button" class="enter-btn">查看商品</button>
                     </div>

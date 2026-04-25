@@ -52,7 +52,7 @@ public class AdoptInstanceServiceImpl extends ServiceImpl<AdoptInstanceMapper, A
     @Override
     public IPage<AdoptInstanceRespDTO> queryMyAdoptInstances(AdoptInstancePageReqDTO reqDTO) {
         long userId = StpUtil.getLoginIdAsLong();
-        boolean isFarmer = StpUtil.hasRole(UserRoleConstant.FARMER_DESC);
+        boolean isFarmer = resolveFarmerView(reqDTO.getViewType());
         LambdaQueryWrapper<AdoptInstanceDO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AdoptInstanceDO::getDelFlag, 0);
         if (reqDTO.getStatus() != null) {
@@ -80,9 +80,24 @@ public class AdoptInstanceServiceImpl extends ServiceImpl<AdoptInstanceMapper, A
         return pageResult.convert(item -> buildInstanceResp(item, adoptItemMap, latestLogTimeMap, orderSimpleMap));
     }
 
+    private boolean resolveFarmerView(String viewType) {
+        boolean hasFarmerRole = StpUtil.hasRole(UserRoleConstant.FARMER_DESC);
+        viewType = StrUtil.trimToNull(viewType);
+        if (viewType == null) {
+            return hasFarmerRole;
+        }
+        if ("FARMER".equalsIgnoreCase(viewType)) {
+            if (!hasFarmerRole) {
+                throw new ClientException("当前账号无权按农户视角查询");
+            }
+            return true;
+        }
+        return false;
+    }
+
     @Override
-    public AdoptInstanceDetailRespDTO getAdoptInstanceDetail(Long instanceId) {
-        AdoptInstanceDO instance = getAndCheckReadableInstance(instanceId);
+    public AdoptInstanceDetailRespDTO getAdoptInstanceDetail(Long instanceId, String viewType) {
+        AdoptInstanceDO instance = getAndCheckReadableInstance(instanceId, viewType);
         AdoptItemDO adoptItem = instance.getItemId() == null ? null : adoptItemMapper.selectById(instance.getItemId());
         Date latestLogTime = getLatestLogTime(Long.valueOf(instance.getId()));
         String orderNo = resolveOrderNo(instance.getOwnerOrderId(), buildOrderSimpleMap(List.of(instance)));
@@ -370,10 +385,11 @@ public class AdoptInstanceServiceImpl extends ServiceImpl<AdoptInstanceMapper, A
             .build();
     }
 
-    private AdoptInstanceDO getAndCheckReadableInstance(Long instanceId) {
+    private AdoptInstanceDO getAndCheckReadableInstance(Long instanceId, String viewType) {
         AdoptInstanceDO instance = getInstanceById(instanceId);
         long userId = StpUtil.getLoginIdAsLong();
-        if (StpUtil.hasRole(UserRoleConstant.FARMER_DESC)) {
+        boolean isFarmer = resolveFarmerView(viewType);
+        if (isFarmer) {
             if (!Objects.equals(instance.getFarmerId(), userId)) {
                 throw new ClientException("无权查看该养殖实例");
             }
@@ -382,6 +398,15 @@ public class AdoptInstanceServiceImpl extends ServiceImpl<AdoptInstanceMapper, A
         if (!Objects.equals(instance.getOwnerUserId(), userId)) {
             throw new ClientException("无权查看该养殖实例");
         }
+        // if (StpUtil.hasRole(UserRoleConstant.FARMER_DESC)) {
+        //     if (!Objects.equals(instance.getFarmerId(), userId)) {
+        //         throw new ClientException("无权查看该养殖实例");
+        //     }
+        //     return instance;
+        // }
+        // if (!Objects.equals(instance.getOwnerUserId(), userId)) {
+        //     throw new ClientException("无权查看该养殖实例");
+        // }
         return instance;
     }
 

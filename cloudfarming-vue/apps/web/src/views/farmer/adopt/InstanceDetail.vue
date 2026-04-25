@@ -168,7 +168,7 @@ import VideoUpload from '@/components/Upload/VideoUpload.vue'
 import AdoptInstanceSummaryCard from '@/components/adopt/AdoptInstanceSummaryCard.vue'
 import AdoptLogTimeline from '@/components/adopt/AdoptLogTimeline.vue'
 import WeightTrendCard from '@/components/adopt/WeightTrendCard.vue'
-import { ADOPT_INSTANCE_STATUS, ADOPT_LOG_TYPE, ADOPT_LOG_TYPE_OPTIONS } from '@/constants/adopt'
+import { ADOPT_INSTANCE_STATUS, ADOPT_INSTANCE_VIEW_TYPE, ADOPT_LOG_TYPE, ADOPT_LOG_TYPE_OPTIONS } from '@/constants/adopt'
 
 const route = useRoute()
 const router = useRouter()
@@ -241,7 +241,7 @@ const fetchInstanceDetail = async () => {
   if (!ensureValidInstanceId()) {
     return false
   }
-  const response = await getAdoptInstanceDetail(instanceId.value)
+  const response = await getAdoptInstanceDetail(instanceId.value, ADOPT_INSTANCE_VIEW_TYPE.FARMER)
   if (!isSuccessCode(response.code)) {
     message.error(response.message || '获取实例详情失败')
     return false
@@ -260,7 +260,8 @@ const fetchLogs = async () => {
       instanceId: instanceId.value,
       current: logsPagination.current,
       size: logsPagination.pageSize,
-      logType: logFilters.logType
+      logType: logFilters.logType,
+      viewType: ADOPT_INSTANCE_VIEW_TYPE.FARMER
     })
     if (!isSuccessCode(response.code)) {
       message.error(response.message || '获取生长日记失败')
@@ -284,7 +285,7 @@ const fetchWeightTrend = async () => {
   }
   weightLoading.value = true
   try {
-    const response = await getAdoptWeightTrend(instanceId.value)
+    const response = await getAdoptWeightTrend(instanceId.value, ADOPT_INSTANCE_VIEW_TYPE.FARMER)
     if (!isSuccessCode(response.code)) {
       message.error(response.message || '获取体重曲线失败')
       return

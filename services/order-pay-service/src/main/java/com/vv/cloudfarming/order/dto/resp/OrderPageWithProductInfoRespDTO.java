@@ -36,6 +36,10 @@ public class OrderPageWithProductInfoRespDTO {
 
     private Integer orderStatus;
 
+    private String logisticsNo;
+
+    private String logisticsCompany;
+
     private Long pendingReviewCount;
 
     private Boolean allReviewed;
