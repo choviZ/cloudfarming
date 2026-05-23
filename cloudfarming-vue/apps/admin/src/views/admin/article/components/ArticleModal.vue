@@ -24,26 +24,21 @@
         />
       </a-form-item>
 
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="文章类型" name="articleType">
-            <a-select
-              v-model:value="formState.articleType"
-              placeholder="请选择文章类型"
-              :options="articleTypeOptions"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="置顶设置" name="isTop">
-            <a-switch
-              v-model:checked="formState.isTop"
-              checked-children="置顶"
-              un-checked-children="普通"
-            />
-          </a-form-item>
-        </a-col>
-      </a-row>
+      <a-form-item label="文章类型" name="articleType">
+        <a-select
+          v-model:value="formState.articleType"
+          placeholder="请选择文章类型"
+          :options="articleTypeOptions"
+        />
+      </a-form-item>
+
+      <a-form-item label="置顶设置" name="isTop">
+        <a-switch
+          v-model:checked="formState.isTop"
+          checked-children="置顶"
+          un-checked-children="普通"
+        />
+      </a-form-item>
 
       <a-form-item v-if="isEditMode" label="发布状态" name="status">
         <a-radio-group v-model:value="formState.status">

@@ -73,10 +73,10 @@
                 <div class="section-divider">
                   <span>用户评论</span>
                 </div>
-                <div class="empty-comment">
-                  <CommentOutlined class="empty-icon" />
-                  <p>评论功能暂未开放，敬请期待...</p>
-                </div>
+                <ProductReviewSection
+                  target-type="adopt"
+                  :adopt-item-id="Number(detail.id)"
+                />
               </div>
             </div>
           </div>
@@ -95,8 +95,8 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { CommentOutlined } from '@ant-design/icons-vue'
 import ShopSummaryCard from '@/components/shop/ShopSummaryCard.vue'
+import ProductReviewSection from '@/components/review/ProductReviewSection.vue'
 import { getAdoptItemDetail, listAnimalCategories } from '@/api/adopt'
 import { getShopInfo } from '@/api/shop'
 

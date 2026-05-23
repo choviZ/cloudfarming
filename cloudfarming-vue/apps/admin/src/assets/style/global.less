@@ -3,92 +3,93 @@
 }
 
 html,
-body {
+body,
+#app {
   width: 100%;
+  min-width: 0;
   height: 100%;
   margin: 0;
   padding: 0;
   font-size: 14px;
-  background-color: var(--color-bg-1);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
 }
 
-.echarts-tooltip-diy {
-  background: linear-gradient(
-    304.17deg,
-    rgba(253, 254, 255, 0.6) -6.04%,
-    rgba(244, 247, 252, 0.6) 85.2%
-  ) !important;
-  border: none !important;
-  backdrop-filter: blur(10px) !important;
-  /* Note: backdrop-filter has minimal browser support */
-
-  border-radius: 6px !important;
-  .content-panel {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 9px;
-    background: rgba(255, 255, 255, 0.8);
-    width: 164px;
-    height: 32px;
-    line-height: 32px;
-    box-shadow: 6px 0px 20px rgba(34, 87, 188, 0.1);
-    border-radius: 4px;
-    margin-bottom: 4px;
-  }
-  .tooltip-title {
-    margin: 0 0 10px 0;
-  }
-  p {
-    margin: 0;
-  }
-  .tooltip-title,
-  .tooltip-value {
-    font-size: 13px;
-    line-height: 15px;
-    display: flex;
-    align-items: center;
-    text-align: right;
-    color: #1d2129;
-    font-weight: bold;
-  }
-  .tooltip-item-icon {
-    display: inline-block;
-    margin-right: 8px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-  }
+body {
+  overflow: hidden;
 }
 
-.general-card {
-  border-radius: 4px;
-  border: none;
-  & > .arco-card-header {
-    height: auto;
-    padding: 20px;
-    border: none;
-  }
-  & > .arco-card-body {
-    padding: 0 20px 20px 20px;
-  }
+a {
+  color: inherit;
 }
 
-.split-line {
-  border-color: rgb(var(--gray-2));
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
 
-.arco-table-cell {
-  .circle {
-    display: inline-block;
-    margin-right: 4px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: rgb(var(--blue-6));
-    &.pass {
-      background-color: rgb(var(--green-6));
-    }
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-toolbar--end {
+  justify-content: flex-end;
+}
+
+.admin-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.admin-muted {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.admin-table-card .ant-table-thead > tr > th {
+  white-space: nowrap;
+}
+
+.admin-table-card .ant-table-tbody > tr > td {
+  vertical-align: middle;
+}
+
+.admin-search-form {
+  width: 100%;
+}
+
+.admin-search-form .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.admin-cell-primary {
+  font-weight: 600;
+}
+
+.admin-cell-secondary {
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.echarts-tooltip-diy p {
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .admin-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-pagination {
+    justify-content: flex-start;
+    overflow-x: auto;
   }
 }

@@ -1,9 +1,8 @@
 <template>
-  <div class="attribute-container">
-    <div class="filter-section">
-      <a-card :bordered="false" class="filter-card">
-        <a-flex align="center" gap="middle">
-          <span>请选择分类：</span>
+  <div class="admin-page attribute-container">
+    <a-card :bordered="false" class="admin-card">
+      <a-form class="admin-search-form" layout="inline">
+        <a-form-item label="请选择分类">
           <a-tree-select
             v-model:value="selectedCategoryId"
             style="width: 300px"
@@ -14,12 +13,12 @@
             :field-names="{ label: 'name', value: 'id', children: 'children' }"
             @change="handleCategoryChange"
           />
-        </a-flex>
-      </a-card>
-    </div>
+        </a-form-item>
+      </a-form>
+    </a-card>
 
-    <div class="content-section" v-if="selectedCategoryId">
-      <a-card :bordered="false">
+    <div v-if="selectedCategoryId">
+      <a-card :bordered="false" class="admin-card admin-table-card">
         <template #title>
           <a-space>
             <a-button type="primary" @click="handleAdd">
@@ -69,9 +68,9 @@
       </a-card>
     </div>
 
-    <div v-else class="empty-placeholder">
-      <a-empty description="请先选择一个分类以管理其属性"/>
-    </div>
+    <a-card v-else :bordered="false" class="admin-card">
+      <a-empty description="请先选择一个分类以管理其属性" />
+    </a-card>
 
     <AttributeModal
       v-model:open="modalVisible"
@@ -192,26 +191,3 @@ onMounted(() => {
   fetchCategoryTree();
 });
 </script>
-
-<style scoped>
-.attribute-container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.filter-card {
-  margin-bottom: 16px;
-}
-
-.empty-placeholder {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  border-radius: 8px;
-  min-height: 400px;
-}
-</style>

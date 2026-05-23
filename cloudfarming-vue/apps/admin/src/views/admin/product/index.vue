@@ -1,8 +1,8 @@
 <template>
-  <div class="product-list-container">
+  <div class="admin-page product-list-container">
     <!-- 筛选区 -->
-    <a-card :bordered="false" class="filter-card">
-      <a-form layout="inline" :model="queryParams" @finish="handleSearch">
+    <a-card :bordered="false" class="admin-card">
+      <a-form class="admin-search-form" layout="inline" :model="queryParams" @finish="handleSearch">
         <a-form-item label="商品名称">
           <a-input v-model:value="queryParams.spuName" placeholder="请输入商品名称" allow-clear />
         </a-form-item>
@@ -32,14 +32,16 @@
           </a-select>
         </a-form-item>
         <a-form-item>
-          <a-button type="primary" html-type="submit">查询</a-button>
-          <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
+          <a-space>
+            <a-button type="primary" html-type="submit">查询</a-button>
+            <a-button @click="handleReset">重置</a-button>
+          </a-space>
         </a-form-item>
       </a-form>
     </a-card>
 
     <!-- 列表区 -->
-    <a-card :bordered="false" class="table-card">
+    <a-card :bordered="false" class="admin-card admin-table-card table-card">
       <a-table
         class="product-table"
         :columns="columns"
@@ -86,7 +88,7 @@
                 title="确定通过该商品审核吗？"
                 @confirm="handleUpdateAuditStatus(record, 1)"
               >
-                <a-button type="link" class="success-btn">通过审核</a-button>
+                <a-button type="link">通过审核</a-button>
               </a-popconfirm>
 
               <a-popconfirm
@@ -110,7 +112,7 @@
                 title="确定要上架该商品吗？"
                 @confirm="handleUpdateStatus(record, 1)"
               >
-                <a-button type="link" class="success-btn">上架</a-button>
+                <a-button type="link">上架</a-button>
               </a-popconfirm>
             </div>
           </template>
@@ -354,12 +356,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.product-list-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .table-card :deep(.ant-table-tbody > tr > td) {
   vertical-align: middle;
 }
@@ -372,10 +368,6 @@ onMounted(() => {
   padding: 0;
   height: 24px;
   line-height: 24px;
-}
-
-.success-btn {
-  color: #52c41a;
 }
 
 .image-placeholder {

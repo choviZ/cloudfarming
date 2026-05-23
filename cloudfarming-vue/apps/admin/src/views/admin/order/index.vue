@@ -1,9 +1,9 @@
 <template>
-    <div class="order-management">
+    <div class="admin-page order-management">
         <!-- 搜索区 -->
-        <a-card class="search-card" :bordered="false">
-            <a-form layout="horizontal" :model="searchForm" style="display: flex; flex-wrap: nowrap; overflow-x: auto;">
-                <a-space :size="16">
+        <a-card class="admin-card" :bordered="false">
+            <a-form class="admin-search-form" layout="inline" :model="searchForm">
+                <a-space :size="16" wrap>
                     <a-form-item label="订单ID">
                         <a-input v-model:value="searchForm.id" placeholder="请输入订单ID" allow-clear
                             @pressEnter="handleSearch" />
@@ -54,7 +54,7 @@
         </a-card>
 
         <!-- 订单列表 -->
-        <a-card :bordered="false" style="margin-top: 16px">
+        <a-card :bordered="false" class="admin-card admin-table-card">
             <a-table :columns="columns" :data-source="orderList" :loading="loading" :pagination="false" row-key="id"
                 :scroll="{ x: 'max-content' }">
                 <template #bodyCell="{ column, record }">
@@ -69,7 +69,7 @@
                         </a-tag>
                     </template>
                     <template v-else-if="column.key === 'amountInfo'">
-                        <div style="font-size: 12px; line-height: 1.8;">
+                        <div class="amount-cell">
                             <div>总额: ¥{{ record.totalAmount }}</div>
                             <div>实付: ¥{{ record.actualPayAmount }}</div>
                             <div>运费: ¥{{ record.freightAmount }}</div>
@@ -79,9 +79,9 @@
                     <template v-else-if="column.key === 'receiverInfo'">
                         <div>
                             <span>{{ record.receiveName }}</span>
-                            <span style="margin-left: 8px; color: #666">{{ record.receivePhone }}</span>
+                            <span class="receiver-phone">{{ record.receivePhone }}</span>
                         </div>
-                        <div style="font-size: 12px; color: #999; margin-top: 4px">
+                        <div class="receiver-address">
                             {{ record.receiveAddress }}
                         </div>
                     </template>
@@ -120,7 +120,7 @@
             </a-table>
 
             <!-- 分页 -->
-            <div class="pagination" style="margin-top: 16px; text-align: right">
+            <div class="admin-pagination">
                 <a-pagination v-model:current="pagination.current" v-model:page-size="pagination.size"
                     :total="pagination.total" :show-total="(total) => `共 ${total} 条`" show-size-changer
                     show-quick-jumper @change="handlePageChange" />
@@ -461,12 +461,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.order-management {
-    padding: 24px;
+.amount-cell {
+    font-size: 12px;
+    line-height: 1.8;
 }
 
-.search-card {
-    margin-bottom: 16px;
+.receiver-phone {
+    margin-left: 8px;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+.receiver-address {
+    margin-top: 4px;
+    color: rgba(0, 0, 0, 0.45);
+    font-size: 12px;
 }
 
 .logistics-cell {
@@ -480,12 +488,11 @@ onMounted(() => {
 }
 
 .logistics-label {
-    color: #666;
+    color: rgba(0, 0, 0, 0.45);
     white-space: nowrap;
 }
 
 .logistics-value {
-    color: #333;
     word-break: break-all;
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
-  <div class="feedback-management">
-    <a-card class="search-card" :bordered="false">
-      <a-form layout="horizontal" :model="searchForm" class="search-form">
+  <div class="admin-page feedback-management">
+    <a-card class="admin-card" :bordered="false">
+      <a-form layout="inline" :model="searchForm" class="admin-search-form">
         <a-space :size="16" wrap>
           <a-form-item label="反馈ID">
             <a-input
@@ -66,7 +66,7 @@
       </a-form>
     </a-card>
 
-    <a-card :bordered="false" style="margin-top: 16px">
+    <a-card :bordered="false" class="admin-card admin-table-card">
       <a-table
         :columns="columns"
         :data-source="feedbackList"
@@ -112,7 +112,7 @@
         </template>
       </a-table>
 
-      <div class="pagination">
+      <div class="admin-pagination">
         <a-pagination
           v-model:current="pagination.current"
           v-model:page-size="pagination.size"
@@ -135,48 +135,29 @@
       @ok="handleProcessSubmit"
     >
       <div v-if="currentRecord" class="process-panel">
-        <div class="detail-grid">
-          <div class="detail-item">
-            <span class="detail-label">反馈ID</span>
-            <span>{{ currentRecord.id }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">提交用户</span>
-            <span>{{ currentRecord.username || `用户${currentRecord.userId}` }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">提交身份</span>
-            <span>{{ currentRecord.submitterTypeName || getSubmitterTypeText(currentRecord.submitterType) }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">联系电话</span>
-            <span>{{ currentRecord.contactPhone }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">问题类型</span>
-            <span>{{ currentRecord.feedbackTypeName || currentRecord.feedbackType }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">提交时间</span>
-            <span>{{ formatTime(currentRecord.createTime) }}</span>
-          </div>
-        </div>
-
-        <div class="detail-block">
-          <div class="detail-label">反馈内容</div>
-          <div class="detail-content">{{ currentRecord.content }}</div>
-        </div>
-
-        <div v-if="currentRecord.handleTime || currentRecord.handlerName" class="detail-grid detail-grid--history">
-          <div class="detail-item">
-            <span class="detail-label">当前处理人</span>
-            <span>{{ currentRecord.handlerName || '-' }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">处理时间</span>
-            <span>{{ currentRecord.handleTime ? formatTime(currentRecord.handleTime) : '-' }}</span>
-          </div>
-        </div>
+        <a-descriptions bordered size="small" :column="2">
+          <a-descriptions-item label="反馈ID">{{ currentRecord.id }}</a-descriptions-item>
+          <a-descriptions-item label="提交用户">
+            {{ currentRecord.username || `用户${currentRecord.userId}` }}
+          </a-descriptions-item>
+          <a-descriptions-item label="提交身份">
+            {{ currentRecord.submitterTypeName || getSubmitterTypeText(currentRecord.submitterType) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="联系电话">{{ currentRecord.contactPhone }}</a-descriptions-item>
+          <a-descriptions-item label="问题类型">
+            {{ currentRecord.feedbackTypeName || currentRecord.feedbackType }}
+          </a-descriptions-item>
+          <a-descriptions-item label="提交时间">{{ formatTime(currentRecord.createTime) }}</a-descriptions-item>
+          <a-descriptions-item v-if="currentRecord.handlerName" label="当前处理人">
+            {{ currentRecord.handlerName || '-' }}
+          </a-descriptions-item>
+          <a-descriptions-item v-if="currentRecord.handleTime" label="处理时间">
+            {{ currentRecord.handleTime ? formatTime(currentRecord.handleTime) : '-' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="反馈内容" :span="2">
+            <div class="detail-content">{{ currentRecord.content }}</div>
+          </a-descriptions-item>
+        </a-descriptions>
 
         <a-form ref="processFormRef" layout="vertical" :model="processForm" :rules="processRules">
           <a-form-item label="处理回复" name="replyContent">
@@ -393,15 +374,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.feedback-management {
-  padding: 24px;
-}
-
-.search-form {
-  display: flex;
-  flex-wrap: wrap;
-}
-
 .submitter-cell {
   display: flex;
   flex-direction: column;
@@ -409,7 +381,6 @@ onMounted(async () => {
 }
 
 .submitter-name {
-  color: #1f2937;
   font-weight: 600;
 }
 
@@ -418,13 +389,12 @@ onMounted(async () => {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  color: #6b7280;
+  color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
 }
 
 .content-cell {
   max-width: 360px;
-  color: #374151;
   line-height: 1.7;
   word-break: break-all;
   display: -webkit-box;
@@ -433,62 +403,15 @@ onMounted(async () => {
   overflow: hidden;
 }
 
-.pagination {
-  margin-top: 16px;
-  text-align: right;
-}
-
 .process-panel {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 18px;
-}
-
-.detail-grid--history {
-  padding: 16px;
-  border-radius: 14px;
-  background: #fafafa;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.detail-label {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.detail-block {
-  padding: 16px;
-  border-radius: 14px;
-  background: #fafafa;
-}
-
 .detail-content {
-  margin-top: 8px;
-  color: #1f2937;
   line-height: 1.8;
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-@media (max-width: 768px) {
-  .feedback-management {
-    padding: 16px;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

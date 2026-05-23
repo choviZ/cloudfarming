@@ -1,7 +1,7 @@
 <template>
-  <div class="farmer-management">
-    <a-card class="search-card">
-      <a-form layout="inline" :model="searchForm">
+  <div class="admin-page farmer-management">
+    <a-card :bordered="false" class="admin-card">
+      <a-form class="admin-search-form" layout="inline" :model="searchForm">
         <a-form-item label="农场名称">
           <a-input
             v-model:value="searchForm.farmName"
@@ -60,7 +60,7 @@
       </a-form>
     </a-card>
 
-    <a-card>
+    <a-card :bordered="false" class="admin-card admin-table-card">
       <a-table
         :columns="columns"
         :data-source="farmerList"
@@ -143,7 +143,7 @@
         </template>
       </a-table>
 
-      <div class="pagination">
+      <div class="admin-pagination">
         <a-pagination
           v-model:current="pagination.current"
           v-model:page-size="pagination.size"
@@ -343,14 +343,6 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
-.farmer-management {
-  padding: 24px;
-}
-
-.search-card {
-  margin-bottom: 16px;
-}
-
 .image-group {
   display: flex;
   align-items: center;
@@ -360,11 +352,5 @@ onMounted(() => {
 .more-count {
   color: #999;
   font-size: 12px;
-}
-
-.pagination {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
 }
 </style>

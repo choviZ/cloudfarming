@@ -115,3 +115,13 @@ export const getSpuReviewSummary = (spuId) => {
 export const pageSpuReviews = (data) => {
   return request.post('/api/order/review/v1/spu/page', data)
 }
+
+export const getAdoptReviewSummary = (adoptItemId) => {
+  return request.get('/api/order/review/v1/adopt/summary', {
+    params: { adoptItemId }
+  })
+}
+
+export const pageAdoptReviews = (data) => {
+  return request.post('/api/order/review/v1/adopt/page', data)
+}

@@ -1,98 +1,86 @@
 <template>
-  <div class="dashboard-page">
-    <a-card :bordered="false" class="hero-card">
-      <div class="hero-card__content">
-        <div class="hero-card__copy">
-          <span class="hero-card__eyebrow">CloudFarming Admin</span>
-          <h2>平台经营数据看板</h2>
-          <p>
-            这版首页重点展示真正能支持判断的运营信号：近 7 日订单趋势、审核待办和积压分布，
-            帮助管理员快速识别增长变化和处理压力。
-          </p>
-          <div class="hero-card__tags">
-            <a-tag color="processing">近 7 日趋势</a-tag>
-            <a-tag color="gold">待办分桶</a-tag>
-            <a-tag color="success">分页聚合计算</a-tag>
-          </div>
-        </div>
-        <div class="hero-card__actions">
-          <div class="hero-card__time">
-            <span>最近刷新</span>
-            <strong>{{ formattedUpdatedAt }}</strong>
-          </div>
-          <a-button type="primary" size="large" :loading="loading" @click="loadDashboard">
+  <div class="admin-page dashboard-page">
+    <a-card :bordered="false" class="admin-card" title="平台经营数据看板">
+      <template #extra>
+        <a-space>
+          <span class="admin-muted">最近刷新：{{ formattedUpdatedAt }}</span>
+          <a-button type="primary" :loading="loading" @click="loadDashboard">
             <template #icon>
               <ReloadOutlined />
             </template>
             刷新数据
           </a-button>
-        </div>
-      </div>
-      <div class="hero-card__note">
-        统计口径：订单趋势按创建时间聚合近 7 天数据；待办积压按创建时间或最近更新时间分为 24h 内、24-72h、72h+。
-      </div>
+        </a-space>
+      </template>
+      <a-alert
+        type="info"
+        show-icon
+        message="统计口径"
+        description="订单趋势按创建时间聚合近 7 天数据；待办积压按创建时间或最近更新时间分为 24h 内、24-72h、72h+。"
+      />
     </a-card>
 
-    <section class="metric-grid">
-      <article
+    <a-row :gutter="[16, 16]">
+      <a-col
         v-for="metric in metricCards"
         :key="metric.key"
-        class="metric-card"
-        :class="`metric-card--${metric.tone}`"
+        :xs="24"
+        :sm="12"
+        :xl="6"
       >
-        <span class="metric-card__label">{{ metric.label }}</span>
-        <strong class="metric-card__value">{{ metric.value }}</strong>
-        <span class="metric-card__meta">{{ metric.meta }}</span>
-        <span class="metric-card__hint">{{ metric.hint }}</span>
-      </article>
-    </section>
+        <a-card :bordered="false" class="admin-card" size="small">
+          <a-statistic :title="metric.label" :value="metric.value" />
+          <div class="metric-meta">{{ metric.meta }}</div>
+          <div class="admin-muted metric-hint">{{ metric.hint }}</div>
+        </a-card>
+      </a-col>
+    </a-row>
 
-    <section class="chart-grid">
-      <a-card :bordered="false" class="chart-card">
-        <div class="chart-card__header">
-          <div>
-            <h3>用户结构</h3>
-            <p>区分普通用户、农户与管理员账号的当前规模</p>
-          </div>
-          <span class="chart-card__badge">{{ formatCount(summary.totalUsers) }}</span>
-        </div>
+    <a-row :gutter="[16, 16]">
+      <a-col :xs="24" :lg="10">
+        <a-card :bordered="false" class="admin-card" title="用户结构">
+          <template #extra>
+            <a-tag color="blue">{{ formatCount(summary.totalUsers) }}</a-tag>
+          </template>
+          <p class="admin-muted chart-desc">区分普通用户、农户与管理员账号的当前规模</p>
         <div ref="userChartRef" class="chart-canvas"></div>
-      </a-card>
+        </a-card>
+      </a-col>
 
-      <a-card :bordered="false" class="chart-card chart-card--trend">
-        <div class="chart-card__header">
-          <div>
-            <h3>近 7 日订单趋势</h3>
-            <p>同时观察下单量、支付订单量和有效 GMV 的变化</p>
-          </div>
-          <span class="chart-card__badge">GMV {{ formatMoney(summary.last7Gmv, true) }}</span>
-        </div>
+      <a-col :xs="24" :lg="14">
+        <a-card :bordered="false" class="admin-card" title="近 7 日订单趋势">
+          <template #extra>
+            <a-tag color="blue">GMV {{ formatMoney(summary.last7Gmv, true) }}</a-tag>
+          </template>
+          <p class="admin-muted chart-desc">同时观察下单量、支付订单量和有效 GMV 的变化</p>
         <div ref="orderTrendChartRef" class="chart-canvas chart-canvas--trend"></div>
-      </a-card>
+        </a-card>
+      </a-col>
 
-      <a-card :bordered="false" class="chart-card chart-card--wide">
-        <div class="chart-card__header">
-          <div>
-            <h3>审核待办 / 积压</h3>
-            <p>按审核类型和处理年龄分桶，帮助判断哪里开始堆积</p>
-          </div>
-          <span class="chart-card__badge">{{ formatCount(summary.reviewBacklogTotal) }}</span>
-        </div>
+      <a-col :span="24">
+        <a-card :bordered="false" class="admin-card" title="审核待办 / 积压">
+          <template #extra>
+            <a-tag color="blue">{{ formatCount(summary.reviewBacklogTotal) }}</a-tag>
+          </template>
+          <p class="admin-muted chart-desc">按审核类型和处理年龄分桶，帮助判断哪里开始堆积</p>
         <div ref="backlogChartRef" class="chart-canvas chart-canvas--wide"></div>
-        <div class="backlog-summary">
-          <div class="backlog-summary__item">
-            <span>商品待审</span>
-            <strong>{{ formatCount(summary.pendingProductAudit) }}</strong>
-            <em>72h+ {{ formatCount(summary.productBacklogOverdue) }}</em>
-          </div>
-          <div class="backlog-summary__item">
-            <span>农户待审</span>
-            <strong>{{ formatCount(summary.pendingFarmerReview) }}</strong>
-            <em>72h+ {{ formatCount(summary.farmerBacklogOverdue) }}</em>
-          </div>
-        </div>
-      </a-card>
-    </section>
+          <a-row :gutter="[16, 16]">
+            <a-col :xs="24" :md="12">
+              <a-card size="small" title="商品待审">
+                <a-statistic :value="formatCount(summary.pendingProductAudit)" />
+                <div class="admin-muted">72h+ {{ formatCount(summary.productBacklogOverdue) }}</div>
+              </a-card>
+            </a-col>
+            <a-col :xs="24" :md="12">
+              <a-card size="small" title="农户待审">
+                <a-statistic :value="formatCount(summary.pendingFarmerReview)" />
+                <div class="admin-muted">72h+ {{ formatCount(summary.farmerBacklogOverdue) }}</div>
+              </a-card>
+            </a-col>
+          </a-row>
+        </a-card>
+      </a-col>
+    </a-row>
   </div>
 </template>
 
@@ -114,15 +102,15 @@ import { getFeedbackPage } from '@/api/feedback'
 echarts.use([GridComponent, LegendComponent, TooltipComponent, PieChart, BarChart, LineChart, SVGRenderer])
 
 const USER_TYPE_OPTIONS = [
-  { label: '普通用户', value: 0, color: '#1D4ED8' },
-  { label: '农户', value: 1, color: '#0F766E' },
-  { label: '管理员', value: 2, color: '#F59E0B' },
+  { label: '普通用户', value: 0, color: '#1677ff' },
+  { label: '农户', value: 1, color: '#faad14' },
+  { label: '管理员', value: 2, color: '#722ed1' },
 ]
 
 const BACKLOG_BUCKETS = [
-  { key: 'fresh', label: '24h 内', color: '#60A5FA' },
-  { key: 'warning', label: '24-72h', color: '#F59E0B' },
-  { key: 'overdue', label: '72h+', color: '#EF4444' },
+  { key: 'fresh', label: '24h 内', color: '#1677ff' },
+  { key: 'warning', label: '24-72h', color: '#faad14' },
+  { key: 'overdue', label: '72h+', color: '#ff4d4f' },
 ]
 
 const REVIEW_BACKLOG_CONFIG = [
@@ -198,7 +186,6 @@ const metricCards = computed(() => [
     value: formatCount(summary.totalUsers),
     meta: `普通用户 ${formatCount(summary.userRegularCount)} · 农户 ${formatCount(summary.userFarmerCount)}`,
     hint: `管理员账号 ${formatCount(summary.userAdminCount)} 个`,
-    tone: 'blue',
   },
   {
     key: 'orders',
@@ -206,7 +193,6 @@ const metricCards = computed(() => [
     value: formatCount(summary.last7OrderCount),
     meta: `支付订单 ${formatCount(summary.last7PaidOrderCount)} · 今日 ${formatCount(summary.todayOrderCount)}`,
     hint: `近 7 日 GMV ${formatMoney(summary.last7Gmv, true)}`,
-    tone: 'amber',
   },
   {
     key: 'review',
@@ -214,7 +200,6 @@ const metricCards = computed(() => [
     value: formatCount(summary.pendingProductAudit + summary.pendingFarmerReview),
     meta: `商品 ${formatCount(summary.pendingProductAudit)} · 农户 ${formatCount(summary.pendingFarmerReview)}`,
     hint: `72h+ 积压 ${formatCount(summary.productBacklogOverdue + summary.farmerBacklogOverdue)}`,
-    tone: 'cyan',
   },
   {
     key: 'feedback',
@@ -222,7 +207,6 @@ const metricCards = computed(() => [
     value: formatCount(summary.pendingFeedback),
     meta: `24h 内 ${formatCount(summary.feedbackBacklogFresh)} · 24-72h ${formatCount(summary.feedbackBacklogWarning)}`,
     hint: `72h+ 未处理 ${formatCount(summary.feedbackBacklogOverdue)}`,
-    tone: 'rose',
   },
 ])
 
@@ -519,7 +503,7 @@ function buildUserChartOption() {
 function buildOrderTrendChartOption() {
   return {
     animation: !prefersReducedMotion,
-    color: ['#94A3B8', '#1D4ED8', '#14B8A6'],
+    color: ['#d9d9d9', '#1677ff', '#722ed1'],
     legend: {
       top: 0,
       right: 0,
@@ -638,7 +622,7 @@ function buildOrderTrendChartOption() {
         data: orderTrendPoints.value.map((item) => item.paidOrderCount),
         itemStyle: {
           borderRadius: [10, 10, 0, 0],
-          color: '#1D4ED8',
+          color: '#1677ff',
         },
       },
       {
@@ -651,17 +635,17 @@ function buildOrderTrendChartOption() {
         symbolSize: 8,
         lineStyle: {
           width: 4,
-          color: '#14B8A6',
+          color: '#722ed1',
         },
         itemStyle: {
           color: '#FFFFFF',
-          borderColor: '#14B8A6',
+          borderColor: '#722ed1',
           borderWidth: 3,
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(20, 184, 166, 0.18)' },
-            { offset: 1, color: 'rgba(20, 184, 166, 0.02)' },
+            { offset: 0, color: 'rgba(114, 46, 209, 0.16)' },
+            { offset: 1, color: 'rgba(114, 46, 209, 0.02)' },
           ]),
         },
       },
@@ -891,221 +875,17 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="less">
-.dashboard-page {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+.metric-meta {
+  margin-top: 8px;
 }
 
-.hero-card {
-  overflow: hidden;
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at top right, rgba(245, 158, 11, 0.18), transparent 28%),
-    linear-gradient(135deg, #0f172a 0%, #1d4ed8 48%, #0f766e 100%);
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+.metric-hint {
+  margin-top: 4px;
+  font-size: 12px;
 }
 
-.hero-card :deep(.ant-card-body) {
-  padding: 0;
-}
-
-.hero-card__content {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px 28px 20px;
-}
-
-.hero-card__copy {
-  max-width: 760px;
-}
-
-.hero-card__eyebrow {
-  display: inline-flex;
+.chart-desc {
   margin-bottom: 12px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.hero-card__copy h2 {
-  margin: 0;
-  color: #ffffff;
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.hero-card__copy p {
-  margin: 12px 0 0;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 14px;
-  line-height: 1.75;
-}
-
-.hero-card__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 20px;
-}
-
-.hero-card__tags :deep(.ant-tag) {
-  margin-inline-end: 0;
-  border-radius: 999px;
-}
-
-.hero-card__actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 16px;
-}
-
-.hero-card__time {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 12px;
-}
-
-.hero-card__time strong {
-  color: #ffffff;
-  font-size: 16px;
-}
-
-.hero-card__note {
-  padding: 14px 28px 18px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 13px;
-  line-height: 1.6;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.metric-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 22px 22px 20px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
-  overflow: hidden;
-}
-
-.metric-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
-  height: 5px;
-  border-radius: 999px;
-}
-
-.metric-card--blue::before {
-  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
-}
-
-.metric-card--cyan::before {
-  background: linear-gradient(90deg, #0f766e, #14b8a6);
-}
-
-.metric-card--amber::before {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
-}
-
-.metric-card--rose::before {
-  background: linear-gradient(90deg, #ea580c, #fb7185);
-}
-
-.metric-card__label {
-  color: #64748b;
-  font-size: 13px;
-}
-
-.metric-card__value {
-  color: #0f172a;
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.metric-card__meta {
-  color: #334155;
-  font-size: 14px;
-}
-
-.metric-card__hint {
-  color: #94a3b8;
-  font-size: 12px;
-}
-
-.chart-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-  gap: 18px;
-}
-
-.chart-card {
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-}
-
-.chart-card :deep(.ant-card-body) {
-  padding: 22px 22px 18px;
-}
-
-.chart-card--wide {
-  grid-column: 1 / -1;
-}
-
-.chart-card__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.chart-card__header h3 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.chart-card__header p {
-  margin: 8px 0 0;
-  color: #64748b;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.chart-card__badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 78px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  color: #1d4ed8;
-  font-size: 13px;
-  font-weight: 600;
-  background: rgba(37, 99, 235, 0.08);
 }
 
 .chart-canvas {
@@ -1113,46 +893,9 @@ onBeforeUnmount(() => {
   height: 320px;
 }
 
-.chart-canvas--trend {
-  height: 340px;
-}
-
+.chart-canvas--trend,
 .chart-canvas--wide {
-  height: 320px;
-}
-
-.backlog-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.backlog-summary__item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #f8fbff 0%, #f3f7fb 100%);
-  border: 1px solid #e5edf8;
-}
-
-.backlog-summary__item span {
-  color: #64748b;
-  font-size: 13px;
-}
-
-.backlog-summary__item strong {
-  color: #0f172a;
-  font-size: 24px;
-  line-height: 1;
-}
-
-.backlog-summary__item em {
-  color: #ef4444;
-  font-size: 12px;
-  font-style: normal;
+  height: 340px;
 }
 
 :deep(.trend-tooltip-title) {
@@ -1167,58 +910,7 @@ onBeforeUnmount(() => {
   line-height: 1.7;
 }
 
-@media (max-width: 1200px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 992px) {
-  .hero-card__content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .hero-card__actions,
-  .hero-card__time {
-    align-items: flex-start;
-  }
-
-  .chart-grid,
-  .backlog-summary {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 768px) {
-  .dashboard-page {
-    gap: 18px;
-  }
-
-  .hero-card__content {
-    padding: 22px 22px 18px;
-  }
-
-  .hero-card__copy h2 {
-    font-size: 24px;
-  }
-
-  .hero-card__note {
-    padding: 12px 22px 16px;
-  }
-
-  .metric-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .chart-card :deep(.ant-card-body) {
-    padding: 18px 18px 14px;
-  }
-
-  .chart-card__header {
-    flex-direction: column;
-  }
-
   .chart-canvas,
   .chart-canvas--trend,
   .chart-canvas--wide {

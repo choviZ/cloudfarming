@@ -337,7 +337,7 @@ const resolveOrderItems = (order) => {
 
 const isPendingReviewOrder = (order) => {
   return (
-    order?.orderType === ORDER_TYPE.GOODS &&
+    (order?.orderType === ORDER_TYPE.GOODS || order?.orderType === ORDER_TYPE.ADOPT) &&
     resolveOrderStatus(order) === ORDER_STATUS.COMPLETED &&
     Number(order?.pendingReviewCount || 0) > 0
   )
@@ -382,7 +382,7 @@ const getOrderStatusClass = (order) => {
 
 const getOrderStatusHint = (order) => {
   if (isPendingReviewOrder(order)) {
-    return `订单已完成，当前还有 ${Number(order.pendingReviewCount || 0)} 件商品待评价`
+    return `订单已完成，当前还有 ${Number(order.pendingReviewCount || 0)} 项待评价`
   }
   const status = resolveOrderStatus(order)
   if (status === ORDER_STATUS.PENDING_PAYMENT) {

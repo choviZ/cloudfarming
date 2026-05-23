@@ -1,8 +1,8 @@
 <template>
-  <div class="user-management">
+  <div class="admin-page user-management">
     <!-- 查询表单 -->
-    <a-card class="search-card">
-      <a-form layout="inline" :model="searchForm">
+    <a-card :bordered="false" class="admin-card">
+      <a-form class="admin-search-form" layout="inline" :model="searchForm">
         <a-form-item label="用户名">
           <a-input
             v-model:value="searchForm.username"
@@ -62,7 +62,7 @@
     </a-card>
 
     <!-- 操作按钮 -->
-    <div class="action-bar">
+    <div class="admin-toolbar admin-toolbar--end">
       <a-button type="primary" @click="handleAdd">
         <template #icon>
           <PlusOutlined />
@@ -72,12 +72,13 @@
     </div>
 
     <!-- 用户列表 -->
-    <a-card>
+    <a-card :bordered="false" class="admin-card admin-table-card">
       <a-table
         :columns="columns"
         :data-source="userList"
         :loading="loading"
         :pagination="false"
+        :scroll="{ x: 1200 }"
         row-key="id"
       >
         <template #bodyCell="{ column, record }">
@@ -119,7 +120,7 @@
       </a-table>
 
       <!-- 分页 -->
-      <div class="pagination">
+      <div class="admin-pagination">
         <a-pagination
           v-model:current="pagination.current"
           v-model:page-size="pagination.size"
@@ -485,23 +486,3 @@ onMounted(() => {
   fetchUserList()
 })
 </script>
-
-<style scoped lang="less">
-.user-management {
-  padding: 24px;
-
-  .search-card {
-    margin-bottom: 16px;
-  }
-
-  .action-bar {
-    margin-bottom: 16px;
-  }
-
-  .pagination {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 16px;
-  }
-}
-</style>

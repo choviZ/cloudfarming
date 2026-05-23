@@ -1,7 +1,7 @@
 <template>
-  <div class="article-page">
-    <a-card :bordered="false" class="search-card">
-      <a-form layout="inline" :model="queryParams">
+  <div class="admin-page article-page">
+    <a-card :bordered="false" class="admin-card">
+      <a-form class="admin-search-form" layout="inline" :model="queryParams">
         <a-form-item label="标题">
           <a-input
             v-model:value="queryParams.title"
@@ -46,11 +46,11 @@
       </a-form>
     </a-card>
 
-    <div class="action-bar">
+    <div class="admin-toolbar admin-toolbar--end">
       <a-button type="primary" @click="handleCreate">发布文章</a-button>
     </div>
 
-    <a-card :bordered="false">
+    <a-card :bordered="false" class="admin-card admin-table-card">
       <a-table
         :columns="columns"
         :data-source="articleList"
@@ -364,25 +364,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.article-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.action-bar {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .title-cell__title {
   font-weight: 600;
-  color: #1f1f1f;
 }
 
 .title-cell__summary {
   margin-top: 6px;
-  color: #666;
+  color: rgba(0, 0, 0, 0.45);
   font-size: 13px;
   line-height: 1.6;
 }

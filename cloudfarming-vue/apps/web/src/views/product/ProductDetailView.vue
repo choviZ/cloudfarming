@@ -96,18 +96,6 @@
                 />
               </div>
             </div>
-
-            <div class="services-row">
-              <div class="service-item">
-                <SafetyCertificateOutlined class="service-icon" />
-                <span>坏果包赔</span>
-              </div>
-              <div class="service-item">
-                <ClockCircleOutlined class="service-icon" />
-                <span>48h 发货</span>
-              </div>
-            </div>
-
             <div class="action-buttons">
               <button class="btn btn-secondary" :disabled="!canBuy" @click="addToCart">加入购物车</button>
               <button class="btn btn-primary" :disabled="!canBuy" @click="buyNow">立即购买</button>
@@ -158,18 +146,9 @@
                 <section class="detail-images">
                   <div class="prose">
                     <p v-if="spuInfo.description">{{ spuInfo.description }}</p>
-                    <div v-if="productImages.length > 0" class="image-stack">
-                      <img
-                        v-for="(image, index) in productImages"
-                        :key="`${image}-${index}`"
-                        :src="image"
-                        class="detail-img"
-                      >
-                    </div>
                   </div>
                 </section>
               </div>
-
               <product-review-section
                 v-else
                 :spu-id="Number(spuId)"

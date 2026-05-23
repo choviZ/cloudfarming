@@ -90,7 +90,7 @@ const columns = [
   {
     title: '所在地区',
     key: 'area',
-    width: 300,
+    width: 240,
   },
   {
     title: '详细地址',

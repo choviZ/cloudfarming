@@ -1,18 +1,19 @@
 <template>
-  <div class="product-detail-container">
-    <a-page-header title="商品详情" @back="() => router.back()">
-      <template #extra>
+  <div class="admin-page product-detail-container">
+    <div class="admin-toolbar">
+      <a-button @click="() => router.back()">返回</a-button>
+      <a-space>
         <a-button v-if="spu?.auditStatus === 0" type="primary" @click="handleAudit(1)">通过审核</a-button>
         <a-button v-if="spu?.auditStatus === 0" danger @click="handleAudit(2)">拒绝审核</a-button>
-      </template>
-    </a-page-header>
+      </a-space>
+    </div>
 
     <div v-if="loading" class="loading-wrapper">
       <a-spin size="large" />
     </div>
 
     <div v-else-if="hasDetail" class="detail-content">
-      <a-card title="SPU 基础信息" :bordered="false" class="section-card">
+      <a-card title="SPU 基础信息" :bordered="false" class="admin-card section-card">
         <a-descriptions :column="2" bordered size="small">
           <a-descriptions-item label="SPU ID">{{ spu.id || '-' }}</a-descriptions-item>
           <a-descriptions-item label="店铺 ID">{{ spu.shopId || '-' }}</a-descriptions-item>
@@ -42,7 +43,7 @@
         </a-descriptions>
       </a-card>
 
-      <a-card title="SPU 基础属性" :bordered="false" class="section-card">
+      <a-card title="SPU 基础属性" :bordered="false" class="admin-card section-card">
         <a-descriptions v-if="baseAttrEntries.length" :column="3" size="small" bordered>
           <a-descriptions-item v-for="([key, value]) in baseAttrEntries" :key="key" :label="key">
             {{ value }}
@@ -51,7 +52,7 @@
         <div v-else class="empty-text">暂无基础属性</div>
       </a-card>
 
-      <a-card title="SKU 规格列表（含价格）" :bordered="false" class="section-card">
+      <a-card title="SKU 规格列表（含价格）" :bordered="false" class="admin-card admin-table-card section-card">
         <a-table :columns="skuColumns" :data-source="skuList" row-key="id" :pagination="false" bordered>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'skuImage'">
@@ -347,15 +348,10 @@ onMounted(() => {
 
 <style scoped>
 .product-detail-container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  min-height: 100%;
 }
 
 .detail-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;

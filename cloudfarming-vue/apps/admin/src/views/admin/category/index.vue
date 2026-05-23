@@ -1,7 +1,7 @@
 <template>
-  <div class="category-management">
+  <div class="admin-page category-management">
     <!-- 操作按钮 -->
-    <div class="action-bar">
+    <div class="admin-toolbar admin-toolbar--end">
       <a-space>
         <a-button type="primary" @click="handleAdd">
           <template #icon>
@@ -19,7 +19,7 @@
     </div>
 
     <!-- 分类树形表格 -->
-    <a-card>
+    <a-card :bordered="false" class="admin-card admin-table-card">
       <a-table
         :columns="columns"
         :data-source="categoryTree"
@@ -220,26 +220,3 @@ onMounted(() => {
   loadCategoryTree()
 })
 </script>
-
-<style scoped>
-.category-management {
-  padding: 24px;
-}
-
-.action-bar {
-  margin-bottom: 16px;
-}
-
-:deep(.ant-table) {
-  font-size: 14px;
-}
-
-:deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
-  font-weight: 600;
-}
-
-:deep(.ant-table-tbody > tr:hover > td) {
-  background: #f5f5f5;
-}
-</style>

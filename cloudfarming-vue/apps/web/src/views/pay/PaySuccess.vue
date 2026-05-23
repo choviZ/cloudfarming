@@ -1,48 +1,95 @@
 <template>
-  <div class="pay-success">
-    <div class="success-card">
-      <div class="success-icon" :class="{ pending: !paid }">
-        <svg viewBox="0 0 100 100" class="check-icon">
-          <circle cx="50" cy="50" r="45" fill="#f0f9f0" stroke="#4CAF50" stroke-width="2" />
-          <path
-            d="M30,50 L45,65 L75,35"
-            fill="none"
-            stroke="#4CAF50"
-            stroke-width="6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </div>
+  <div class="pay-success-page">
+    <div class="pay-success-shell">
+      <!-- 顶部品牌区 -->
+      <button type="button" class="pay-brand" @click="goToHome">
+        <span class="pay-brand__mark">云</span>
+        <span class="pay-brand__content">
+          <span class="pay-brand__title">云养殖助农平台</span>
+          <span class="pay-brand__hint">返回平台首页</span>
+        </span>
+      </button>
 
-      <div class="success-text">
-        <h2 class="title">{{ paid ? '支付成功' : '支付结果确认中' }}</h2>
-        <p class="desc">{{ statusMessage }}</p>
-      </div>
-
-      <div class="status-tip" v-if="loading">
-        正在同步支付结果，请稍候...
-      </div>
-
-      <div class="order-info">
-        <div class="info-item">
-          <span class="label">支付单号：</span>
-          <span class="value">{{ payOrderNo || '--' }}</span>
+      <!-- 页面标题 -->
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">{{ paid ? '支付成功' : '支付结果确认中' }}</h1>
+          <p class="page-subtitle">{{ statusMessage }}</p>
         </div>
-        <div class="info-item">
-          <span class="label">支付金额：</span>
-          <span class="value">¥{{ displayAmount }}</span>
-        </div>
-        <div class="info-item" v-if="tradeStatus">
-          <span class="label">交易状态：</span>
-          <span class="value">{{ tradeStatus }}</span>
+        <div v-if="loading" class="page-summary">
+          <a-spin size="small" />
+          <span>正在同步支付结果，请稍候...</span>
         </div>
       </div>
 
-      <div class="btn-group">
-        <button class="btn btn-primary" @click="goToOrder">查看订单列表</button>
-        <button class="btn btn-secondary" @click="goToHome">返回首页</button>
-      </div>
+      <!-- 结果卡片 -->
+      <a-card class="result-card">
+        <a-result
+          :status="resultStatus"
+          :title="paid ? '支付成功' : '支付结果确认中'"
+          :subTitle="statusMessage"
+        >
+          <template #icon>
+            <div class="custom-icon" :class="{ 'is-pending': !paid }">
+              <svg viewBox="0 0 100 100" class="check-icon">
+                <circle cx="50" cy="50" r="45" fill="#f0f9f0" stroke="#4CAF50" stroke-width="2" />
+                <path
+                  v-if="paid"
+                  d="M30,50 L45,65 L75,35"
+                  fill="none"
+                  stroke="#4CAF50"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <circle v-else cx="50" cy="50" r="30" fill="none" stroke="#4CAF50" stroke-width="4" stroke-dasharray="5,5">
+                  <animateTransform
+                    attributeName="transform"
+                    type="rotate"
+                    from="0 50 50"
+                    to="360 50 50"
+                    dur="1s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
+              </svg>
+            </div>
+          </template>
+
+          <template #extra>
+            <div class="order-detail">
+              <a-descriptions :column="1" bordered size="small">
+                <a-descriptions-item label="支付单号">
+                  <span class="mono">{{ payOrderNo || '--' }}</span>
+                </a-descriptions-item>
+                <a-descriptions-item label="支付金额">
+                  <span class="money">¥{{ displayAmount }}</span>
+                </a-descriptions-item>
+                <a-descriptions-item v-if="tradeStatus" label="交易状态">
+                  <a-tag :color="tradeStatusColor">{{ tradeStatus }}</a-tag>
+                </a-descriptions-item>
+              </a-descriptions>
+            </div>
+          </template>
+
+          <template #actions>
+            <div class="action-buttons">
+              <a-button size="large" @click="goToOrder">查看订单列表</a-button>
+              <a-button type="primary" size="large" @click="goToHome">返回首页</a-button>
+            </div>
+          </template>
+        </a-result>
+      </a-card>
+
+      <!-- 温馨提示 -->
+      <a-alert
+        v-if="!paid"
+        class="warning-tip"
+        type="warning"
+        show-icon
+        message="支付结果需要一定时间同步"
+        description="如果支付已成功但页面显示仍在确认中，请稍后到订单列表刷新查看。切勿重复支付。"
+      />
     </div>
   </div>
 </template>
@@ -64,6 +111,15 @@ const tradeStatus = ref('')
 const statusMessage = ref('正在为您确认支付结果，请稍候...')
 
 const displayAmount = computed(() => amount.value || '--')
+
+const resultStatus = computed(() => paid.value ? 'success' : 'info')
+
+const tradeStatusColor = computed(() => {
+  const status = tradeStatus.value
+  if (status === 'TRADE_SUCCESS' || status === '已支付') return 'green'
+  if (status === 'TRADE_CLOSED' || status === '已关闭') return 'red'
+  return 'orange'
+})
 
 const goToOrder = () => {
   router.push('/usercenter/orders')
@@ -115,144 +171,182 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.pay-success {
+.pay-success-page {
   min-height: 100vh;
-  background-color: #f8fbf8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
+  background-color: #f5f5f5;
+  padding: 24px 16px;
 }
 
-.success-card {
-  width: 100%;
-  max-width: 500px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 40px 30px;
-  box-shadow: 0 4px 20px rgba(76, 175, 80, 0.08);
-  text-align: center;
-  box-sizing: border-box;
-}
-
-.success-icon {
-  margin-bottom: 24px;
-}
-
-.success-icon.pending {
-  opacity: 0.8;
-}
-
-.check-icon {
-  width: 80px;
-  height: 80px;
+.pay-success-shell {
+  max-width: 640px;
   margin: 0 auto;
 }
 
-.success-text .title {
-  font-size: 24px;
-  color: #2e7d32;
-  margin: 0 0 12px;
+/* 品牌区 */
+.pay-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 20px;
+}
+
+.pay-brand:hover {
+  border-color: #4CAF50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
+}
+
+.pay-brand__mark {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #4CAF50, #81C784);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 18px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.success-text .desc {
-  font-size: 16px;
-  color: #558b2f;
-  margin: 0;
-  line-height: 1.5;
+.pay-brand__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.status-tip {
-  margin-top: 18px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background-color: #f0f9f0;
-  color: #2e7d32;
+.pay-brand__title {
   font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  line-height: 1.3;
 }
 
-.order-info {
-  margin: 30px 0;
-  padding: 20px;
-  background-color: #f0f9f0;
-  border-radius: 8px;
-  text-align: left;
+.pay-brand__hint {
+  font-size: 12px;
+  color: #8c8c8c;
 }
 
-.info-item {
+/* 页面标题 */
+.page-header {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #262626;
+  margin: 0 0 6px;
+}
+
+.page-subtitle {
   font-size: 14px;
+  color: #8c8c8c;
+  margin: 0;
 }
 
-.info-item:last-child {
-  margin-bottom: 0;
+.page-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #595959;
 }
 
-.label {
-  color: #388e3c;
-  font-weight: 500;
+/* 结果卡片 */
+.result-card {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
-.value {
-  color: #212121;
+.result-card :deep(.ant-card-body) {
+  padding: 32px 24px;
+}
+
+.custom-icon {
+  display: flex;
+  justify-content: center;
+}
+
+.check-icon {
+  width: 72px;
+  height: 72px;
+}
+
+.custom-icon.is-pending .check-icon {
+  opacity: 0.8;
+}
+
+.order-detail {
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.order-detail :deep(.ant-descriptions-item-label) {
+  width: 100px;
+  color: #8c8c8c;
+}
+
+.order-detail :deep(.ant-descriptions-item-content) {
+  color: #262626;
+}
+
+.mono {
   font-family: monospace;
-  text-align: right;
   word-break: break-all;
 }
 
-.btn-group {
+.money {
+  font-weight: 600;
+  color: #f5222d;
+}
+
+.action-buttons {
   display: flex;
   gap: 16px;
-  margin-top: 10px;
+  justify-content: center;
 }
 
-.btn {
-  flex: 1;
-  height: 48px;
+.action-buttons .ant-btn {
+  min-width: 120px;
+}
+
+/* 提示 */
+.warning-tip {
+  margin-top: 16px;
   border-radius: 8px;
-  border: none;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-primary {
-  background-color: #4CAF50;
-  color: #ffffff;
-}
-
-.btn-primary:hover {
-  background-color: #388e3c;
-}
-
-.btn-secondary {
-  background-color: #ffffff;
-  color: #4CAF50;
-  border: 1px solid #4CAF50;
-}
-
-.btn-secondary:hover {
-  background-color: #f0f9f0;
 }
 
 @media (max-width: 480px) {
-  .success-card {
-    padding: 30px 20px;
+  .pay-success-page {
+    padding: 16px 12px;
   }
 
-  .btn-group {
+  .page-header {
     flex-direction: column;
     gap: 12px;
   }
 
-  .success-text .title {
-    font-size: 20px;
+  .result-card :deep(.ant-card-body) {
+    padding: 24px 16px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .action-buttons .ant-btn {
+    width: 100%;
   }
 }
 </style>

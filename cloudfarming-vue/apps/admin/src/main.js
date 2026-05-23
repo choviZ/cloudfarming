@@ -7,6 +7,7 @@ import router from './router'
 import Antd from 'ant-design-vue';
 import i18n from './locales'
 import 'ant-design-vue/dist/reset.css';
+import './assets/style/global.less'
 const app = createApp(App)
 
 dayjs.locale('zh-cn')

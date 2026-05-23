@@ -1,8 +1,9 @@
 <template>
-  <div id="create-spu">
+  <div id="create-spu" class="create-spu-page">
+    <a-card class="create-spu-card" :bordered="false">
     <a-form
-      :label-col="{ span: 2 }"
-      :wrapper-col="{ span: 22 }"
+      :label-col="{ xs: { span: 24 }, sm: { span: 5 } }"
+      :wrapper-col="{ xs: { span: 24 }, sm: { span: 19 } }"
       label-align="left"
     >
       <h2>填写商品基本信息</h2>
@@ -91,6 +92,7 @@
         </a-space>
       </a-form-item>
     </a-form>
+    </a-card>
   </div>
 </template>
 
@@ -356,3 +358,44 @@ const handleSave = async () => {
   }
 }
 </script>
+
+<style scoped>
+.create-spu-page {
+  width: 100%;
+  min-height: 100%;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.create-spu-card {
+  width: min(100%, 1080px);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(15, 35, 24, 0.08);
+}
+
+.create-spu-card :deep(.ant-card-body) {
+  padding: 28px;
+}
+
+.create-spu-card :deep(h2) {
+  margin: 0 0 24px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2f27;
+}
+
+.create-spu-card :deep(.ant-divider) {
+  margin: 28px 0;
+}
+
+@media (max-width: 768px) {
+  .create-spu-page {
+    padding: 16px;
+  }
+
+  .create-spu-card :deep(.ant-card-body) {
+    padding: 20px;
+  }
+}
+</style>

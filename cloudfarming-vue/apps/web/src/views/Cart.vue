@@ -5,7 +5,6 @@
         <span class="cart-brand__mark">云</span>
         <span class="cart-brand__content">
           <span class="cart-brand__title">云养殖助农平台</span>
-          <span class="cart-brand__hint">返回平台首页</span>
         </span>
       </button>
       <div class="cart-header">

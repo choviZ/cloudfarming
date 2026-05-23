@@ -112,7 +112,7 @@ import { computed, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
 import MultiImageUpload from '@/components/Upload/MultiImageUpload.vue'
-import { createOrderReview, getSkuOrderDetail } from '@/api/order'
+import { createOrderReview, getAdoptOrderDetail, getSkuOrderDetail, ORDER_TYPE } from '@/api/order'
 
 const route = useRoute()
 const router = useRouter()
@@ -137,6 +137,7 @@ const itemImageFallback = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent
 `)}` 
 
 const pendingCount = computed(() => items.value.filter((item) => !item.reviewed).length)
+const orderType = ref(null)
 
 const ensureForms = () => {
   const activeIds = new Set(items.value.map((item) => String(item.id)))
@@ -166,10 +167,15 @@ const fetchOrderDetails = async () => {
   }
   loading.value = true
   try {
-    const response = await getSkuOrderDetail(orderNo.value)
+    const adoptResponse = await getAdoptOrderDetail(orderNo.value)
+    const hasAdoptItems = adoptResponse.code === '0' && Array.isArray(adoptResponse.data) && adoptResponse.data.length > 0
+    const response = hasAdoptItems ? adoptResponse : await getSkuOrderDetail(orderNo.value)
     if (response.code === '0' && Array.isArray(response.data)) {
+      orderType.value = hasAdoptItems ? ORDER_TYPE.ADOPT : ORDER_TYPE.GOODS
       items.value = response.data.map((item) => ({
         ...item,
+        skuName: hasAdoptItems ? item.itemName : item.skuName,
+        skuImage: hasAdoptItems ? item.itemImage : item.skuImage,
         reviewed: Boolean(item.reviewed),
         reviewImageUrls: Array.isArray(item.reviewImageUrls) ? item.reviewImageUrls : []
       }))
@@ -204,7 +210,9 @@ const submitReview = async (item) => {
   submittingMap[item.id] = true
   try {
     const response = await createOrderReview({
-      orderDetailSkuId: item.id,
+      ...(orderType.value === ORDER_TYPE.ADOPT
+        ? { orderDetailAdoptId: item.id }
+        : { orderDetailSkuId: item.id }),
       score: form.score,
       content,
       imageUrls
