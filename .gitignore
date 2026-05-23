@@ -45,6 +45,7 @@ build/
 application-local.yml
 application-local.yaml
 
-### codex ###
+### AGENT ###
 .codex/*
 output/*
+CLAUDE.md
