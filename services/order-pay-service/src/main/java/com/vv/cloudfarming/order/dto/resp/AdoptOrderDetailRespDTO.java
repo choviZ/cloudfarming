@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 认养订单响应DTO
@@ -80,4 +81,34 @@ public class AdoptOrderDetailRespDTO {
      * 关联的收获地址id
      */
     private Long receiveId;
+
+    /**
+     * 是否已评价
+     */
+    private Boolean reviewed;
+
+    /**
+     * 评价ID
+     */
+    private Long reviewId;
+
+    /**
+     * 评价评分
+     */
+    private Integer reviewScore;
+
+    /**
+     * 评价内容
+     */
+    private String reviewContent;
+
+    /**
+     * 评价图片列表
+     */
+    private List<String> reviewImageUrls;
+
+    /**
+     * 评价创建时间
+     */
+    private Date reviewCreateTime;
 }

@@ -3,7 +3,6 @@ package com.vv.cloudfarming.order.service.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -11,14 +10,17 @@ import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.order.constant.OrderTypeConstant;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
+import com.vv.cloudfarming.order.dao.entity.OrderDetailAdoptDO;
 import com.vv.cloudfarming.order.dao.entity.OrderDetailSkuDO;
 import com.vv.cloudfarming.order.dao.entity.OrderSkuReviewDO;
+import com.vv.cloudfarming.order.dao.mapper.OrderDetailAdoptMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderDetailSkuMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderMapper;
 import com.vv.cloudfarming.order.dao.mapper.OrderSkuReviewMapper;
 import com.vv.cloudfarming.order.dto.common.OrderReviewAggDTO;
 import com.vv.cloudfarming.order.dto.common.ProductSummaryDTO;
 import com.vv.cloudfarming.order.dto.common.SpuReviewSummaryAggDTO;
+import com.vv.cloudfarming.order.dto.req.AdoptReviewPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderReviewPendingPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderSkuReviewCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.SpuReviewPageReqDTO;
@@ -52,6 +54,7 @@ public class OrderReviewServiceImpl implements OrderReviewService {
     private static final long DEFAULT_PAGE_SIZE = 10L;
 
     private final OrderMapper orderMapper;
+    private final OrderDetailAdoptMapper orderDetailAdoptMapper;
     private final OrderDetailSkuMapper orderDetailSkuMapper;
     private final OrderSkuReviewMapper orderSkuReviewMapper;
     private final OrderProductSummaryQueryService orderProductSummaryQueryService;
@@ -61,31 +64,29 @@ public class OrderReviewServiceImpl implements OrderReviewService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderSkuReviewRespDTO createCurrentUserReview(OrderSkuReviewCreateReqDTO requestParam) {
+        if (requestParam.getOrderDetailAdoptId() == null && requestParam.getOrderDetailSkuId() == null) {
+            throw new ClientException("订单评价明细不能为空");
+        }
         long userId = StpUtil.getLoginIdAsLong();
-        OrderDetailSkuDO orderDetailSku = orderDetailSkuMapper.selectById(requestParam.getOrderDetailSkuId());
-        if (orderDetailSku == null) {
-            throw new ClientException("订单商品不存在");
-        }
-        OrderDO order = orderMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class)
-            .eq(OrderDO::getOrderNo, orderDetailSku.getOrderNo()));
-        if (order == null) {
-            throw new ClientException("订单不存在");
-        }
-        if (!Objects.equals(order.getUserId(), userId)) {
-            throw new ClientException("当前订单不属于你");
-        }
-        if (!Objects.equals(order.getOrderType(), OrderTypeConstant.GOODS)) {
-            throw new ClientException("当前订单不支持商品评价");
-        }
-        if (!Objects.equals(order.getOrderStatus(), OrderStatusEnum.COMPLETED.getCode())) {
-            throw new ClientException("订单完成后才可以评价");
-        }
-
         List<String> normalizedImageUrls = normalizeImageUrls(requestParam.getImageUrls());
         String normalizedContent = StrUtil.trim(requestParam.getContent());
         if (StrUtil.isBlank(normalizedContent) && normalizedImageUrls.isEmpty()) {
             throw new ClientException("评价内容不能为空");
         }
+
+        if (requestParam.getOrderDetailAdoptId() != null) {
+            return createAdoptReview(requestParam, userId, normalizedContent, normalizedImageUrls);
+        }
+        return createSkuReview(requestParam, userId, normalizedContent, normalizedImageUrls);
+    }
+
+    private OrderSkuReviewRespDTO createSkuReview(OrderSkuReviewCreateReqDTO requestParam, long userId,
+                                                   String normalizedContent, List<String> normalizedImageUrls) {
+        OrderDetailSkuDO orderDetailSku = orderDetailSkuMapper.selectById(requestParam.getOrderDetailSkuId());
+        if (orderDetailSku == null) {
+            throw new ClientException("订单商品不存在");
+        }
+        OrderDO order = getAndValidateOrder(orderDetailSku.getOrderNo(), userId, OrderTypeConstant.GOODS, "商品");
 
         OrderSkuReviewDO existed = orderSkuReviewMapper.selectOne(Wrappers.lambdaQuery(OrderSkuReviewDO.class)
             .eq(OrderSkuReviewDO::getOrderNo, order.getOrderNo())
@@ -115,12 +116,65 @@ public class OrderReviewServiceImpl implements OrderReviewService {
         return toReviewResp(review);
     }
 
+    private OrderSkuReviewRespDTO createAdoptReview(OrderSkuReviewCreateReqDTO requestParam, long userId,
+                                                     String normalizedContent, List<String> normalizedImageUrls) {
+        OrderDetailAdoptDO orderDetailAdopt = orderDetailAdoptMapper.selectById(requestParam.getOrderDetailAdoptId());
+        if (orderDetailAdopt == null) {
+            throw new ClientException("认养订单明细不存在");
+        }
+        OrderDO order = getAndValidateOrder(orderDetailAdopt.getOrderNo(), userId, OrderTypeConstant.ADOPT, "认养");
+
+        OrderSkuReviewDO existed = orderSkuReviewMapper.selectOne(Wrappers.lambdaQuery(OrderSkuReviewDO.class)
+            .eq(OrderSkuReviewDO::getOrderNo, order.getOrderNo())
+            .eq(OrderSkuReviewDO::getOrderDetailAdoptId, orderDetailAdopt.getId()));
+        if (existed != null) {
+            throw new ClientException("该认养项目已评价");
+        }
+
+        UserRespDTO user = getUserSnapshot(userId);
+        OrderSkuReviewDO review = OrderSkuReviewDO.builder()
+            .orderNo(order.getOrderNo())
+            .orderDetailAdoptId(orderDetailAdopt.getId())
+            .adoptItemId(orderDetailAdopt.getAdoptItemId())
+            .shopId(order.getShopId())
+            .userId(userId)
+            .score(requestParam.getScore())
+            .content(StrUtil.isBlank(normalizedContent) ? null : normalizedContent)
+            .imageUrls(joinImageUrls(normalizedImageUrls))
+            .userNameSnapshot(resolveUserName(user))
+            .userAvatarSnapshot(user == null || StrUtil.isBlank(user.getAvatar()) ? null : user.getAvatar())
+            .build();
+        int inserted = orderSkuReviewMapper.insert(review);
+        if (inserted <= 0) {
+            throw new ServiceException("提交评价失败");
+        }
+        return toReviewResp(review);
+    }
+
+    private OrderDO getAndValidateOrder(String orderNo, long userId, int expectedOrderType, String reviewTypeName) {
+        OrderDO order = orderMapper.selectOne(Wrappers.lambdaQuery(OrderDO.class)
+            .eq(OrderDO::getOrderNo, orderNo));
+        if (order == null) {
+            throw new ClientException("订单不存在");
+        }
+        if (!Objects.equals(order.getUserId(), userId)) {
+            throw new ClientException("当前订单不属于你");
+        }
+        if (!Objects.equals(order.getOrderType(), expectedOrderType)) {
+            throw new ClientException("当前订单不支持" + reviewTypeName + "评价");
+        }
+        if (!Objects.equals(order.getOrderStatus(), OrderStatusEnum.COMPLETED.getCode())) {
+            throw new ClientException("订单完成后才可以评价");
+        }
+        return order;
+    }
+
     @Override
     public IPage<OrderPageWithProductInfoRespDTO> pageCurrentUserPendingReviews(OrderReviewPendingPageReqDTO requestParam) {
         long userId = StpUtil.getLoginIdAsLong();
         List<OrderDO> completedGoodsOrders = orderMapper.selectList(Wrappers.lambdaQuery(OrderDO.class)
             .eq(OrderDO::getUserId, userId)
-            .eq(OrderDO::getOrderType, OrderTypeConstant.GOODS)
+            .in(OrderDO::getOrderType, OrderTypeConstant.GOODS, OrderTypeConstant.ADOPT)
             .eq(OrderDO::getOrderStatus, OrderStatusEnum.COMPLETED.getCode())
             .orderByDesc(OrderDO::getCreateTime)
             .orderByDesc(OrderDO::getId));
@@ -159,21 +213,23 @@ public class OrderReviewServiceImpl implements OrderReviewService {
 
     @Override
     public SpuReviewSummaryRespDTO getSpuReviewSummary(Long spuId) {
-        SpuReviewSummaryAggDTO aggDTO = orderSkuReviewMapper.selectSpuReviewSummary(spuId);
-        return SpuReviewSummaryRespDTO.builder()
-            .totalReviewCount(safeLong(aggDTO == null ? null : aggDTO.getTotalReviewCount()))
-            .avgScore(safeAmount(aggDTO == null ? null : aggDTO.getAvgScore()))
-            .score1Count(safeLong(aggDTO == null ? null : aggDTO.getScore1Count()))
-            .score2Count(safeLong(aggDTO == null ? null : aggDTO.getScore2Count()))
-            .score3Count(safeLong(aggDTO == null ? null : aggDTO.getScore3Count()))
-            .score4Count(safeLong(aggDTO == null ? null : aggDTO.getScore4Count()))
-            .score5Count(safeLong(aggDTO == null ? null : aggDTO.getScore5Count()))
-            .build();
+        return toReviewSummaryResp(orderSkuReviewMapper.selectSpuReviewSummary(spuId));
     }
 
     @Override
     public IPage<OrderSkuReviewRespDTO> pageSpuReviews(SpuReviewPageReqDTO requestParam) {
         IPage<OrderSkuReviewDO> reviewPage = orderSkuReviewMapper.selectSpuReviewPage(requestParam, requestParam.getSpuId());
+        return reviewPage.convert(this::toReviewResp);
+    }
+
+    @Override
+    public SpuReviewSummaryRespDTO getAdoptReviewSummary(Long adoptItemId) {
+        return toReviewSummaryResp(orderSkuReviewMapper.selectAdoptReviewSummary(adoptItemId));
+    }
+
+    @Override
+    public IPage<OrderSkuReviewRespDTO> pageAdoptReviews(AdoptReviewPageReqDTO requestParam) {
+        IPage<OrderSkuReviewDO> reviewPage = orderSkuReviewMapper.selectAdoptReviewPage(requestParam, requestParam.getAdoptItemId());
         return reviewPage.convert(this::toReviewResp);
     }
 
@@ -194,6 +250,18 @@ public class OrderReviewServiceImpl implements OrderReviewService {
             return "用户";
         }
         return user.getUsername();
+    }
+
+    private SpuReviewSummaryRespDTO toReviewSummaryResp(SpuReviewSummaryAggDTO aggDTO) {
+        return SpuReviewSummaryRespDTO.builder()
+            .totalReviewCount(safeLong(aggDTO == null ? null : aggDTO.getTotalReviewCount()))
+            .avgScore(safeAmount(aggDTO == null ? null : aggDTO.getAvgScore()))
+            .score1Count(safeLong(aggDTO == null ? null : aggDTO.getScore1Count()))
+            .score2Count(safeLong(aggDTO == null ? null : aggDTO.getScore2Count()))
+            .score3Count(safeLong(aggDTO == null ? null : aggDTO.getScore3Count()))
+            .score4Count(safeLong(aggDTO == null ? null : aggDTO.getScore4Count()))
+            .score5Count(safeLong(aggDTO == null ? null : aggDTO.getScore5Count()))
+            .build();
     }
 
     private OrderSkuReviewRespDTO toReviewResp(OrderSkuReviewDO review) {

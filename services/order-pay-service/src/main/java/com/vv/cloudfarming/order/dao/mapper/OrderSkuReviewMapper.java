@@ -16,4 +16,8 @@ public interface OrderSkuReviewMapper extends BaseMapper<OrderSkuReviewDO> {
     SpuReviewSummaryAggDTO selectSpuReviewSummary(@Param("spuId") Long spuId);
 
     IPage<OrderSkuReviewDO> selectSpuReviewPage(IPage<OrderSkuReviewDO> page, @Param("spuId") Long spuId);
+
+    SpuReviewSummaryAggDTO selectAdoptReviewSummary(@Param("adoptItemId") Long adoptItemId);
+
+    IPage<OrderSkuReviewDO> selectAdoptReviewPage(IPage<OrderSkuReviewDO> page, @Param("adoptItemId") Long adoptItemId);
 }

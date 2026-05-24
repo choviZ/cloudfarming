@@ -87,12 +87,25 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { getSpuReviewSummary, pageSpuReviews } from '@/api/order'
+import {
+  getAdoptReviewSummary,
+  getSpuReviewSummary,
+  pageAdoptReviews,
+  pageSpuReviews
+} from '@/api/order'
 
 const props = defineProps({
+  targetType: {
+    type: String,
+    default: 'product'
+  },
   spuId: {
     type: Number,
-    required: true
+    default: null
+  },
+  adoptItemId: {
+    type: Number,
+    default: null
   }
 })
 
@@ -120,6 +133,7 @@ const avgScoreDisplay = computed(() => {
   const value = Number(summary.avgScore)
   return Number.isNaN(value) ? '0.0' : value.toFixed(1)
 })
+const targetId = computed(() => props.targetType === 'adopt' ? props.adoptItemId : props.spuId)
 
 const scoreDistribution = computed(() => {
   const total = totalReviewCount.value
@@ -160,11 +174,13 @@ const applySummary = (data = {}) => {
 }
 
 const fetchSummary = async () => {
-  if (!props.spuId) {
+  if (!targetId.value) {
     applySummary({})
     return
   }
-  const response = await getSpuReviewSummary(props.spuId)
+  const response = props.targetType === 'adopt'
+    ? await getAdoptReviewSummary(targetId.value)
+    : await getSpuReviewSummary(targetId.value)
   if (response.code === '0' && response.data) {
     applySummary(response.data)
     return
@@ -173,17 +189,24 @@ const fetchSummary = async () => {
 }
 
 const fetchReviews = async () => {
-  if (!props.spuId) {
+  if (!targetId.value) {
     reviews.value = []
     return
   }
   loading.value = true
   try {
-    const response = await pageSpuReviews({
-      spuId: props.spuId,
+    const payload = {
       current: pageState.current,
       size: pageState.pageSize
-    })
+    }
+    if (props.targetType === 'adopt') {
+      payload.adoptItemId = targetId.value
+    } else {
+      payload.spuId = targetId.value
+    }
+    const response = props.targetType === 'adopt'
+      ? await pageAdoptReviews(payload)
+      : await pageSpuReviews(payload)
     if (response.code === '0' && response.data) {
       reviews.value = response.data.records || []
       pageState.total = Number(response.data.total) || 0
@@ -218,10 +241,10 @@ const formatDateTime = (value) => {
 }
 
 watch(
-  () => props.spuId,
+  () => [props.targetType, props.spuId, props.adoptItemId],
   async (value) => {
     resetState()
-    if (!value) {
+    if (!targetId.value) {
       return
     }
     await fetchSummary()

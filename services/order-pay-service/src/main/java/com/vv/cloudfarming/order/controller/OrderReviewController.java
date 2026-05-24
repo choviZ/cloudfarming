@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
+import com.vv.cloudfarming.order.dto.req.AdoptReviewPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderReviewPendingPageReqDTO;
 import com.vv.cloudfarming.order.dto.req.OrderSkuReviewCreateReqDTO;
 import com.vv.cloudfarming.order.dto.req.SpuReviewPageReqDTO;
@@ -57,5 +58,17 @@ public class OrderReviewController {
     @PostMapping("/api/order/review/v1/spu/page")
     public Result<IPage<OrderSkuReviewRespDTO>> pageSpuReviews(@RequestBody @Valid SpuReviewPageReqDTO requestParam) {
         return Results.success(orderReviewService.pageSpuReviews(requestParam));
+    }
+
+    @Operation(summary = "查询认养项目评价汇总")
+    @GetMapping("/api/order/review/v1/adopt/summary")
+    public Result<SpuReviewSummaryRespDTO> getAdoptReviewSummary(@RequestParam("adoptItemId") @NotNull Long adoptItemId) {
+        return Results.success(orderReviewService.getAdoptReviewSummary(adoptItemId));
+    }
+
+    @Operation(summary = "分页查询认养项目评价")
+    @PostMapping("/api/order/review/v1/adopt/page")
+    public Result<IPage<OrderSkuReviewRespDTO>> pageAdoptReviews(@RequestBody @Valid AdoptReviewPageReqDTO requestParam) {
+        return Results.success(orderReviewService.pageAdoptReviews(requestParam));
     }
 }

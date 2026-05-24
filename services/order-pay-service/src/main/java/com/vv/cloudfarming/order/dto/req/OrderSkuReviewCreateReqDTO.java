@@ -10,8 +10,9 @@ import java.util.List;
 @Data
 public class OrderSkuReviewCreateReqDTO {
 
-    @NotNull(message = "订单商品明细不能为空")
     private Long orderDetailSkuId;
+
+    private Long orderDetailAdoptId;
 
     @NotNull(message = "评分不能为空")
     @Min(value = 1, message = "评分最低为1分")

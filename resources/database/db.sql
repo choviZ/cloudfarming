@@ -244,15 +244,14 @@ create table t_spu
     update_time  datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '更新时间',
     del_flag     tinyint  default 0                 not null comment '逻辑删除'
 );
-create table t_sku_attr_value
+
+create table t_spu_attr_value
 (
     id         bigint auto_increment comment 'id'
         primary key,
-    sku_id     bigint       null comment '标准库存商品id',
+    spu_id     bigint       null comment '标准商品id',
     attr_id    bigint       null comment '属性id',
-    attr_value varchar(255) null comment '属性值',
-    price      decimal      null,
-    stock      int          null comment '库存'
+    attr_value varchar(255) null comment '属性值'
 );
 
 create table t_sku
@@ -736,9 +735,11 @@ CREATE TABLE t_order_sku_review
 (
     id                   BIGINT                             NOT NULL PRIMARY KEY,
     order_no             VARCHAR(64)                        NOT NULL,
-    order_detail_sku_id  BIGINT                             NOT NULL,
-    spu_id               BIGINT                             NOT NULL,
-    sku_id               BIGINT                             NOT NULL,
+    order_detail_sku_id  BIGINT                             NULL,
+    order_detail_adopt_id BIGINT                            NULL,
+    spu_id               BIGINT                             NULL,
+    adopt_item_id        BIGINT                             NULL,
+    sku_id               BIGINT                             NULL,
     shop_id              BIGINT                             NOT NULL,
     user_id              BIGINT                             NOT NULL,
     score                TINYINT                            NOT NULL,
@@ -750,8 +751,10 @@ CREATE TABLE t_order_sku_review
     update_time          DATETIME DEFAULT CURRENT_TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
     del_flag             INT      DEFAULT 0                 NULL,
     UNIQUE INDEX uk_order_detail_sku_id (order_detail_sku_id),
+    UNIQUE INDEX uk_order_detail_adopt_id (order_detail_adopt_id),
     INDEX idx_order_no (order_no),
     INDEX idx_spu_create_time (spu_id, create_time),
+    INDEX idx_adopt_item_create_time (adopt_item_id, create_time),
     INDEX idx_user_create_time (user_id, create_time)
 )
     CHARSET = utf8mb4;

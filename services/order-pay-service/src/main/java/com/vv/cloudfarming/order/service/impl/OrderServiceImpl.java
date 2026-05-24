@@ -675,11 +675,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
 
     @Override
     public List<AdoptOrderDetailRespDTO> getAdoptOrderDetail(String orderNo) {
-        getAccessibleOrderByOrderNo(orderNo);
+        OrderDO order = getAccessibleOrderByOrderNo(orderNo);
         LambdaQueryWrapper<OrderDetailAdoptDO> wrapper = Wrappers.lambdaQuery(OrderDetailAdoptDO.class)
             .eq(OrderDetailAdoptDO::getOrderNo, orderNo);
         List<OrderDetailAdoptDO> orderDetails = orderDetailAdoptMapper.selectList(wrapper);
-        return orderDetails.stream().map(each -> BeanUtil.toBean(each, AdoptOrderDetailRespDTO.class)).toList();
+        Map<Long, OrderSkuReviewDO> reviewMap = orderSkuReviewMapper.selectList(Wrappers.lambdaQuery(OrderSkuReviewDO.class)
+                .eq(OrderSkuReviewDO::getOrderNo, order.getOrderNo())
+                .isNotNull(OrderSkuReviewDO::getOrderDetailAdoptId))
+            .stream()
+            .collect(Collectors.toMap(OrderSkuReviewDO::getOrderDetailAdoptId, each -> each, (left, right) -> left));
+        return orderDetails.stream().map(each -> buildAdoptOrderDetailResp(each, reviewMap.get(each.getId()))).toList();
     }
 
     @Override
@@ -940,6 +945,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
 
     private SkuOrderDetailRespDTO buildSkuOrderDetailResp(OrderDetailSkuDO orderDetailSku, OrderSkuReviewDO review) {
         SkuOrderDetailRespDTO respDTO = BeanUtil.toBean(orderDetailSku, SkuOrderDetailRespDTO.class);
+        if (review == null) {
+            respDTO.setReviewed(Boolean.FALSE);
+            respDTO.setReviewImageUrls(Collections.emptyList());
+            return respDTO;
+        }
+        respDTO.setReviewed(Boolean.TRUE);
+        respDTO.setReviewId(review.getId());
+        respDTO.setReviewScore(review.getScore());
+        respDTO.setReviewContent(review.getContent());
+        respDTO.setReviewImageUrls(splitImageUrls(review.getImageUrls()));
+        respDTO.setReviewCreateTime(review.getCreateTime());
+        return respDTO;
+    }
+
+    private AdoptOrderDetailRespDTO buildAdoptOrderDetailResp(OrderDetailAdoptDO orderDetailAdopt, OrderSkuReviewDO review) {
+        AdoptOrderDetailRespDTO respDTO = BeanUtil.toBean(orderDetailAdopt, AdoptOrderDetailRespDTO.class);
         if (review == null) {
             respDTO.setReviewed(Boolean.FALSE);
             respDTO.setReviewImageUrls(Collections.emptyList());
