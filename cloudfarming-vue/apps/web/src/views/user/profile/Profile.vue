@@ -124,7 +124,7 @@ const rules = {
     { min: 2, max: 30, message: '用户名长度需在 2-30 个字符之间', trigger: 'blur' }
   ],
   phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { required: false, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
   ],
   avatar: [],
@@ -193,7 +193,7 @@ const avatarInitial = computed(() => {
 const maskedPhone = computed(() => {
   const phone = formState.phone || userStore.loginUser?.phone || ''
   if (!phone || phone.length < 11) {
-    return '未设置手机号'
+    return '未绑定手机号'
   }
   return `${phone.slice(0, 3)}****${phone.slice(7)}`
 })

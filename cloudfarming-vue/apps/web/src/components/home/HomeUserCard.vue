@@ -7,7 +7,7 @@
       </div>
 
       <div class="user-info-section">
-        <div class="avatar-wrapper">
+        <div class="avatar-wrapper" @click="router.push('/usercenter/profile')">
           <img v-if="hasAvatar" :src="userAvatar" alt="Avatar" class="avatar-img">
           <div v-else class="avatar-placeholder">
             <UserOutlined class="avatar-icon" />
@@ -372,6 +372,7 @@ onMounted(() => {
   border-radius: 50%;
   position: relative;
   z-index: 1;
+  cursor: pointer;
 }
 
 .avatar-img,
