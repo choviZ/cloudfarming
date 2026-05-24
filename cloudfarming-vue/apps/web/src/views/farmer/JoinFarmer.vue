@@ -5,7 +5,7 @@
                 <h2 class="apply-title">申请入驻农户</h2>
                 <p class="apply-subtitle">填写基础信息，提交后由平台审核，通过即可开通农户店铺。</p>
             </div>
-            <a-form :model="applyFarmerReq" :rules="rules" :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }"
+            <a-form ref="formRef" :model="applyFarmerReq" :rules="rules" :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }"
                 labelAlign="left" :hide-required-mark="true">
                 <a-card v-if="current == 0" class="card">
                     <h2 style="text-align: center">主体信息</h2>
@@ -79,16 +79,27 @@ import { getFarmerReviewStatus, submitFarmerApply } from '@/api/farmer.js'
 import { handleResp } from '@/utils/respUtil.js'
 import ReviewState from '@/views/farmer/components/ReviewState.vue'
 
+const formRef = ref()
+
+const stepFields = [
+    ['realName', 'idCard', 'houseAddress'],
+    ['farmName', 'farmAddress', 'farmArea', 'breedingType', 'businessLicenseNo']
+]
+// 校验规则
 const rules = {
     realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
     idCard: [
         { required: true, message: '请输入身份证号', trigger: 'blur' },
         { pattern: /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/, message: '请输入正确的身份证号', trigger: 'blur' }
     ],
+    houseAddress: [{ required: true, message: '请输入户籍信息', trigger: 'blur' }],
+    farmName: [{ required: true, message: '请输入养殖场名称', trigger: 'blur' }],
+    farmAddress: [{ required: true, message: '请输入养殖场地址', trigger: 'blur' }],
     farmArea: [
         { required: true, message: '请输入养殖场面积', trigger: 'blur' },
         { type: 'number', min: 0, message: '养殖场面积必须大于0', trigger: 'blur' }
     ],
+    breedingType: [{ required: true, message: '请输入养殖品类', trigger: 'blur' }],
     businessLicenseNo: [{ required: true, message: '请输入营业执照编号', trigger: 'blur' }]
 }
 
@@ -108,6 +119,11 @@ const applyFarmerReq = ref({
 
 // 提交审核申请
 const submitApply = async () => {
+    try {
+        await formRef.value.validateFields()
+    } catch {
+        return
+    }
     const res = await submitFarmerApply(applyFarmerReq.value)
     handleResp(res, '审核提交成功', '提交失败')
 }
@@ -117,7 +133,12 @@ const loading = ref(false)
 
 // 步骤条
 const current = ref(0)
-const next = () => {
+const next = async () => {
+    try {
+        await formRef.value.validateFields(stepFields[current.value])
+    } catch {
+        return
+    }
     current.value++
 }
 const prev = () => {
