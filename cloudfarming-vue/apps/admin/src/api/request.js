@@ -23,11 +23,13 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   (response) => {
-    // 统一处理响应数据格式
-    return response.data
+    const data = response.data
+    if (data.code && data.code !== '0') {
+      return Promise.reject(data)
+    }
+    return data
   },
   (error) => {
-    // 统一处理错误
     console.error('API请求错误:', error)
     return Promise.reject(error)
   }

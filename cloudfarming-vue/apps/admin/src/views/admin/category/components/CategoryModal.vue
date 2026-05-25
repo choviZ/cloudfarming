@@ -134,7 +134,7 @@ const handleModalOk = async () => {
     if (error.errorFields) {
       message.error('请检查表单填写是否正确')
     } else {
-      message.error(props.mode === 'edit' ? '更新失败' : '创建失败')
+      message.error(error.message || (props.mode === 'edit' ? '更新失败' : '创建失败'))
     }
   } finally {
     modalLoading.value = false

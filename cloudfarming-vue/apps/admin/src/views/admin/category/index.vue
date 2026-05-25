@@ -52,7 +52,7 @@
                 编辑
               </a-button>
               <a-popconfirm
-                title="确定要删除该分类吗？删除后子分类也将被删除！"
+                title="确定要删除该分类吗？存在子分类时无法删除"
                 ok-text="确定"
                 cancel-text="取消"
                 @confirm="() => handleDelete(record.id)"
@@ -208,7 +208,7 @@ const handleDelete = async (id) => {
     message.success('删除成功')
     await loadCategoryTree()
   } catch (error) {
-    message.error('删除失败')
+    message.error(error.message || '删除失败')
   }
 }
 
