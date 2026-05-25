@@ -205,7 +205,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import AddressSelector from '../../components/address/AddressSelector.vue'
+import AddressSelector from '@/components/address/AddressSelector.vue'
 import { getAdoptItemDetail } from '@/api/adopt'
 import { batchRemoveFromCart, getCartCheckoutPreview } from '@/api/cart'
 import { createOrder, getCurrentAdoptAgreement, ORDER_TYPE } from '@/api/order'
