@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.product.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -7,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.vv.cloudfarming.common.cosntant.UserRoleConstant;
 import com.vv.cloudfarming.common.enums.ShelfStatusEnum;
 import com.vv.cloudfarming.common.exception.ClientException;
 import com.vv.cloudfarming.common.exception.ServiceException;
@@ -115,9 +117,11 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
             throw new ClientException("认养项目不存在");
         }
 
-        Long shopId = getShopIdByUserId(userId);
-        if (!Objects.equals(adoptItem.getShopId(), shopId)) {
-            throw new ClientException("没有权限操作该认养项目");
+        if (!StpUtil.hasRole(UserRoleConstant.ADMIN_DESC)) {
+            Long shopId = getShopIdByUserId(userId);
+            if (!Objects.equals(adoptItem.getShopId(), shopId)) {
+                throw new ClientException("没有权限操作该认养项目");
+            }
         }
 
         if (ShelfStatusEnum.ONLINE.getCode().equals(status)
@@ -142,9 +146,11 @@ public class AdoptItemServiceImpl extends ServiceImpl<AdoptItemMapper, AdoptItem
             throw new ClientException("认养项目不存在");
         }
 
-        Long shopId = getShopIdByUserId(userId);
-        if (!Objects.equals(adoptItem.getShopId(), shopId)) {
-            throw new ClientException("没有权限删除该认养项目");
+        if (!StpUtil.hasRole(UserRoleConstant.ADMIN_DESC)) {
+            Long shopId = getShopIdByUserId(userId);
+            if (!Objects.equals(adoptItem.getShopId(), shopId)) {
+                throw new ClientException("没有权限删除该认养项目");
+            }
         }
 
         if (!this.removeById(adoptItemId)) {

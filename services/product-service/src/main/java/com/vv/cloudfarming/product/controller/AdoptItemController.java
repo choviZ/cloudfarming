@@ -1,5 +1,6 @@
 package com.vv.cloudfarming.product.controller;
 
+import cn.dev33.satoken.annotation.SaCheckOr;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
@@ -47,7 +48,7 @@ public class AdoptItemController {
         return Results.success();
     }
 
-    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @SaCheckOr(role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)})
     @Operation(summary = "上架认养项目")
     @PutMapping("/api/adopt/item/v1/{adoptItemId}/on-shelf")
     public Result<Void> onShelfAdoptItem(@PathVariable Long adoptItemId) {
@@ -56,7 +57,7 @@ public class AdoptItemController {
         return Results.success();
     }
 
-    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @SaCheckOr(role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)})
     @Operation(summary = "下架认养项目")
     @PutMapping("/api/adopt/item/v1/{adoptItemId}/off-shelf")
     public Result<Void> offShelfAdoptItem(@PathVariable Long adoptItemId) {
@@ -65,7 +66,7 @@ public class AdoptItemController {
         return Results.success();
     }
 
-    @SaCheckRole(UserRoleConstant.FARMER_DESC)
+    @SaCheckOr(role = {@SaCheckRole(UserRoleConstant.FARMER_DESC), @SaCheckRole(UserRoleConstant.ADMIN_DESC)})
     @Operation(summary = "删除认养项目")
     @DeleteMapping("/api/adopt/item/v1/{adoptItemId}")
     public Result<Void> deleteAdoptItem(@PathVariable Long adoptItemId) {

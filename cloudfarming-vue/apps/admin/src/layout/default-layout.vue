@@ -85,6 +85,7 @@ import {
   AppstoreOutlined,
   DashboardOutlined,
   FileTextOutlined,
+  HeartOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -137,6 +138,12 @@ const menuList = [
     key: 'admin/product',
     icon: ShopOutlined,
     description: '处理商品审核、上下架和详情查看',
+  },
+  {
+    label: '认养管理',
+    key: 'admin/adopt',
+    icon: HeartOutlined,
+    description: '管理认养项目的审核与上下架',
   },
   {
     label: '农户管理',

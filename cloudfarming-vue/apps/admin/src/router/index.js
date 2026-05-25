@@ -71,6 +71,11 @@ const router = createRouter({
           component: () => import('@/views/admin/feedback/index.vue'),
         },
         {
+          path: '/admin/adopt',
+          name: 'admin-adopt',
+          component: () => import('@/views/admin/adopt/index.vue'),
+        },
+        {
           path: '/admin/product/detail/:id',
           name: 'admin-product-detail',
           component: () => import('@/views/admin/product/components/detail.vue'),

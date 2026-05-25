@@ -57,6 +57,16 @@ public class AdoptItemRespDTO {
     private String coverImage;
 
     /**
+     * 总数量
+     */
+    private Integer totalCount;
+
+    /**
+     * 可认养数量
+     */
+    private Integer availableCount;
+
+    /**
      * 审核状态：0=待审核 1=通过 2=拒绝
      */
     private Integer auditStatus;
