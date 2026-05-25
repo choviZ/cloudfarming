@@ -11,7 +11,7 @@ export const saveSpu = (data) => {
  * 根据id删除SPU
  */
 export const deleteSpuById = (id) => {
-  return request.post(`/api/spu/delete${id}`)
+  return request.post('/api/spu/delete', null, { params: { id } })
 }
 
 /**
@@ -56,14 +56,14 @@ export const batchCreateSpuAttrValues = (data) => {
  * 更新SPU属性值
  */
 export const updateSpuAttrValue = (data) => {
-  return request.post(`/api/spu/attr/update`, data)
+  return request.post('/api/spu/attr/update', data)
 }
 
 /**
  * 删除SPU属性值
  */
 export const deleteSpuAttrValue = (id) => {
-  return request.post(`/api/spu/attr/delete/${id}`)
+  return request.post('/api/spu/attr/delete', null, { params: { id } })
 }
 
 /**
@@ -77,26 +77,26 @@ export const batchDeleteSpuAttrValues = (ids) => {
  * 根据SPU ID删除所有属性值
  */
 export const deleteSpuAttrValuesBySpuId = (spuId) => {
-  return request.post(`/api/spu/attr/delete/all/${spuId}`)
+  return request.post('/api/spu/attr/delete/all', null, { params: { spuId } })
 }
 
 /**
  * 根据ID查询SPU属性值
  */
 export const getSpuAttrValueById = (id) => {
-  return request.get(`/api/spu/attr/get/${id}`)
+  return request.get('/api/spu/attr/get', { params: { id } })
 }
 
 /**
  * 根据SPU ID查询属性值列表
  */
 export const listSpuAttrValuesBySpuId = (spuId) => {
-  return request.get('/v1/spu/attr/ list', { params: { spuId } })
+  return request.get('/api/spu/attr/list', { params: { spuId } })
 }
 
 /**
  * 根据SPU ID和属性ID查询属性值
  */
 export const getSpuAttrValueBySpuIdAndAttrId = (spuId, attrId) => {
-  return request.get('/v1/spu/attr/id', { params: { spuId, attrId } })
+  return request.get('/api/spu/attr/id', { params: { spuId, attrId } })
 }

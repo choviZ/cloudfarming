@@ -99,7 +99,7 @@ export function pageMyAdoptItems(data) {
  */
 export function createAdoptOrder(data) {
     return request.post(
-        '/v1/adopt/order',
+        '/api/order/v1/create',
         data
     )
 }
@@ -110,6 +110,6 @@ export function createAdoptOrder(data) {
  */
 export function listAnimalCategories() {
   return request.get(
-    '/v1/adopt/animal-category/list'
+    '/api/adopt/animal-category/list'
   )
 }

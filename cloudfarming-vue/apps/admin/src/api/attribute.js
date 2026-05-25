@@ -25,7 +25,7 @@ export const updateAttribute = (requestParam) => {
  * 删除属性
  */
 export const deleteAttribute = (id) => {
-  return request.post('/api/attribute/v1/delete', null, { params: { id } })
+  return request.post('/api/attribute/v1/delete', id)
 }
 
 /**

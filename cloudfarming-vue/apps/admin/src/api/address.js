@@ -53,7 +53,7 @@ export function deleteReceiveAddress(id) {
  * @returns {Promise<Object>} Result<ReceiveAddressResp>
  */
 export function getReceiveAddressById(id) {
-    return request.get(`/api/receive-address/get`,{params:{id}})
+    return request.get('/api/receive-address/get', { params: { id } })
 }
 
 /**
