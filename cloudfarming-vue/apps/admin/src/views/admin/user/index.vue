@@ -92,6 +92,10 @@
               {{ record.status === 0 ? '正常' : '禁用' }}
             </a-tag>
           </template>
+          <template v-else-if="column.key === 'phone'">
+            <span v-if="record.phone">{{ record.phone }}</span>
+            <span v-else style="color: #999">未绑定手机号</span>
+          </template>
           <template v-else-if="column.key === 'avatar'">
             <a-avatar :src="record.avatar" :size="32">
               <template #icon>

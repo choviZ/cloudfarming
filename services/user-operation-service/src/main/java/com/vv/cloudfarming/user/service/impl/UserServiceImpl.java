@@ -104,6 +104,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     @Override
     public boolean createUser(UserCreateReqDTO requestParam) {
         UserDO userDO = BeanUtil.toBean(requestParam, UserDO.class);
+        if (StrUtil.isBlank(userDO.getPhone())) {
+            userDO.setPhone(null);
+        }
         int inserted = baseMapper.insert(userDO);
         if (inserted == 0) {
             throw new ServiceException("新增用户失败");
@@ -120,6 +123,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
             throw new ClientException("用户不存在");
         }
         UserDO userDO = BeanUtil.toBean(requestParam, UserDO.class);
+        if (StrUtil.isBlank(userDO.getPhone())) {
+            userDO.setPhone(null);
+        }
         int updated = baseMapper.updateById(userDO);
         if (updated == 0) {
             throw new ServiceException("更新用户失败");
@@ -152,7 +158,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                 .like(StrUtil.isNotBlank(username), UserDO::getUsername, username)
                 .like(StrUtil.isNotBlank(phoneNumber),UserDO::getPhone,phoneNumber)
                 .eq(ObjectUtil.isNotNull(userType), UserDO::getUserType, userType)
-                .eq(ObjectUtil.isNotNull(status), UserDO::getStatus, status);
+                .eq(ObjectUtil.isNotNull(status), UserDO::getStatus, status)
+                .orderByDesc(UserDO::getCreateTime);
         IPage<UserDO> page = baseMapper.selectPage(requestParam, wrapper);
         return page.convert(each -> BeanUtil.toBean(each, UserRespDTO.class));
     }
