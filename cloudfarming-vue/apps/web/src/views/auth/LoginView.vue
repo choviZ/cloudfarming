@@ -123,7 +123,7 @@ import {
     UserOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { userLogin, userRegister } from '../api/user.js'
+import { userLogin, userRegister } from '@/api/user.js'
 import { useUserStore } from '@/stores/useUserStore.js'
 
 const router = useRouter()

@@ -89,26 +89,20 @@
         <button
           type="button"
           class="category-pill"
-          :class="{ active: !adoptStatus }"
-          @click="handleAdoptStatusClick('')"
+          :class="{ active: !adoptAnimalCategory }"
+          @click="handleAdoptCategoryClick('')"
         >
           全部
         </button>
         <button
+          v-for="cat in animalCategories"
+          :key="cat.code"
           type="button"
           class="category-pill"
-          :class="{ active: adoptStatus === '1' }"
-          @click="handleAdoptStatusClick('1')"
+          :class="{ active: adoptAnimalCategory === cat.code }"
+          @click="handleAdoptCategoryClick(cat.code)"
         >
-          可认养
-        </button>
-        <button
-          type="button"
-          class="category-pill"
-          :class="{ active: adoptStatus === '0' }"
-          @click="handleAdoptStatusClick('0')"
-        >
-          已结束
+          {{ cat.name }}
         </button>
       </div>
 
@@ -244,7 +238,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { pageAdoptItems } from '@/api/adopt'
+import { pageAdoptItems, listAnimalCategories } from '@/api/adopt'
 import { getCategoryById, getChildrenByParentId, getTopLevelCategories } from '@/api/category'
 import { listSpuByPage } from '@/api/spu'
 
@@ -265,6 +259,8 @@ const selectedCategoryId = ref('')
 const selectedCategoryName = ref('')
 const activeTopCategoryId = ref('')
 const adoptStatus = ref('')
+const adoptAnimalCategory = ref('')
+const animalCategories = ref([])
 const viewMode = ref(LIST_MODE.PRODUCT)
 const searchKeyword = ref('')
 
@@ -340,14 +336,12 @@ const topCategoryName = computed(() => {
 
 const summaryCopy = computed(() => {
   if (isAdoptMode.value) {
-    if (adoptStatus.value === '1') {
-      return '当前为你展示可立即认养的项目。'
-    }
-    if (adoptStatus.value === '0') {
-      return '当前为你展示已结束的认养项目。'
+    if (adoptAnimalCategory.value) {
+      const matched = animalCategories.value.find((c) => c.code === adoptAnimalCategory.value)
+      return `当前为你展示”${matched?.name || adoptAnimalCategory.value}”类认养项目。`
     }
     if (searchKeyword.value) {
-      return `正在搜索“${searchKeyword.value}”相关认养项目。`
+      return `正在搜索”${searchKeyword.value}”相关认养项目。`
     }
     return '统一浏览云农场内可查看的认养项目。'
   }
@@ -387,7 +381,7 @@ const buildRouteQuery = ({
   categoryId = selectedCategoryId.value,
   categoryName = selectedCategoryName.value,
   topCategoryId = activeTopCategoryId.value,
-  adoptStatusValue = adoptStatus.value
+  adoptCategoryValue = adoptAnimalCategory.value
 } = {}) => {
   const query = {
     mode: mode === LIST_MODE.ADOPT ? LIST_MODE.ADOPT : LIST_MODE.PRODUCT
@@ -399,8 +393,8 @@ const buildRouteQuery = ({
   }
 
   if (query.mode === LIST_MODE.ADOPT) {
-    if (adoptStatusValue !== '' && adoptStatusValue !== undefined && adoptStatusValue !== null) {
-      query.adoptStatus = String(adoptStatusValue)
+    if (adoptCategoryValue) {
+      query.adoptCategory = adoptCategoryValue
     }
     return query
   }
@@ -426,7 +420,7 @@ const isSameRouteQuery = (targetQuery) => {
     categoryId: normalizeQueryValue(route.query.selectedCategoryId || route.query.categoryId),
     categoryName: normalizeQueryValue(route.query.selectedCategoryName || route.query.categoryName),
     topCategoryId: normalizeQueryValue(route.query.topCategoryId),
-    adoptStatus: normalizeQueryValue(route.query.adoptStatus)
+    adoptCategory: normalizeQueryValue(route.query.adoptCategory)
   }
 
   const normalizedTarget = {
@@ -435,7 +429,7 @@ const isSameRouteQuery = (targetQuery) => {
     categoryId: targetQuery.selectedCategoryId || targetQuery.categoryId || '',
     categoryName: targetQuery.selectedCategoryName || targetQuery.categoryName || '',
     topCategoryId: targetQuery.topCategoryId || '',
-    adoptStatus: targetQuery.adoptStatus || ''
+    adoptCategory: targetQuery.adoptCategory || ''
   }
 
   return JSON.stringify(currentQuery) === JSON.stringify(normalizedTarget)
@@ -462,6 +456,7 @@ const resetProductFilters = () => {
 
 const resetAdoptFilters = () => {
   adoptStatus.value = ''
+  adoptAnimalCategory.value = ''
 }
 
 const syncStateFromRoute = () => {
@@ -472,6 +467,7 @@ const syncStateFromRoute = () => {
 
   if (isAdoptMode.value) {
     adoptStatus.value = normalizeQueryValue(route.query.adoptStatus)
+    adoptAnimalCategory.value = normalizeQueryValue(route.query.adoptCategory)
     resetProductFilters()
     return
   }
@@ -493,6 +489,17 @@ const fetchCategories = async () => {
     }
   } catch (error) {
     console.error('Failed to fetch categories:', error)
+  }
+}
+
+const fetchAnimalCategories = async () => {
+  try {
+    const res = await listAnimalCategories()
+    if (res.code === '0') {
+      animalCategories.value = res.data || []
+    }
+  } catch {
+    // 静默失败
   }
 }
 
@@ -606,11 +613,12 @@ const fetchAdoptData = async () => {
     current: pagination.current,
     size: pagination.size,
     title: searchKeyword.value || undefined,
-    reviewStatus: 1
+    reviewStatus: 1,
+    status: 1
   }
 
-  if (adoptStatus.value !== '') {
-    req.status = Number(adoptStatus.value)
+  if (adoptAnimalCategory.value) {
+    req.animalCategory = adoptAnimalCategory.value
   }
 
   const res = await pageAdoptItems(req)
@@ -667,7 +675,7 @@ const handleModeChange = async (mode) => {
       categoryId: '',
       categoryName: '',
       topCategoryId: '',
-      adoptStatusValue: ''
+      adoptCategoryValue: ''
     })
   )
 }
@@ -685,12 +693,12 @@ const handleCategoryClick = async (id = '', name = '', topCategoryId = '') => {
       categoryId: id,
       categoryName: name,
       topCategoryId: topCategoryId || id,
-      adoptStatusValue: ''
+      adoptCategoryValue: ''
     })
   )
 }
 
-const handleAdoptStatusClick = async (status) => {
+const handleAdoptCategoryClick = async (category) => {
   if (!isAdoptMode.value) {
     return
   }
@@ -703,7 +711,7 @@ const handleAdoptStatusClick = async (status) => {
       categoryId: '',
       categoryName: '',
       topCategoryId: '',
-      adoptStatusValue: status
+      adoptCategoryValue: category
     })
   )
 }
@@ -787,6 +795,7 @@ const goToAdoptDetail = (id) => {
 
 onMounted(() => {
   fetchCategories()
+  fetchAnimalCategories()
 })
 
 watch(
@@ -799,7 +808,8 @@ watch(
     route.query.selectedCategoryName,
     route.query.categoryName,
     route.query.topCategoryId,
-    route.query.adoptStatus
+    route.query.adoptStatus,
+    route.query.adoptCategory
   ],
   async () => {
     syncStateFromRoute()

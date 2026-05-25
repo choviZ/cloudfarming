@@ -77,7 +77,7 @@ import { onMounted, ref } from 'vue'
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 import { getFarmerReviewStatus, submitFarmerApply } from '@/api/farmer.js'
 import { handleResp } from '@/utils/respUtil.js'
-import ReviewState from '@/views/farmer/components/ReviewState.vue'
+import ReviewState from '@/views/farmer/ReviewState.vue'
 
 const formRef = ref()
 

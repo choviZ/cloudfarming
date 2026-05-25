@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Login from '../views/LoginView.vue'
+import Login from '../views/auth/LoginView.vue'
 import BasicLayout from '../layout/BasicLayout.vue'
 import MerchantLayout from '@/layout/MerchantLayout.vue'
 import UserCenterLayout from '@/layout/UserCenterLayout.vue'
@@ -66,12 +66,12 @@ const router = createRouter({
         {
           path: 'adopt/order/create/:id',
           name: 'adoptOrderCreate',
-          component: () => import('../views/order/OrderCreate.vue')
+          component: () => import('../views/user/orders/OrderCreate.vue')
         },
         {
           path: 'order/create',
           name: 'orderCreate',
-          component: () => import('../views/order/OrderCreate.vue')
+          component: () => import('../views/user/orders/OrderCreate.vue')
         },
         {
           path: 'pay',
@@ -97,7 +97,7 @@ const router = createRouter({
         {
           path: 'cart',
           name: 'cart',
-          component: () => import('../views/Cart.vue')
+          component: () => import('../views/cart/Cart.vue')
         },
         {
           path: 'feedback',
@@ -112,12 +112,12 @@ const router = createRouter({
         {
           path: 'farmers',
           name: 'farmerList',
-          component: () => import('../views/farmer/public/FarmerList.vue')
+          component: () => import('../views/farmer/display/FarmerList.vue')
         },
         {
           path: 'farmers/:id',
           name: 'farmerDetail',
-          component: () => import('../views/farmer/public/FarmerDetail.vue')
+          component: () => import('../views/farmer/display/FarmerDetail.vue')
         }
       ]
     },
@@ -168,7 +168,7 @@ const router = createRouter({
         {
           path: 'adopts',
           name: 'userAdopts',
-          component: () => import('../views/user/adopt/MyAdopts.vue')
+          component: () => import('../views/user/adopt/UserAdopts.vue')
         },
         {
           path: 'adopts/:instanceId',
@@ -201,12 +201,12 @@ const router = createRouter({
         {
           path: 'spu/list',
           name: 'mySpuList',
-          component: () => import('../views/farmer/admin/ProductList.vue')
+          component: () => import('../views/farmer/product-manage/ProductList.vue')
         },
         {
           path: 'spu/create',
           name: 'createSpu',
-          component: () => import('../views/farmer/admin/Index.vue')
+          component: () => import('../views/farmer/product-manage/Index.vue')
         },
         {
           path: 'shop',
@@ -226,7 +226,7 @@ const router = createRouter({
         {
           path: 'adopt/my',
           name: 'myAdopts',
-          component: () => import('../views/farmer/adopt/MyAdopts.vue')
+          component: () => import('../views/farmer/adopt/FarmerAdopts.vue')
         },
         {
           path: 'adopt/instances',
@@ -246,7 +246,7 @@ const router = createRouter({
         {
           path: 'showcase',
           name: 'farmerShowcase',
-          component: () => import('../views/farmer/showcase/FarmerShowcaseManage.vue')
+          component: () => import('../views/farmer/farm/FarmInfoManage.vue')
         }
       ]
     }
