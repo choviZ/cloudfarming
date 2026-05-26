@@ -5,6 +5,10 @@ spring:
     name: cloudfarming-aggregation
   profiles:
     active: local
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 120MB
   datasource:
     driver-class-name: org.apache.shardingsphere.driver.ShardingSphereDriver
     url: jdbc:shardingsphere:classpath:aggregation-shardingsphere-config.yaml

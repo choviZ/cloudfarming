@@ -7,7 +7,7 @@ import { upload } from '@/api/common';
 const props = defineProps({
   value: { type: String, default: '' },
   bizCode: { type: String, required: true },
-  maxSize: { type: Number, default: 2 } // MB
+  maxSize: { type: Number, default: 20 } // MB
 });
 
 const emit = defineEmits(['update:value', 'change']);
