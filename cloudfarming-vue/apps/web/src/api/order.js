@@ -56,6 +56,10 @@ export const confirmPayOrder = (payOrderNo) => {
   })
 }
 
+export const cancelPayOrder = (payOrderNo) => {
+  return request.post('/api/pay/cancel', { payOrderNo })
+}
+
 export const getFarmerOrderStatistics = () => {
   return request.get('/api/order/v1/farmer/statistics')
 }

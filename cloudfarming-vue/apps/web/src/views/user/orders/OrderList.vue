@@ -130,6 +130,29 @@
                 >
                   去评价
                 </a-button>
+                <template v-else-if="canGoPay(order)">
+                  <a-button
+                    type="primary"
+                    class="action-button"
+                    @click="handleGoPay(order)"
+                  >
+                    去支付
+                  </a-button>
+                  <a-popconfirm
+                    title="确定取消该订单吗？取消后将释放库存。"
+                    ok-text="确定"
+                    cancel-text="再想想"
+                    @confirm="handleCancelOrder(order)"
+                  >
+                    <a-button
+                      type="link"
+                      class="action-link"
+                      danger
+                    >
+                      取消订单
+                    </a-button>
+                  </a-popconfirm>
+                </template>
                 <a-button
                   v-else-if="canConfirmReceive(order)"
                   type="primary"
@@ -179,6 +202,7 @@ import { message } from 'ant-design-vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  cancelPayOrder,
   getMyPendingReviewOrders,
   getOrderList,
   getPayOrderList,
@@ -466,6 +490,19 @@ const canGoReview = (order) => {
   return isPendingReviewOrder(order) && Boolean(order?.orderNo)
 }
 
+const canGoPay = (order) => {
+  if (resolveOrderStatus(order) !== ORDER_STATUS.PENDING_PAYMENT) {
+    return false
+  }
+  if (!order?.payOrderNo) {
+    return false
+  }
+  if (order.expireTime) {
+    return new Date(order.expireTime).getTime() > Date.now()
+  }
+  return true
+}
+
 const canViewLogistics = (order) => {
   return Boolean(order?.orderNo && order?.logisticsNo)
 }
@@ -575,6 +612,39 @@ const handleGoReview = (order) => {
       orderNo: order.orderNo
     }
   })
+}
+
+const handleGoPay = (order) => {
+  if (!order?.payOrderNo) {
+    message.error('支付单号不存在')
+    return
+  }
+  router.push({
+    name: 'pay',
+    query: {
+      payOrderNo: order.payOrderNo,
+      amount: order.totalAmount || order.actualPayAmount || order.totalPrice
+    }
+  })
+}
+
+const handleCancelOrder = async (order) => {
+  if (!order?.payOrderNo) {
+    message.error('支付单号不存在')
+    return
+  }
+  try {
+    const response = await cancelPayOrder(order.payOrderNo)
+    if (response.code !== '0') {
+      message.error(response.message || '取消订单失败')
+      return
+    }
+    message.success('订单已取消')
+    fetchOrders()
+  } catch (error) {
+    console.error('handleCancelOrder error:', error)
+    message.error(error.message || '取消订单失败，请稍后重试')
+  }
 }
 
 const handleViewLogistics = (order) => {

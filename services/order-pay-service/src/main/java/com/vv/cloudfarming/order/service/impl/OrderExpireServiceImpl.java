@@ -24,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vv.cloudfarming.common.exception.ClientException;
+
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -116,6 +118,48 @@ public class OrderExpireServiceImpl implements OrderExpireService {
             }
         }
         return closedCount;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean cancelPayOrder(String payOrderNo, Long userId) {
+        if (payOrderNo == null || payOrderNo.isBlank()) {
+            return false;
+        }
+        PayDO payOrder = payOrderMapper.selectPayOrderByNo(payOrderNo);
+        if (payOrder == null) {
+            throw new ClientException("支付单不存在");
+        }
+        if (!userId.equals(payOrder.getBuyerId())) {
+            throw new ClientException("无权操作该支付单");
+        }
+        if (!PayStatusEnum.UNPAID.getCode().equals(payOrder.getPayStatus())) {
+            throw new ClientException("该支付单已支付，无法取消");
+        }
+        if (!BizStatusConstant.WAIT_PAY.equals(payOrder.getBizStatus())) {
+            throw new ClientException("该支付单状态异常，无法取消");
+        }
+
+        LambdaUpdateWrapper<PayDO> payUpdateWrapper = Wrappers.lambdaUpdate(PayDO.class)
+            .eq(PayDO::getPayOrderNo, payOrderNo)
+            .eq(PayDO::getPayStatus, PayStatusEnum.UNPAID.getCode())
+            .eq(PayDO::getBizStatus, BizStatusConstant.WAIT_PAY)
+            .set(PayDO::getBizStatus, BizStatusConstant.CLOSED);
+        int payUpdated = payOrderMapper.update(null, payUpdateWrapper);
+        if (!SqlHelper.retBool(payUpdated)) {
+            return false;
+        }
+
+        List<OrderDO> orders = orderMapper.selectList(
+            Wrappers.lambdaQuery(OrderDO.class)
+                .eq(OrderDO::getPayOrderNo, payOrderNo)
+                .eq(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_PAYMENT.getCode())
+        );
+        for (OrderDO order : safeList(orders)) {
+            closeSinglePendingOrder(order);
+        }
+        log.info("用户主动取消支付单，payOrderNo={}, userId={}, orderCount={}", payOrderNo, userId, safeList(orders).size());
+        return true;
     }
 
     private void closeSinglePendingOrder(OrderDO order) {
