@@ -16,7 +16,12 @@
             <div class="timeline-item-head">
               <div class="timeline-tags">
                 <a-tag :color="resolveLogType(log).color">{{ log.logTypeDesc || resolveLogType(log).label }}</a-tag>
-                <a-tag v-if="log.weight !== null && log.weight !== undefined" color="blue">体重 {{ Number(log.weight).toFixed(1) }}kg</a-tag>
+                <span v-if="log.weight !== null && log.weight !== undefined" class="weight-pill">
+                  <svg class="weight-pill__icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM5.5 4h5l1 3h-7l1-3ZM2 8.5h12l-1 5.5H3L2 8.5Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="weight-pill__value">{{ Number(log.weight).toFixed(1) }}kg</span>
+                </span>
               </div>
               <span class="timeline-time">{{ formatDate(log.createTime) }}</span>
             </div>
@@ -149,7 +154,32 @@ const formatDate = (value) => {
 .timeline-tags {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+}
+
+.weight-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 6px;
+  background: #f0f9f2;
+  border: 1px solid #d5ede0;
+  border-radius: 20px;
+  color: #2f855a;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.weight-pill__icon {
+  width: 14px;
+  height: 14px;
+  color: #4e9967;
+  flex-shrink: 0;
+}
+
+.weight-pill__value {
+  font-weight: 600;
 }
 
 .timeline-time {
