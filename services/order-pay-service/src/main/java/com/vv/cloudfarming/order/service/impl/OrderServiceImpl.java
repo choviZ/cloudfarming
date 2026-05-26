@@ -585,6 +585,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 (left, right) -> left
             ));
         Map<Long, List<Long>> assignedEarTagMap = buildAssignedEarTagMap(requestParam.getItems());
+        Map<Long, String> itemImageMap = buildItemImageMap(requestParam.getItems());
 
         validateAssignedEarTags(requiredQuantityMap, assignedEarTagMap, itemNameMap);
 
@@ -593,6 +594,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 AdoptInstanceCreateReqDTO instance = new AdoptInstanceCreateReqDTO();
                 instance.setItemId(entry.getKey());
                 instance.setEarTagNo(earTagNo);
+                instance.setImage(itemImageMap.get(entry.getKey()));
                 return instance;
             }))
             .toList();
@@ -875,6 +877,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, OrderDO> implemen
                 .addAll(normalizedEarTags);
         }
         return assignedEarTagMap;
+    }
+
+    private Map<Long, String> buildItemImageMap(List<OrderAssignAdoptItemReqDTO> requestItems) {
+        Map<Long, String> itemImageMap = new HashMap<>();
+        for (OrderAssignAdoptItemReqDTO requestItem : requestItems) {
+            Long adoptItemId = requestItem.getAdoptItemId();
+            String earTagImage = requestItem.getEarTagImage();
+            if (adoptItemId != null && adoptItemId > 0 && StrUtil.isNotBlank(earTagImage)) {
+                itemImageMap.put(adoptItemId, earTagImage);
+            }
+        }
+        return itemImageMap;
     }
 
     private void validateAssignedEarTags(

@@ -206,9 +206,18 @@
             <a-textarea
               v-model:value="item.earTagInput"
               :rows="Math.min(Math.max(item.quantity, 3), 6)"
-              :placeholder="`请输入${item.quantity}个耳标号，支持逗号或换行分隔`"
+              :placeholder="`请输入${item.quantity}个耳标号`"
               allow-clear
             />
+
+            <div class="assign-item-image">
+              <span class="assign-item-image-label">耳标照片（选填）</span>
+              <ImageUpload
+                v-model:value="item.earTagImage"
+                biz-code="ANIMAL_PROFILE"
+                :max-size="10"
+              />
+            </div>
 
             <p class="assign-item-hint">已填写 {{ countEarTags(item.earTagInput) }} / {{ item.quantity }} 个耳标号</p>
           </div>
@@ -240,6 +249,7 @@ import {
   ORDER_TYPE
 } from '@/api/order'
 import OrderLogisticsModal from '@/components/order/OrderLogisticsModal.vue'
+import ImageUpload from '@/components/Upload/ImageUpload.vue'
 
 const PAGE_SIZE = 10
 
@@ -663,7 +673,8 @@ const openAssignModal = async (order) => {
       adoptItemId: item.adoptItemId,
       itemName: item.itemName,
       quantity: Number(item.quantity || 0),
-      earTagInput: ''
+      earTagInput: '',
+      earTagImage: ''
     }))
     if (!assignForm.items.length) {
       message.warning('当前订单暂无可分配的认养明细')
@@ -793,7 +804,8 @@ const buildAssignPayload = () => {
       })
       return {
         adoptItemId: item.adoptItemId,
-        earTagNos: normalizedEarTags
+        earTagNos: normalizedEarTags,
+        earTagImage: item.earTagImage || undefined
       }
     })
   }
@@ -1051,6 +1063,17 @@ onMounted(() => {
 
 .assign-item-meta {
   margin: 6px 0 0;
+  color: #7b8b7f;
+  font-size: 12px;
+}
+
+.assign-item-image {
+  margin-top: 12px;
+}
+
+.assign-item-image-label {
+  display: block;
+  margin-bottom: 6px;
   color: #7b8b7f;
   font-size: 12px;
 }

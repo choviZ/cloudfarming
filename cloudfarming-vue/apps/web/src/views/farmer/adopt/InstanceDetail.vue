@@ -76,7 +76,7 @@
               <h2 class="publish-title">发布新日记</h2>
             </div>
             <a-tag :color="canPublishDiary ? 'green' : 'default'">
-              {{ canPublishDiary ? '用户实时可见' : '当前不可更新' }}
+              {{ canPublishDiary ? '用户可见' : '当前不可更新' }}
             </a-tag>
           </div>
 

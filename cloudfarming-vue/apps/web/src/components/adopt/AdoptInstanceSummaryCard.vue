@@ -21,6 +21,10 @@
           <span class="summary-label">{{ item.label }}</span>
           <strong class="summary-value">{{ item.value }}</strong>
         </div>
+        <div v-if="instance?.image" class="summary-item ear-tag-photo-item">
+          <span class="summary-label">耳标照片</span>
+          <a-image :src="instance.image" :width="120" class="ear-tag-image-preview" />
+        </div>
       </div>
     </div>
   </section>
@@ -50,7 +54,7 @@ const fallbackCover = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
 const statusOption = computed(() => getAdoptInstanceStatusOption(props.instance?.status))
 const statusText = computed(() => props.instance?.statusDesc || statusOption.value?.label || '未知状态')
 const statusColor = computed(() => statusOption.value?.color || 'default')
-const coverImage = computed(() => props.instance?.image || props.instance?.itemCoverImage || fallbackCover)
+const coverImage = computed(() => props.instance?.itemCoverImage || fallbackCover)
 const summaryItems = computed(() => {
   const items = [
     {
@@ -146,10 +150,11 @@ const formatDate = (value, fallback = '--') => {
 }
 
 .summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 280px));
+  display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   align-self: flex-start;
+  align-items: flex-start;
 }
 
 .summary-item {
@@ -174,13 +179,18 @@ const formatDate = (value, fallback = '--') => {
   word-break: break-all;
 }
 
+.ear-tag-photo-item {
+  flex: 0 0 auto;
+}
+
+.ear-tag-image-preview {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 @media (max-width: 992px) {
   .summary-card {
     grid-template-columns: 1fr;
-  }
-
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -189,8 +199,8 @@ const formatDate = (value, fallback = '--') => {
     padding: 18px;
   }
 
-  .summary-grid {
-    grid-template-columns: 1fr;
+  .summary-item {
+    flex: 1 1 100%;
   }
 
   .summary-head {

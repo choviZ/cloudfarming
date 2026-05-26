@@ -23,4 +23,9 @@ public class OrderAssignAdoptItemReqDTO {
      */
     @NotEmpty(message = "耳标号不能为空")
     private List<String> earTagNos;
+
+    /**
+     * 耳标照片URL
+     */
+    private String earTagImage;
 }

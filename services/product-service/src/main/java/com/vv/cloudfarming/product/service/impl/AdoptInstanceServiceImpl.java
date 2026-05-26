@@ -159,6 +159,7 @@ public class AdoptInstanceServiceImpl extends ServiceImpl<AdoptInstanceMapper, A
             .map(each -> AdoptInstanceDO.builder()
                 .itemId(each.getItemId())
                 .earTagNo(each.getEarTagNo())
+                .image(each.getImage())
                 .status(LivestockStatusEnum.ADOPTED.getCode())
                 .farmerId(reqDTO.getFarmerId())
                 .ownerUserId(reqDTO.getOwnerUserId())

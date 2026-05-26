@@ -20,4 +20,9 @@ public class AdoptInstanceCreateReqDTO {
      */
     @NotNull(message = "耳标号不能为空")
     private Long earTagNo;
+
+    /**
+     * 耳标照片URL
+     */
+    private String image;
 }
