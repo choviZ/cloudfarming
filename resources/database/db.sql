@@ -758,3 +758,23 @@ CREATE TABLE t_order_sku_review
     INDEX idx_user_create_time (user_id, create_time)
 )
     CHARSET = utf8mb4;
+
+CREATE TABLE t_article
+(
+    id           BIGINT AUTO_INCREMENT                 NOT NULL PRIMARY KEY,
+    title        VARCHAR(128)                          NOT NULL,
+    summary      VARCHAR(256)                          NULL,
+    cover_image  VARCHAR(512)                          NULL,
+    content      TEXT                                  NULL,
+    article_type INT                                   NOT NULL COMMENT '文章类型：1-平台公告 2-农业政策 3-养殖知识',
+    status       INT       DEFAULT 1                   NULL COMMENT '状态：0-草稿 1-已发布',
+    is_top       TINYINT(1) DEFAULT 0                  NULL COMMENT '是否置顶',
+    author_id    BIGINT                                NULL,
+    publish_time DATETIME                              NULL,
+    create_time  DATETIME  DEFAULT CURRENT_TIMESTAMP   NULL,
+    update_time  DATETIME  DEFAULT CURRENT_TIMESTAMP   NULL ON UPDATE CURRENT_TIMESTAMP,
+    del_flag     INT       DEFAULT 0                   NULL,
+    INDEX idx_article_type (article_type),
+    INDEX idx_publish_time (publish_time)
+)
+    CHARSET = utf8mb4;
