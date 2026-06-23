@@ -1,6 +1,11 @@
 server:
   port: 8083
 
+pay:
+    mock:
+        enabled: true        # 总开关，true=跳过支付宝
+        result: success      # success / fail，模拟支付结果
+
 spring:
   profiles:
     active: local

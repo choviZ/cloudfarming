@@ -1,5 +1,11 @@
 server:
   port: 8080
+
+pay:
+    mock:
+        enabled: true
+        result: success
+
 spring:
   application:
     name: cloudfarming-aggregation

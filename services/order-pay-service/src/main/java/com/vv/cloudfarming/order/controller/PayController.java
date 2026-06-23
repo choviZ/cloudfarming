@@ -15,6 +15,7 @@ import com.vv.cloudfarming.common.exception.ServiceException;
 import com.vv.cloudfarming.common.result.Result;
 import com.vv.cloudfarming.common.result.Results;
 import com.vv.cloudfarming.order.config.AlipayTemplate;
+import com.vv.cloudfarming.order.config.PayMockProperties;
 import com.vv.cloudfarming.order.constant.BizStatusConstant;
 import com.vv.cloudfarming.order.constant.OrderTypeConstant;
 import com.vv.cloudfarming.order.dao.entity.OrderDO;
@@ -35,6 +36,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,17 +55,18 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Tag(name = "支付宝支付接口")
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/alipay")
 public class PayController {
 
-    private static final Logger log = LoggerFactory.getLogger(PayController.class);
     private static final String DEFAULT_RETURN_URL = "http://localhost:5173/paySuccess";
     private static final String TRADE_SUCCESS = "TRADE_SUCCESS";
     private static final String TRADE_FINISHED = "TRADE_FINISHED";
 
+    private final PayMockProperties payMockProperties;
     private final AlipayTemplate alipayTemplate;
     private final PayOrderMapper payOrderMapper;
     private final OrderMapper orderMapper;
@@ -76,6 +79,20 @@ public class PayController {
     @GetMapping("/pay")
     public void pay(@RequestParam String payOrderNo, HttpServletResponse response) throws IOException {
         PayDO payOrder = getPayOrderByNo(payOrderNo);
+
+        // 是否跳过支付
+        if (payMockProperties.isEnabled()) {
+            log.info("正在使用mock支付方式！");
+            if ("fail".equals(payMockProperties.getResult())) {
+                response.sendRedirect(resolveReturnUrl() + "?out_trade_no=" + payOrderNo + "&trade_status=TRADE_CLOSED");
+            } else {
+                // 不为 fail 都算成功
+                handlePaySuccess(payOrderNo, payOrder.getTotalAmount().toPlainString(), "MOCK" + payOrderNo);
+                response.sendRedirect(resolveReturnUrl() + "?out_trade_no=" + payOrderNo + "&trade_status=TRADE_SUCCESS");
+            }
+            return;
+        }
+
         DefaultAlipayClient defaultAlipayClient = createAlipayClient();
         AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
         request.setNotifyUrl(alipayTemplate.getNotifyUrl());
@@ -111,7 +128,7 @@ public class PayController {
             }
             if (!isTradePaid(requestParam.get("trade_status"))) {
                 log.info("支付宝异步回调状态无需处理，outTradeNo={}, tradeStatus={}",
-                        requestParam.get("out_trade_no"), requestParam.get("trade_status"));
+                    requestParam.get("out_trade_no"), requestParam.get("trade_status"));
                 return "success";
             }
             handlePaySuccess(requestParam.get("out_trade_no"), requestParam.get("total_amount"), requestParam.get("trade_no"));
@@ -128,6 +145,14 @@ public class PayController {
     @GetMapping("/confirm")
     public Result<PayConfirmRespDTO> confirm(@RequestParam String payOrderNo) {
         PayDO payOrder = getPayOrderByNo(payOrderNo);
+
+        if (payMockProperties.isEnabled()) {
+            boolean paid = PayStatusEnum.PAID.getCode().equals(payOrder.getPayStatus());
+            String tradeStatus = paid ? "TRADE_SUCCESS" : "TRADE_CLOSED";
+            String msg = paid ? "支付成功（mock）" : "支付失败（mock）";
+            return Results.success(buildConfirmResp(payOrder, paid, tradeStatus, msg));
+        }
+
         if (PayStatusEnum.PAID.getCode().equals(payOrder.getPayStatus())) {
             return Results.success(buildConfirmResp(payOrder, true, null, "支付已确认"));
         }
@@ -164,8 +189,8 @@ public class PayController {
 
         if (queryResponse == null || !queryResponse.isSuccess()) {
             String message = queryResponse != null && StringUtils.hasText(queryResponse.getSubMsg())
-                    ? queryResponse.getSubMsg()
-                    : "支付结果确认失败，请稍后刷新订单列表";
+                ? queryResponse.getSubMsg()
+                : "支付结果确认失败，请稍后刷新订单列表";
             log.warn("支付宝交易查询失败，payOrderNo={}, response={}", payOrderNo, queryResponse);
             return Results.success(buildConfirmResp(payOrder, false, null, message));
         }
@@ -186,13 +211,13 @@ public class PayController {
 
     private DefaultAlipayClient createAlipayClient() {
         return new DefaultAlipayClient(
-                alipayTemplate.getGatewayUrl(),
-                alipayTemplate.getAppId(),
-                alipayTemplate.getPrivateKey(),
-                "json",
-                alipayTemplate.getCharset(),
-                alipayTemplate.getAlipayPublicKey(),
-                alipayTemplate.getSignType()
+            alipayTemplate.getGatewayUrl(),
+            alipayTemplate.getAppId(),
+            alipayTemplate.getPrivateKey(),
+            "json",
+            alipayTemplate.getCharset(),
+            alipayTemplate.getAlipayPublicKey(),
+            alipayTemplate.getSignType()
         );
     }
 
@@ -202,10 +227,10 @@ public class PayController {
 
     private boolean verifyAlipaySign(Map<String, String> requestParam) throws AlipayApiException {
         return AlipaySignature.rsaCheckV1(
-                requestParam,
-                alipayTemplate.getAlipayPublicKey(),
-                alipayTemplate.getCharset(),
-                alipayTemplate.getSignType()
+            requestParam,
+            alipayTemplate.getAlipayPublicKey(),
+            alipayTemplate.getCharset(),
+            alipayTemplate.getSignType()
         );
     }
 
@@ -223,13 +248,13 @@ public class PayController {
 
     private PayConfirmRespDTO buildConfirmResp(PayDO payOrder, boolean paid, String tradeStatus, String message) {
         return PayConfirmRespDTO.builder()
-                .payOrderNo(payOrder.getPayOrderNo())
-                .paid(paid)
-                .payStatus(payOrder.getPayStatus())
-                .tradeStatus(tradeStatus)
-                .totalAmount(payOrder.getTotalAmount())
-                .message(message)
-                .build();
+            .payOrderNo(payOrder.getPayOrderNo())
+            .paid(paid)
+            .payStatus(payOrder.getPayStatus())
+            .tradeStatus(tradeStatus)
+            .totalAmount(payOrder.getTotalAmount())
+            .message(message)
+            .build();
     }
 
     private void validatePayAmount(PayDO payOrder, String totalAmount) {
@@ -261,20 +286,20 @@ public class PayController {
         }
 
         List<OrderDO> orders = orderMapper.selectList(
-                Wrappers.lambdaQuery(OrderDO.class)
-                        .eq(OrderDO::getUserId, userId)
-                        .eq(OrderDO::getPayOrderNo, payNo)
+            Wrappers.lambdaQuery(OrderDO.class)
+                .eq(OrderDO::getUserId, userId)
+                .eq(OrderDO::getPayOrderNo, payNo)
         );
         if (orders == null || orders.isEmpty()) {
             throw new ServiceException("支付单号：" + payNo + "对应的订单不存在");
         }
 
         LambdaUpdateWrapper<PayDO> payWrapper = Wrappers.lambdaUpdate(PayDO.class)
-                .eq(PayDO::getPayOrderNo, payNo)
-                .eq(PayDO::getPayStatus, PayStatusEnum.UNPAID.getCode())
-                .set(PayDO::getPayStatus, PayStatusEnum.PAID.getCode())
-                .set(PayDO::getBizStatus, BizStatusConstant.PAID)
-                .set(PayDO::getPayTime, LocalDateTime.now());
+            .eq(PayDO::getPayOrderNo, payNo)
+            .eq(PayDO::getPayStatus, PayStatusEnum.UNPAID.getCode())
+            .set(PayDO::getPayStatus, PayStatusEnum.PAID.getCode())
+            .set(PayDO::getBizStatus, BizStatusConstant.PAID)
+            .set(PayDO::getPayTime, LocalDateTime.now());
         int payUpdated = payOrderMapper.update(null, payWrapper);
         if (!SqlHelper.retBool(payUpdated)) {
             PayDO latestPayOrder = getPayOrderByNo(payNo);
@@ -287,16 +312,16 @@ public class PayController {
 
         for (OrderDO order : orders) {
             int orderUpdated = orderMapper.update(null, Wrappers.lambdaUpdate(OrderDO.class)
-                    .eq(OrderDO::getId, order.getId())
-                    .eq(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_PAYMENT.getCode())
-                    .set(OrderDO::getOrderStatus, resolvePaidOrderStatus(order.getOrderType())));
+                .eq(OrderDO::getId, order.getId())
+                .eq(OrderDO::getOrderStatus, OrderStatusEnum.PENDING_PAYMENT.getCode())
+                .set(OrderDO::getOrderStatus, resolvePaidOrderStatus(order.getOrderType())));
             if (!SqlHelper.retBool(orderUpdated)) {
                 throw new ServiceException("更新订单状态失败");
             }
 
             if (OrderTypeConstant.ADOPT == order.getOrderType()) {
                 LambdaQueryWrapper<OrderDetailAdoptDO> adoptDetailWrapper = Wrappers.lambdaQuery(OrderDetailAdoptDO.class)
-                        .eq(OrderDetailAdoptDO::getOrderNo, order.getOrderNo());
+                    .eq(OrderDetailAdoptDO::getOrderNo, order.getOrderNo());
                 List<OrderDetailAdoptDO> orderDetailAdopts = orderDetailAdoptMapper.selectList(adoptDetailWrapper);
                 for (OrderDetailAdoptDO adoptDetail : orderDetailAdopts) {
                     LockStockReqDTO lockStockReqDTO = new LockStockReqDTO();
@@ -305,12 +330,12 @@ public class PayController {
                     Integer updated = adoptItemRemoteService.deductAdoptItemStock(lockStockReqDTO).getData();
                     if (updated == null || updated <= 0) {
                         throw new ServiceException("扣减认养项目锁定库存失败，orderNo=" + order.getOrderNo()
-                                + ", adoptItemId=" + adoptDetail.getAdoptItemId());
+                            + ", adoptItemId=" + adoptDetail.getAdoptItemId());
                     }
                 }
             } else if (OrderTypeConstant.GOODS == order.getOrderType()) {
                 LambdaQueryWrapper<OrderDetailSkuDO> skuDetailWrapper = Wrappers.lambdaQuery(OrderDetailSkuDO.class)
-                        .eq(OrderDetailSkuDO::getOrderNo, order.getOrderNo());
+                    .eq(OrderDetailSkuDO::getOrderNo, order.getOrderNo());
                 List<OrderDetailSkuDO> skuDetails = orderDetailSkuMapper.selectList(skuDetailWrapper);
                 for (OrderDetailSkuDO skuDetail : skuDetails) {
                     LockStockReqDTO lockStockReqDTO = new LockStockReqDTO();
@@ -319,7 +344,7 @@ public class PayController {
                     Integer updated = skuRemoteService.deductStock(lockStockReqDTO).getData();
                     if (updated == null || updated <= 0) {
                         throw new ServiceException("扣减SKU锁定库存失败，orderNo=" + order.getOrderNo()
-                                + ", skuId=" + skuDetail.getSkuId());
+                            + ", skuId=" + skuDetail.getSkuId());
                     }
                 }
             } else {
