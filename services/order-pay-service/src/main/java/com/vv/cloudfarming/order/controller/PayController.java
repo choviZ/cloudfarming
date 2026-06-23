@@ -38,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,6 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +83,7 @@ public class PayController {
 
         JSONObject bizContent = new JSONObject();
         bizContent.put("out_trade_no", payOrder.getPayOrderNo());
-        bizContent.put("total_amount", payOrder.getTotalAmount());
+        bizContent.put("total_amount", payOrder.getTotalAmount().setScale(2, RoundingMode.HALF_UP).toPlainString());
         bizContent.put("subject", payOrder.getPayOrderNo());
         bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
         request.setBizContent(bizContent.toString());
@@ -116,6 +118,7 @@ public class PayController {
             return "success";
         } catch (Exception ex) {
             log.error("处理支付宝异步回调失败，参数={}", requestParam, ex);
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return "failure";
         }
     }
@@ -134,32 +137,51 @@ public class PayController {
         bizContent.put("out_trade_no", payOrderNo);
         request.setBizContent(bizContent.toString());
 
-        try {
-            AlipayTradeQueryResponse queryResponse = createAlipayClient().execute(request);
-            if (queryResponse == null || !queryResponse.isSuccess()) {
-                String message = queryResponse != null && StringUtils.hasText(queryResponse.getSubMsg())
-                        ? queryResponse.getSubMsg()
-                        : "支付结果确认失败，请稍后刷新订单列表";
-                log.warn("支付宝交易查询失败，payOrderNo={}, response={}", payOrderNo, queryResponse);
-                return Results.success(buildConfirmResp(payOrder, false, null, message));
+        AlipayTradeQueryResponse queryResponse = null;
+        AlipayApiException lastApiException = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                queryResponse = createAlipayClient().execute(request);
+                lastApiException = null;
+                break;
+            } catch (AlipayApiException e) {
+                lastApiException = e;
+                log.warn("调用支付宝交易查询失败（第{}次尝试），payOrderNo={}", attempt + 1, payOrderNo, e);
+                if (attempt < 2) {
+                    try {
+                        Thread.sleep(1000L * (attempt + 1));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw wrapAlipayException("支付结果确认失败，请稍后重试", e);
+                    }
+                }
             }
-
-            String tradeStatus = queryResponse.getTradeStatus();
-            if (isTradePaid(tradeStatus)) {
-                handlePaySuccess(payOrderNo, queryResponse.getTotalAmount(), queryResponse.getTradeNo());
-                PayDO latestPayOrder = getPayOrderByNo(payOrderNo);
-                return Results.success(buildConfirmResp(latestPayOrder, true, tradeStatus, "支付成功"));
-            }
-
-            String message = "支付结果确认中，请稍后刷新订单列表";
-            if ("TRADE_CLOSED".equals(tradeStatus)) {
-                message = "该支付单已关闭";
-            }
-            return Results.success(buildConfirmResp(payOrder, false, tradeStatus, message));
-        } catch (AlipayApiException e) {
-            log.error("调用支付宝交易查询失败，payOrderNo={}", payOrderNo, e);
-            throw wrapAlipayException("支付结果确认失败，请稍后重试", e);
         }
+        if (lastApiException != null) {
+            log.error("调用支付宝交易查询失败（已重试3次），payOrderNo={}", payOrderNo, lastApiException);
+            throw wrapAlipayException("支付结果确认失败，请稍后重试", lastApiException);
+        }
+
+        if (queryResponse == null || !queryResponse.isSuccess()) {
+            String message = queryResponse != null && StringUtils.hasText(queryResponse.getSubMsg())
+                    ? queryResponse.getSubMsg()
+                    : "支付结果确认失败，请稍后刷新订单列表";
+            log.warn("支付宝交易查询失败，payOrderNo={}, response={}", payOrderNo, queryResponse);
+            return Results.success(buildConfirmResp(payOrder, false, null, message));
+        }
+
+        String tradeStatus = queryResponse.getTradeStatus();
+        if (isTradePaid(tradeStatus)) {
+            handlePaySuccess(payOrderNo, queryResponse.getTotalAmount(), queryResponse.getTradeNo());
+            PayDO latestPayOrder = getPayOrderByNo(payOrderNo);
+            return Results.success(buildConfirmResp(latestPayOrder, true, tradeStatus, "支付成功"));
+        }
+
+        String message = "支付结果确认中，请稍后刷新订单列表";
+        if ("TRADE_CLOSED".equals(tradeStatus)) {
+            message = "该支付单已关闭";
+        }
+        return Results.success(buildConfirmResp(payOrder, false, tradeStatus, message));
     }
 
     private DefaultAlipayClient createAlipayClient() {
@@ -282,8 +304,8 @@ public class PayController {
                     lockStockReqDTO.setQuantity(adoptDetail.getQuantity());
                     Integer updated = adoptItemRemoteService.deductAdoptItemStock(lockStockReqDTO).getData();
                     if (updated == null || updated <= 0) {
-                        log.error("扣减认养项目锁定库存失败，orderNo={}, adoptItemId={}, quantity={}",
-                                order.getOrderNo(), adoptDetail.getAdoptItemId(), adoptDetail.getQuantity());
+                        throw new ServiceException("扣减认养项目锁定库存失败，orderNo=" + order.getOrderNo()
+                                + ", adoptItemId=" + adoptDetail.getAdoptItemId());
                     }
                 }
             } else if (OrderTypeConstant.GOODS == order.getOrderType()) {
@@ -296,8 +318,8 @@ public class PayController {
                     lockStockReqDTO.setQuantity(skuDetail.getQuantity());
                     Integer updated = skuRemoteService.deductStock(lockStockReqDTO).getData();
                     if (updated == null || updated <= 0) {
-                        log.error("扣减SKU锁定库存失败，orderNo={}, skuId={}, quantity={}",
-                                order.getOrderNo(), skuDetail.getSkuId(), skuDetail.getQuantity());
+                        throw new ServiceException("扣减SKU锁定库存失败，orderNo=" + order.getOrderNo()
+                                + ", skuId=" + skuDetail.getSkuId());
                     }
                 }
             } else {
